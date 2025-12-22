@@ -1520,10 +1520,11 @@ AutoPlay.handleWrinklers = function() {
     AutoPlay.poppingWrinklers = true;
     AutoPlay.wrinklerTime = AutoPlay.now;
     AutoPlay.addActivity("Popping wrinklers for droppings and/or achievements.");
+    AutoPlay.logStatus('wrinkler', 'Popping all wrinklers');
     Game.wrinklers.forEach(function(w) { if (w.close==1) w.hp = 0; } );
   } else {
     if (!Game.Achievements['Wrinkler poker'].won && Game.wrinklers[3].close==1) {
-      Game.wrinklers[3].selected=1; 
+      Game.wrinklers[3].selected=1;
       l('backgroundLeftCanvas').click();
     }
     AutoPlay.findNextWrinkler();
@@ -1533,6 +1534,7 @@ AutoPlay.handleWrinklers = function() {
       if (AutoPlay.now-AutoPlay.wrinklerTime >= 2*60*60*1000) {
         Game.wrinklers[AutoPlay.nextWrinkler].hp = 0;  // pop
         AutoPlay.wrinklerTime = AutoPlay.now;
+        AutoPlay.logStatus('wrinkler', 'Popped single wrinkler');
       }
     }
   }
@@ -1678,13 +1680,15 @@ AutoPlay.handleAscend = function() {
   if (Game.ascensionMode == 0 && Game.prestige == 0)
     AutoPlay.canContinue();  // update achievement goals
   if (Game.AchievementsById[AutoPlay.nextAchievement].won) {
+    var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
+    AutoPlay.logStatus('achievement', 'Unlocked: ' + achiev.name);
     var date = new Date();
     date.setTime(AutoPlay.now-Game.startDate);
     var legacyTime = Game.sayTime(date.getTime()/1000*Game.fps,-1);
     date.setTime(AutoPlay.now-Game.fullDate);
     var fullTime=Game.sayTime(date.getTime()/1000*Game.fps,-1);
     AutoPlay.doAscend("have achievement: " +
-      Game.AchievementsById[AutoPlay.nextAchievement].ddesc.replace(/<q>.*?<\/q>/ig, '') +
+      achiev.ddesc.replace(/<q>.*?<\/q>/ig, '') +
       " after " + legacyTime + "(total: " + fullTime + ")",1);
     return;
   }
@@ -1837,6 +1841,7 @@ AutoPlay.mustRebornAscend = function() {
 AutoPlay.doAscend = function(str,log) {
   if (Game.AscendTimer>0 || Game.ReincarnateTimer>0) return;
   if (AutoPlay.onAscend || Game.OnAscend) return;
+  AutoPlay.logStatus('ascend', str);
   AutoPlay.wantAscend = AutoPlay.plantPending /*|| AutoPlay.harvestPlant*/;
   AutoPlay.addActivity("Preparing to ascend.");
   if (AutoPlay.wantAscend) return; // do not ascend when we wait for a plant
@@ -2053,12 +2058,17 @@ AutoPlay.handleDragon = function() {
   if (Game.dragonAura!=wantedAura) {
     Game.specialTab = "dragon"; Game.SetDragonAura(wantedAura,0);
     Game.ConfirmPrompt(); Game.ToggleSpecialMenu(0);
+    var auraNames = ['', 'Breath of Milk', 'Dragon Cursor', 'Elder Battalion', 'Reaper of Fields', 'Dragonflight', 'Ancestral Metamorphosis', 'Unholy Dominion', 'Fierce Hoarder', 'Dragon God', 'Arcane Aura', 'Fierce Hoarder', 'Dragon Orb', 'Radiant Appetite', 'Dragon\'s Curve'];
+    if (wantedAura < auraNames.length) {
+      AutoPlay.logStatus('dragon', 'Dragon aura 1: ' + auraNames[wantedAura]);
+    }
   }
   if ((Game.dragonAura2!=1) &&
       (Game.dragonLevel>=Game.dragonLevels.length-1)) {
   // set second aura to kitten (breath of milk)
     Game.specialTab = "dragon"; Game.SetDragonAura(1,1);
     Game.ConfirmPrompt(); Game.ToggleSpecialMenu(0);
+    AutoPlay.logStatus('dragon', 'Dragon aura 2: Breath of Milk');
 } }
 
 AutoPlay.checkDragon = function(building) {
@@ -2238,7 +2248,9 @@ if (!AutoPlay.Backup.UpdateMenu) AutoPlay.Backup.UpdateMenu = Game.UpdateMenu;
 
 AutoPlay.setBotMode = function() {
   AutoPlay.ToggleConfig('BotMode');
-  AutoPlay.info("The bot has changed mode to "+AutoPlay.ConfigData.BotMode.label[AutoPlay.Config.BotMode]);
+  var modeName = AutoPlay.ConfigData.BotMode.label[AutoPlay.Config.BotMode];
+  AutoPlay.info("The bot has changed mode to " + modeName);
+  AutoPlay.logStatus('mode', 'Mode: ' + modeName);
 //  AutoPlay.info("The bot has changed mode to "+AutoPlay.ConfigData.BotMode[]);
 }
 
