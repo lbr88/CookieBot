@@ -91,7 +91,12 @@ AutoPlay.run = function() {
   }
   if (AutoPlay.now<AutoPlay.deadline) return;  // end of speed activity
   // run periodically from here (every 15 seconds)
-  if (Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName && (!Game.onMenu || Game.onMenu === '')) {
+  // Auto-save once on unsaved games to prevent menu closing issues
+  if (!AutoPlay.hasAutoSaved && !window.localStorage.getItem('CookieClickerGame')) {
+    Game.WriteSave();
+    AutoPlay.hasAutoSaved = true;
+  }
+  if (Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName) {
     Game.bakeryNameL.textContent = AutoPlay.robotName+Game.bakeryNameL.textContent;
   } // write the robot name in front of the bakery name
   AutoPlay.activities = AutoPlay.mainActivity;
