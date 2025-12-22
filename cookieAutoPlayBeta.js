@@ -106,15 +106,7 @@ AutoPlay.run = function() {
 
   // DEBUG
   var wasOpen = Game.onMenu;
-  function debugCheck(label) {
-    if (wasOpen) {
-      var msg = document.getElementById('cookiebot-debug');
-      if (msg) {
-        msg.innerHTML += '<br>' + label + ': ' + (Game.onMenu || '<span style="color:#f00;">CLOSED</span>');
-      }
-    }
-  }
-  debugCheck('After status section');
+  if (wasOpen) console.log('CookieBot: After status section, menu:', Game.onMenu || 'CLOSED');
 
   // Calculate dynamic deadline based on when next purchase is affordable
   var dynamicDeadline = 15000; // Default 15 seconds
@@ -153,36 +145,28 @@ AutoPlay.run = function() {
     }
   }
 
-  debugCheck('After deadline calc');
+  if (wasOpen) console.log('CookieBot: After deadline calc, menu:', Game.onMenu || 'CLOSED');
   AutoPlay.deadline=AutoPlay.now+dynamicDeadline;
-  debugCheck('After deadline set');
+  if (wasOpen) console.log('CookieBot: After deadline set, menu:', Game.onMenu || 'CLOSED');
   AutoPlay.setDeadline(AutoPlay.now+(AutoPlay.now-Game.startDate)/10); // quick start
-  debugCheck('After setDeadline');
+  if (wasOpen) console.log('CookieBot: After setDeadline, menu:', Game.onMenu || 'CLOSED');
   // Skip dashboard update if user has a menu open (prevents closing menus on mobile)
   if (!Game.onMenu || Game.onMenu === '') {
     AutoPlay.updateDashboard();
   }
-  debugCheck('After updateDashboard');
+  if (wasOpen) console.log('CookieBot: After updateDashboard, menu:', Game.onMenu || 'CLOSED');
 
   // run periodically (every 15 seconds)
 
   // DEBUG: Check which handle function closes menu
-  var wasMenuOpen = Game.onMenu;
-  function checkMenu(fname) {
-    if (wasMenuOpen && !Game.onMenu) {
-      var msg = document.getElementById('cookiebot-debug');
-      if (msg) msg.innerHTML += '<br><span style="color:#f00;">CLOSED BY: ' + fname + '</span>';
-    }
-  }
-
-  if (AutoPlay.Config.CheatLumps!=4) { AutoPlay.handleSugarLumps(); checkMenu('handleSugarLumps'); }
-  AutoPlay.handleSavings(); checkMenu('handleSavings');
-  AutoPlay.handleSeasons(); checkMenu('handleSeasons');
-  AutoPlay.handleDragon(); checkMenu('handleDragon');
-  AutoPlay.handleWrinklers(); checkMenu('handleWrinklers');
-  AutoPlay.handleAscend(); checkMenu('handleAscend');
-  AutoPlay.handleMinigames(); checkMenu('handleMinigames');
-  AutoPlay.handleNotes(); checkMenu('handleNotes');
+  if (AutoPlay.Config.CheatLumps!=4) { AutoPlay.handleSugarLumps(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleSugarLumps'); }
+  AutoPlay.handleSavings(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleSavings');
+  AutoPlay.handleSeasons(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleSeasons');
+  AutoPlay.handleDragon(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleDragon');
+  AutoPlay.handleWrinklers(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleWrinklers');
+  AutoPlay.handleAscend(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleAscend');
+  AutoPlay.handleMinigames(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleMinigames');
+  AutoPlay.handleNotes(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleNotes');
   // add some more hints what the bot is doing (but only if not working on special achievements)
   if (!AutoPlay.workingOnSpecialAchievement) {
     if (!Game.HasAchiev('Elder')) AutoPlay.addActivity("Getting 7 grandma types");
