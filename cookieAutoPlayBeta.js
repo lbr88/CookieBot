@@ -343,7 +343,7 @@ AutoPlay.handleSavings = function() {
     var minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
     var statusMsg = 'No golden cookie reserve yet (' + minutesRemaining + ' min remaining in startup period)';
     AutoPlay.addActivity(statusMsg);
-    AutoPlay.logStatus('reserve', statusMsg);
+    AutoPlay.logStatus('reserve:startup', 'No reserve yet (startup period)');
     return;
   }
   if (Game.UpgradesById[52].bought && Game.UpgradesById[53].bought) {
@@ -353,7 +353,7 @@ AutoPlay.handleSavings = function() {
     AutoPlay.savingsGoal = 0;
     var statusMsg = 'Waiting for golden cookie upgrades before building reserve';
     AutoPlay.addActivity(statusMsg + '.');
-    AutoPlay.logStatus('reserve', statusMsg);
+    AutoPlay.logStatus('reserve:waiting-upgrades', statusMsg);
     return;
   }
   if (Game.UpgradesById[86].bought)  // get lucky
@@ -361,16 +361,17 @@ AutoPlay.handleSavings = function() {
   // scale goal between 0 and 1 based on elapsed time
   if (elapsedTime < targetTime) {
     AutoPlay.savingsGoal *= scaling;
+    var scalingPct = (scaling * 100).toFixed(0);
     var statusMsg = 'Building reserve: ' + Beautify(AutoPlay.savingsGoal) + ' (' + (scaling * 100).toFixed(1) + '% of max)';
     AutoPlay.addActivity('Building golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
       ' cookies (' + (scaling * 100).toFixed(1) + '% of max)');
-    AutoPlay.logStatus('reserve', statusMsg);
+    AutoPlay.logStatus('reserve:building-' + Math.floor(scalingPct/10)*10, 'Building reserve: ' + scalingPct + '% of max');
   }
   else {
     var statusMsg = 'Maintaining reserve: ' + Beautify(AutoPlay.savingsGoal);
     AutoPlay.addActivity('Maintaining golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
       ' cookies');
-    AutoPlay.logStatus('reserve', statusMsg);
+    AutoPlay.logStatus('reserve:maintaining', 'Maintaining reserve at max');
   }
   if (AutoPlay.savingsGoal > Game.Objects["Cursor"].getPrice()) { // saving is too expensive
     AutoPlay.savingsStart += delayTime; // delay saving
@@ -2576,11 +2577,16 @@ AutoPlay.updateDashboard = function() {
         var color = '#ccc';
         var icon = '📊';
 
-        if (entry.type === 'goal') { color = '#fc6'; icon = '🎯'; }
-        else if (entry.type === 'reserve') { color = '#f96'; icon = '🍪'; }
-        else if (entry.type === 'achievement') { color = '#f66'; icon = '🏆'; }
-        else if (entry.type === 'mode') { color = '#6f6'; icon = '⚙️'; }
-        else if (entry.type === 'ascend') { color = '#f6f'; icon = '⬆️'; }
+        // Extract base type (e.g., 'reserve:startup' -> 'reserve')
+        var baseType = entry.type.split(':')[0];
+
+        if (baseType === 'goal') { color = '#fc6'; icon = '🎯'; }
+        else if (baseType === 'reserve') { color = '#f96'; icon = '🍪'; }
+        else if (baseType === 'achievement') { color = '#f66'; icon = '🏆'; }
+        else if (baseType === 'mode') { color = '#6f6'; icon = '⚙️'; }
+        else if (baseType === 'ascend') { color = '#f6f'; icon = '⬆️'; }
+        else if (baseType === 'dragon') { color = '#c9f'; icon = '🐉'; }
+        else if (baseType === 'wrinkler') { color = '#a8a'; icon = '🪱'; }
 
         statusHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + icon + ' ' + entry.message + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
       });
