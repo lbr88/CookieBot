@@ -2658,19 +2658,23 @@ AutoPlay.updateDashboard = function() {
         goalColor = '#f9f';
       }
 
-      nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,200,200,0.08); border: 2px solid ' + goalColor + '; border-radius: 4px; min-height: 40px;" title="Current bot objective">';
+      nextHtml += '<div style="margin-bottom: 12px; padding: 8px; background: rgba(0,200,200,0.08); border: 2px solid ' + goalColor + '; border-radius: 4px;" title="Current bot objective">';
       nextHtml += '<div style="color: ' + goalColor + '; font-weight: bold; font-size: 11px; margin-bottom: 4px;">';
       nextHtml += goalIcon + ' Current Goal';
       nextHtml += '</div>';
-      nextHtml += '<div style="color: #ccc; font-size: 10px; line-height: 1.4;">' + AutoPlay.mainActivity + '</div>';
+      nextHtml += '<div style="color: #ccc; font-size: 10px; line-height: 1.3;">' + AutoPlay.mainActivity + '</div>';
       nextHtml += '</div>';
     }
 
-    // Show additional activities in styled box if present
+    // Show additional activities in styled box if present (filter out status info)
     if (AutoPlay.activities && AutoPlay.activities !== AutoPlay.mainActivity) {
       var extraActivities = AutoPlay.activities.replace(AutoPlay.mainActivity, '').replace(/<div class="line"><\/div>/g, '');
+      // Filter out "Missing X achievements" text - it's now in Stats & Reserve
+      if (extraActivities.indexOf('Missing') !== -1 && extraActivities.indexOf('achievements') !== -1) {
+        extraActivities = '';
+      }
       if (extraActivities.trim()) {
-        nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(100,100,100,0.08); border: 2px solid #888; border-radius: 4px; min-height: 40px;" title="Additional bot activities">';
+        nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(100,100,100,0.08); border: 2px solid #888; border-radius: 4px;" title="Additional bot activities">';
         nextHtml += '<div style="color: #888; font-weight: bold; font-size: 11px; margin-bottom: 4px;">';
         nextHtml += 'ℹ️ Additional Info';
         nextHtml += '</div>';
@@ -2932,6 +2936,29 @@ AutoPlay.updateDashboard = function() {
       }
     }
 
+    // Completion status
+    if (AutoPlay.statusInfo) {
+      progressHtml += '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">';
+      progressHtml += '<div style="font-size: 10px; color: #888; font-weight: bold; margin-bottom: 2px;">Progress to Completion</div>';
+      if (AutoPlay.statusInfo.achievements > 0) {
+        progressHtml += '<div style="font-size: 9px; color: #aaa;">🏆 ' + AutoPlay.statusInfo.achievements + ' achievements remaining';
+        if (AutoPlay.statusInfo.shadowAchievements > 0) {
+          progressHtml += ' (' + AutoPlay.statusInfo.shadowAchievements + ' shadow)';
+        }
+        progressHtml += '</div>';
+      }
+      if (AutoPlay.statusInfo.upgrades > 0) {
+        progressHtml += '<div style="font-size: 9px; color: #aaa;">⬆️ ' + AutoPlay.statusInfo.upgrades + ' upgrades remaining</div>';
+      }
+      if (AutoPlay.statusInfo.lumps > 0) {
+        progressHtml += '<div style="font-size: 9px; color: #aaa;">🍬 ' + AutoPlay.statusInfo.lumps + ' sugar lumps needed</div>';
+      }
+      if (AutoPlay.statusInfo.achievements === 0 && AutoPlay.statusInfo.upgrades === 0 && AutoPlay.statusInfo.lumps === 0) {
+        progressHtml += '<div style="font-size: 9px; color: #6f6;">✓ All content completed!</div>';
+      }
+      progressHtml += '</div>';
+    }
+
     document.getElementById('dashProgressContent').innerHTML = progressHtml || 'No active goals';
 
     // Update Combined Activity Feed (status + actions)
@@ -3078,7 +3105,13 @@ AutoPlay.status = function(print=true) { // just for testing purposes
   }
   lum-=Game.lumps;
   if (lum<0) lum=0;
-  AutoPlay.addActivity("Missing "+(ach)+" achievements ("+sach+" shadow), "+up+" upgrades, and "+lum+" sugar lumps.");
+  // Store status info for dashboard display instead of adding to activities
+  AutoPlay.statusInfo = {
+    achievements: ach,
+    shadowAchievements: sach,
+    upgrades: up,
+    lumps: lum
+  };
 }
 
 AutoPlay.setDeadline = function(d) {
