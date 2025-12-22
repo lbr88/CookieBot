@@ -500,6 +500,16 @@ AutoPlay.bestBuy = function() {
     }
   }
 
+  // Store best purchase info for dashboard
+  AutoPlay.nextPurchase = best;
+  AutoPlay.nextPurchaseType = type;
+  AutoPlay.nextPurchasePP = minpp;
+  if (type == 'building') {
+    AutoPlay.nextPurchasePrice = Game.Objects[best].getPrice();
+  } else {
+    AutoPlay.nextPurchasePrice = Game.Upgrades[best].getPrice();
+  }
+
   if (type == 'building') {
     if (AutoPlay.buyBuilding(Game.Objects[best], buy_amt, buy_amt)) haveBought=true;
   } else if (type == 'upgrade')
@@ -2381,13 +2391,43 @@ AutoPlay.updateDashboard = function() {
 
   try {
     // Update Next Actions
-    var nextHtml = AutoPlay.mainActivity || 'Initializing...';
+    var nextHtml = '';
+
+    // Show next purchase
+    if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
+      var purchaseColor = AutoPlay.nextPurchaseType === 'building' ? '#6f6' : '#fc6';
+      nextHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-left: 3px solid ' + purchaseColor + ';">';
+      nextHtml += '<div style="color: ' + purchaseColor + '; font-weight: bold; margin-bottom: 4px;">';
+      nextHtml += (AutoPlay.nextPurchaseType === 'building' ? '🏢 ' : '⬆️ ') + AutoPlay.nextPurchase;
+      nextHtml += '</div>';
+      nextHtml += '<div style="color: #ccc; font-size: 10px;">Cost: ' + Beautify(AutoPlay.nextPurchasePrice) + '</div>';
+
+      if (AutoPlay.nextPurchasePrice > Game.cookies) {
+        var timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
+        nextHtml += '<div style="color: #aaa; font-size: 10px;">Time to afford: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford/60).toFixed(1) + 'm') + '</div>';
+      } else {
+        nextHtml += '<div style="color: #6f6; font-size: 10px;">✓ Can afford now!</div>';
+      }
+
+      if (AutoPlay.nextPurchasePP !== undefined && AutoPlay.nextPurchasePP < Infinity) {
+        nextHtml += '<div style="color: #888; font-size: 9px;">Payback: ' + (AutoPlay.nextPurchasePP < 60 ? AutoPlay.nextPurchasePP.toFixed(1) + 's' : (AutoPlay.nextPurchasePP/60).toFixed(1) + 'm') + '</div>';
+      }
+      nextHtml += '</div>';
+    }
+
+    // Show main activity/goal
+    if (AutoPlay.mainActivity) {
+      nextHtml += '<div style="color: #ccc; font-size: 11px; margin-bottom: 6px;">' + AutoPlay.mainActivity + '</div>';
+    }
+
+    // Show additional activities
     if (AutoPlay.activities && AutoPlay.activities !== AutoPlay.mainActivity) {
-      nextHtml += '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">';
+      nextHtml += '<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #444; font-size: 10px; color: #aaa;">';
       nextHtml += AutoPlay.activities.replace(AutoPlay.mainActivity, '').replace(/<div class="line"><\/div>/g, '<br>');
       nextHtml += '</div>';
     }
-    document.getElementById('dashNextContent').innerHTML = nextHtml;
+
+    document.getElementById('dashNextContent').innerHTML = nextHtml || 'Initializing...';
 
     // Update Progress
     var progressHtml = '';
