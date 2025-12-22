@@ -2478,11 +2478,6 @@ AutoPlay.updateDashboard = function() {
       progressHtml += '<div style="font-size: 10px; color: #aaa;">CPS: ' + Beautify(Game.cookiesPs) + ' (' + (AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0') + 'x multiplier)</div>';
     }
 
-    // Bank
-    if (typeof Beautify !== 'undefined' && Game.cookies !== undefined) {
-      progressHtml += '<div style="font-size: 10px; color: #aaa;">Bank: ' + Beautify(Game.cookies) + '</div>';
-    }
-
     // Buildings and Upgrades
     if (Game.BuildingsOwned !== undefined && Game.UpgradesOwned !== undefined) {
       progressHtml += '<div style="font-size: 10px; color: #aaa;">Buildings: ' + Game.BuildingsOwned + ' | Upgrades: ' + Game.UpgradesOwned + '</div>';
