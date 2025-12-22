@@ -2302,18 +2302,26 @@ AutoPlay.positionDashboard = function() {
     }
   }
 
+  // Preserve current visibility state
+  var currentDisplay = dashboard.style.display;
+
   // Apply positioning
   dashboard.style.cssText = 'position: absolute; bottom: ' + bottomOffset + 'px; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6;';
 
-  // Get dashboard height before potentially hiding it
-  var dashboardHeight = dashboard.offsetHeight;
-
+  // Restore visibility state
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
+  } else if (currentDisplay) {
+    dashboard.style.display = currentDisplay;
   }
 
+  // Force reflow to get accurate height
+  void dashboard.offsetHeight;
+
+  // Get dashboard height - will be correct based on collapsed/expanded state
+  var dashboardHeight = dashboard.offsetHeight;
+
   // Update #game div's bottom to account for all bottom bars including ours
-  // ALWAYS offset the game, even if dashboard is hidden, to prevent overlap
   var game = document.getElementById('game');
   if (game) {
     var totalBottomHeight = bottomOffset + dashboardHeight;
