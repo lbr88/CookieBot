@@ -2221,7 +2221,6 @@ AutoPlay.createDashboard = function() {
   // Create container
   var dashboard = document.createElement('div');
   dashboard.id = 'cookieBotDashboard';
-  dashboard.style.cssText = 'position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6;';
 
   // Create header with toggle button
   var header = document.createElement('div');
@@ -2250,7 +2249,43 @@ AutoPlay.createDashboard = function() {
     document.body.appendChild(dashboard);
   }
 
+  // Calculate bottom offset based on other bottom bars
+  AutoPlay.positionDashboard();
+
   // Apply config setting for visibility
+  if (AutoPlay.Config.ShowDashboard == 0) {
+    dashboard.style.display = 'none';
+  }
+}
+
+AutoPlay.positionDashboard = function() {
+  var dashboard = document.getElementById('cookieBotDashboard');
+  if (!dashboard) return;
+
+  var wrapper = document.getElementById('wrapper');
+  if (!wrapper) return;
+
+  // Find all other bottom-positioned elements in the wrapper
+  var bottomOffset = 0;
+  var children = wrapper.children;
+
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    if (child.id !== 'cookieBotDashboard') {
+      var style = window.getComputedStyle(child);
+      // Check if element is absolutely positioned at the bottom
+      if (style.position === 'absolute' && style.bottom === '0px') {
+        var height = child.offsetHeight;
+        if (height > 0) {
+          bottomOffset += height;
+        }
+      }
+    }
+  }
+
+  // Apply positioning
+  dashboard.style.cssText = 'position: absolute; bottom: ' + bottomOffset + 'px; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6;';
+
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
   }
