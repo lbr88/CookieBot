@@ -92,12 +92,37 @@ AutoPlay.run = function() {
   if (AutoPlay.now<AutoPlay.deadline) return;  // end of speed activity
   // run periodically from here (every 15 seconds)
 
-  // Skip bakery name modification when menu is open (causes menu to close)
-  if (!Game.onMenu && Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName) {
+  // DEBUG: Track each step to find what closes menu
+  var debugMenu = Game.onMenu;
+  function debugLog(step) {
+    if (debugMenu) {
+      var msg = document.getElementById('cookiebot-debug');
+      if (!msg) {
+        msg = document.createElement('div');
+        msg.id = 'cookiebot-debug';
+        msg.style.cssText = 'position:fixed;top:50px;right:10px;background:#000;color:#ff0;padding:10px;border:2px solid #ff0;z-index:99999;font-family:monospace;max-width:300px;font-size:11px;';
+        document.body.appendChild(msg);
+      }
+      msg.innerHTML += '<br>' + step + ' - menu: ' + (Game.onMenu || 'CLOSED');
+    }
+  }
+
+  debugLog('START');
+
+  if (Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName) {
+    debugLog('Before name change');
     Game.bakeryNameL.textContent = AutoPlay.robotName+Game.bakeryNameL.textContent;
-  } // write the robot name in front of the bakery name
+    debugLog('After name change');
+  }
+
+  debugLog('Before activities');
   AutoPlay.activities = AutoPlay.mainActivity;
+  debugLog('After activities');
+
+  debugLog('Before status');
   AutoPlay.status(false);
+  debugLog('After status');
+
   if (AutoPlay.plantPending)
     AutoPlay.addActivity("Make sure to harvest the new plant before ascend!");
 
