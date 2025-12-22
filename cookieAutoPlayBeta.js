@@ -428,9 +428,6 @@ AutoPlay.handleSavings = function() {
   else {
     AutoPlay.logStatus('reserve:maintaining', 'Reserve at max');
   }
-  if (AutoPlay.savingsGoal > Game.Objects["Cursor"].getPrice()) { // saving is too expensive
-    AutoPlay.savingsStart += delayTime; // delay saving
-  }
   let fractionSaved = Game.cookies / AutoPlay.savingsGoal;
   // if fallen behind savings plan, reset to current fraction
   // this happens if you stop the bot for a while or buy something with
