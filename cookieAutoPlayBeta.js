@@ -2627,9 +2627,24 @@ AutoPlay.updateDashboard = function() {
       progressHtml += '<div style="margin-bottom: 8px;">';
       progressHtml += '<div style="color: #fc6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="' + reserveTooltip + '">' + reserveStatus + '</div>';
 
-      // Show note if in special mode (Hardcore/Born Again)
-      if (!isSavingActive && Game.ascensionMode == 1) {
-        progressHtml += '<div style="font-size: 9px; color: #888; font-style: italic; margin-bottom: 4px;">Note: During Hardcore, all cookies are available for purchases</div>';
+      // Show why reserve is not active (if applicable)
+      if (!isSavingActive) {
+        // Check if in startup period
+        const startTime = 30 * 60 * 1000;
+        if (AutoPlay.savingsStart !== undefined && AutoPlay.now) {
+          var elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
+          if (elapsedTime < 0) {
+            var minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
+            progressHtml += '<div style="font-size: 9px; color: #fc6; font-style: italic; margin-bottom: 4px;">⏱ Reserve starts in ' + minutesRemaining + ' minute' + (minutesRemaining !== 1 ? 's' : '') + ' (30-min startup period)</div>';
+          } else if (Game.ascensionMode == 1) {
+            progressHtml += '<div style="font-size: 9px; color: #888; font-style: italic; margin-bottom: 4px;">Note: During Hardcore, all cookies are available for purchases</div>';
+          } else if (!Game.UpgradesById[52].bought || !Game.UpgradesById[53].bought) {
+            var missingUpgrades = [];
+            if (!Game.UpgradesById[52].bought) missingUpgrades.push('Lucky day');
+            if (!Game.UpgradesById[53].bought) missingUpgrades.push('Serendipity');
+            progressHtml += '<div style="font-size: 9px; color: #fc6; font-style: italic; margin-bottom: 4px;">⏳ Waiting for upgrades: ' + missingUpgrades.join(', ') + '</div>';
+          }
+        }
       }
 
       // Calculate actual target with time scaling
