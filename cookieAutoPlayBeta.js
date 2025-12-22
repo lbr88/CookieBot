@@ -2305,14 +2305,18 @@ AutoPlay.positionDashboard = function() {
   // Apply positioning
   dashboard.style.cssText = 'position: absolute; bottom: ' + bottomOffset + 'px; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6;';
 
+  // Get dashboard height before potentially hiding it
+  var dashboardHeight = dashboard.offsetHeight;
+
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
   }
 
   // Update #game div's bottom to account for all bottom bars including ours
+  // ALWAYS offset the game, even if dashboard is hidden, to prevent overlap
   var game = document.getElementById('game');
   if (game) {
-    var totalBottomHeight = bottomOffset + dashboard.offsetHeight;
+    var totalBottomHeight = bottomOffset + dashboardHeight;
     game.style.bottom = totalBottomHeight + 'px';
   }
 }
@@ -2330,6 +2334,11 @@ AutoPlay.toggleDashboard = function() {
     content.style.display = 'flex';
     toggle.textContent = '▼ Collapse';
   }
+
+  // Reposition to account for height change
+  setTimeout(function() {
+    AutoPlay.positionDashboard();
+  }, 0);
 }
 
 AutoPlay.toggleDashboardConfig = function() {
@@ -2337,6 +2346,10 @@ AutoPlay.toggleDashboardConfig = function() {
   var dashboard = document.getElementById('cookieBotDashboard');
   if (dashboard) {
     dashboard.style.display = AutoPlay.Config.ShowDashboard ? 'block' : 'none';
+    // Reposition to update game div's bottom
+    setTimeout(function() {
+      AutoPlay.positionDashboard();
+    }, 0);
   }
 }
 
