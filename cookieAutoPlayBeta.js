@@ -350,14 +350,10 @@ AutoPlay.handleSavings = function() {
   }
   if (AutoPlay.Config.SavingStrategy == 2) {  // LUCKY
     AutoPlay.savingsGoal = Game.unbuffedCps * 60 * 100;
-    AutoPlay.addActivity('Saving to lucky (' +
-      Beautify(AutoPlay.savingsGoal) + ' cookies)');
     return;
   }
   if (AutoPlay.Config.SavingStrategy == 3) {  // LUCKY FRENZY
     AutoPlay.savingsGoal = Game.unbuffedCps * 60 * 100 * 7;
-    AutoPlay.addActivity('Saving to lucky frenzy (' +
-      Beautify(AutoPlay.savingsGoal) + ' cookies)');
     return;
   }
   // Auto: Save nothing for first 30 minutes, then linearly ramp up savings
@@ -370,9 +366,6 @@ AutoPlay.handleSavings = function() {
   let scaling = Math.min(elapsedTime / targetTime, 1);  //fraction of time to target
   if (elapsedTime < 0) {
     AutoPlay.savingsGoal = 0;
-    var minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
-    var statusMsg = 'No golden cookie reserve yet (' + minutesRemaining + ' min remaining in startup period)';
-    AutoPlay.addActivity(statusMsg);
     AutoPlay.logStatus('reserve:startup', 'No reserve yet (startup period)');
     return;
   }
@@ -381,9 +374,7 @@ AutoPlay.handleSavings = function() {
   }
   else {
     AutoPlay.savingsGoal = 0;
-    var statusMsg = 'Waiting for golden cookie upgrades before building reserve';
-    AutoPlay.addActivity(statusMsg + '.');
-    AutoPlay.logStatus('reserve:waiting-upgrades', statusMsg);
+    AutoPlay.logStatus('reserve:waiting-upgrades', 'Waiting for golden cookie upgrades');
     return;
   }
   if (Game.UpgradesById[86].bought)  // get lucky
@@ -394,15 +385,9 @@ AutoPlay.handleSavings = function() {
     // Calculate actual savings progress (cookies saved vs goal)
     var actualProgress = Math.min(100, (Game.cookies / AutoPlay.savingsGoal) * 100);
     var progressPct = actualProgress.toFixed(0);
-    var statusMsg = 'Building reserve: ' + Beautify(AutoPlay.savingsGoal) + ' (' + actualProgress.toFixed(1) + '% saved)';
-    AutoPlay.addActivity('Building golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
-      ' cookies (' + actualProgress.toFixed(1) + '% saved)');
     AutoPlay.logStatus('reserve:building-' + Math.floor(progressPct/10)*10, 'Reserve growing: ' + progressPct + '% saved');
   }
   else {
-    var statusMsg = 'Maintaining reserve: ' + Beautify(AutoPlay.savingsGoal);
-    AutoPlay.addActivity('Maintaining golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
-      ' cookies');
     AutoPlay.logStatus('reserve:maintaining', 'Reserve at max');
   }
   if (AutoPlay.savingsGoal > Game.Objects["Cursor"].getPrice()) { // saving is too expensive
