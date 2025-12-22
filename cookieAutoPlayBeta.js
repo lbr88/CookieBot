@@ -365,13 +365,13 @@ AutoPlay.handleSavings = function() {
     var statusMsg = 'Building reserve: ' + Beautify(AutoPlay.savingsGoal) + ' (' + (scaling * 100).toFixed(1) + '% of max)';
     AutoPlay.addActivity('Building golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
       ' cookies (' + (scaling * 100).toFixed(1) + '% of max)');
-    AutoPlay.logStatus('reserve:building-' + Math.floor(scalingPct/10)*10, 'Building reserve: ' + scalingPct + '% of max');
+    AutoPlay.logStatus('reserve:building-' + Math.floor(scalingPct/10)*10, 'Reserve growing: ' + scalingPct + '% of max');
   }
   else {
     var statusMsg = 'Maintaining reserve: ' + Beautify(AutoPlay.savingsGoal);
     AutoPlay.addActivity('Maintaining golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
       ' cookies');
-    AutoPlay.logStatus('reserve:maintaining', 'Maintaining reserve at max');
+    AutoPlay.logStatus('reserve:maintaining', 'Reserve at max');
   }
   if (AutoPlay.savingsGoal > Game.Objects["Cursor"].getPrice()) { // saving is too expensive
     AutoPlay.savingsStart += delayTime; // delay saving
