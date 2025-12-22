@@ -158,15 +158,14 @@ AutoPlay.run = function() {
 
   // run periodically (every 15 seconds)
 
-  // DEBUG: Check which handle function closes menu
-  if (AutoPlay.Config.CheatLumps!=4) { AutoPlay.handleSugarLumps(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleSugarLumps'); }
-  AutoPlay.handleSavings(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleSavings');
-  AutoPlay.handleSeasons(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleSeasons');
-  AutoPlay.handleDragon(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleDragon');
-  AutoPlay.handleWrinklers(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleWrinklers');
-  AutoPlay.handleAscend(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleAscend');
-  AutoPlay.handleMinigames(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleMinigames');
-  AutoPlay.handleNotes(); if (wasOpen && !Game.onMenu) console.log('CookieBot: MENU CLOSED BY handleNotes');
+  if (AutoPlay.Config.CheatLumps!=4) AutoPlay.handleSugarLumps();
+  AutoPlay.handleSavings();
+  AutoPlay.handleSeasons();
+  AutoPlay.handleDragon();
+  AutoPlay.handleWrinklers();
+  AutoPlay.handleAscend();
+  AutoPlay.handleMinigames();
+  AutoPlay.handleNotes();
   // add some more hints what the bot is doing (but only if not working on special achievements)
   if (!AutoPlay.workingOnSpecialAchievement) {
     if (!Game.HasAchiev('Elder')) AutoPlay.addActivity("Getting 7 grandma types");
@@ -728,15 +727,23 @@ AutoPlay.handleBuildings = function() {
 
 //===================== Handle Seasons ==========================
 AutoPlay.handleSeasons = function() {
+  var menuBefore = Game.onMenu;
+  if (menuBefore) console.log('handleSeasons START, menu:', menuBefore);
+
   if (Game.Upgrades["A festive hat"].bought &&
       !Game.Upgrades["Santa's dominion"].unlocked) { // develop santa
+    if (menuBefore) console.log('Before santa upgrade');
     Game.specialTab = "santa";
     Game.UpgradeSanta();
     Game.ToggleSpecialMenu(0);
+    if (menuBefore) console.log('After santa upgrade, menu:', Game.onMenu || 'CLOSED');
   }
   if (Game.season == "christmas" && !Game.Achievements["Baby it\'s old outside"].won) {
+    if (menuBefore) console.log('Before christmas check');
     if (Game.onMenu) Game.ShowMenu('');
+    if (menuBefore) console.log('After ShowMenu, menu:', Game.onMenu || 'CLOSED');
     Game.Objects['Grandma'].canvas.parentElement.scrollIntoView()
+    if (menuBefore) console.log('After scrollIntoView, menu:', Game.onMenu || 'CLOSED');
     elfGrandmas = Game.Objects["Grandma"].pics.filter(function(p) { return p.pic=="elfGrandma.png"; });
     if (elfGrandmas.length) {
       elfGranny = elfGrandmas[0];
