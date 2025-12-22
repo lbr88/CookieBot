@@ -2302,17 +2302,17 @@ AutoPlay.positionDashboard = function() {
     }
   }
 
-  // Preserve current visibility state
-  var currentDisplay = dashboard.style.display;
+  // Apply positioning without wiping other styles
+  dashboard.style.position = 'absolute';
+  dashboard.style.bottom = bottomOffset + 'px';
+  dashboard.style.left = '0';
+  dashboard.style.right = '0';
+  dashboard.style.background = 'rgba(0, 0, 0, 0.9)';
+  dashboard.style.borderTop = '2px solid #6f6';
+  dashboard.style.zIndex = '10000';
 
-  // Apply positioning
-  dashboard.style.cssText = 'position: absolute; bottom: ' + bottomOffset + 'px; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6;';
-
-  // Restore visibility state
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
-  } else if (currentDisplay) {
-    dashboard.style.display = currentDisplay;
   }
 
   // Force reflow to get accurate height
