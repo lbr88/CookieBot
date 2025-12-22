@@ -707,9 +707,6 @@ AutoPlay.handleBuildings = function() {
 
 //===================== Handle Seasons ==========================
 AutoPlay.handleSeasons = function() {
-  // Don't interrupt if user has a menu open
-  if (Game.onMenu && Game.onMenu !== '') return;
-
   if (Game.Upgrades["A festive hat"].bought &&
       !Game.Upgrades["Santa's dominion"].unlocked) { // develop santa
     Game.specialTab = "santa";
@@ -1996,7 +1993,7 @@ AutoPlay.doAscend = function(str,log) {
   }
   if (Game.Upgrades["Chocolate egg"].unlocked &&
       !Game.Upgrades["Chocolate egg"].bought) {
-    if (Game.dragonLevel>=9 && (!Game.onMenu || Game.onMenu === '')) { // setting first aura to earth shatterer
+    if (Game.dragonLevel>=9) { // setting first aura to earth shatterer
       Game.specialTab="dragon"; Game.SetDragonAura(5,0);
       Game.ConfirmPrompt(); Game.ToggleSpecialMenu(0);
     }
@@ -2171,9 +2168,6 @@ AutoPlay.assignPermanentSlot = function(slot,options) {
 
 //===================== Handle Dragon ==========================
 AutoPlay.handleDragon = function() {
-  // Don't interrupt if user has a menu open
-  if (Game.onMenu && Game.onMenu !== '') return;
-
   var wantedAura=0;
   if (Game.Upgrades["A crumbly egg"].unlocked) {
     if (Game.dragonLevel<Game.dragonLevels.length-1 &&
@@ -2246,9 +2240,6 @@ AutoPlay.checkDragon = function(building) {
 }
 
 AutoPlay.petDragon = function() {
-  // Don't interrupt if user has a menu open
-  if (Game.onMenu && Game.onMenu !== '') return;
-
   if (Game.dragonLevel>=8) { // can pet the dragon
     var drops=['Dragon scale','Dragon claw','Dragon fang','Dragon teddy bear'];
     for (var drop of drops) {
