@@ -2522,29 +2522,60 @@ AutoPlay.updateDashboard = function() {
 
     // Savings progress bar (golden cookie reserve)
     if (AutoPlay.savingsGoal > 0 && typeof Beautify !== 'undefined') {
-      var percent = Math.min(100, (Game.cookies / AutoPlay.savingsGoal) * 100);
-      var savingsColor = Game.cookies >= AutoPlay.savingsGoal ? '#6f6' : '#fc6';
       progressHtml += '<div style="margin-bottom: 8px;">';
-      progressHtml += '<div style="color: ' + savingsColor + '; font-size: 10px;" title="The bot keeps a reserve of cookies to maximize Lucky and Lucky Frenzy golden cookie bonuses. This amount is unavailable for purchases.">🍪 Golden Cookie Reserve: ' + Beautify(AutoPlay.savingsGoal) + '</div>';
+      progressHtml += '<div style="color: #fc6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="The bot keeps a reserve of cookies to maximize Lucky and Lucky Frenzy golden cookie bonuses. This amount is unavailable for purchases.">🍪 Golden Cookie Reserve</div>';
 
-      // Calculate ramp-up progress
+      // Calculate base thresholds (without time scaling)
+      var baseLucky = Game.unbuffedCps * 60 * 100; // 6000 seconds of CPS
+      var baseLuckyFrenzy = baseLucky * 7; // 42000 seconds of CPS
+      var hasGetLucky = Game.UpgradesById[86] && Game.UpgradesById[86].bought;
+
+      // Calculate actual target with time scaling
+      var scaling = 1;
       if (AutoPlay.savingsStart !== undefined && AutoPlay.now && Game.startDate) {
         const startTime = 30 * 60 * 1000;
         const targetTime = 400 * 60 * 1000;
         var elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
-        var rampProgress = Math.min(100, Math.max(0, (elapsedTime / targetTime) * 100));
+        scaling = Math.min(elapsedTime / targetTime, 1);
 
-        if (rampProgress < 100) {
-          progressHtml += '<div style="font-size: 9px; color: #888; margin-top: 2px;" title="The reserve target gradually increases over 400 minutes after a 30-minute startup period. This prevents the bot from over-saving early in the run.">Reserve growing: ' + rampProgress.toFixed(1) + '% of target (full at ' + (targetTime/60000).toFixed(0) + ' min)</div>';
+        if (scaling < 1) {
+          progressHtml += '<div style="font-size: 9px; color: #888; margin-bottom: 4px;" title="The reserve target gradually increases over 400 minutes after a 30-minute startup period. This prevents the bot from over-saving early in the run.">⏱ Target ramping up: ' + (scaling * 100).toFixed(1) + '% (full at ' + (targetTime/60000).toFixed(0) + ' min)</div>';
         }
       }
 
-      if (Game.cookies < AutoPlay.savingsGoal) {
-        progressHtml += '<div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;" title="Progress toward the reserve goal. This shows how many cookies you have saved compared to the target reserve amount."><div style="background: linear-gradient(to right, #fc6, #f96); height: 100%; width: ' + percent + '%;"></div></div>';
-        progressHtml += '<div style="font-size: 10px; color: #aaa; margin-top: 2px;">' + Beautify(Game.cookies) + ' / ' + Beautify(AutoPlay.savingsGoal) + ' (' + percent.toFixed(1) + '%)</div>';
-      } else {
-        progressHtml += '<div style="font-size: 10px; color: #6f6; margin-top: 2px;">✓ Goal reached! Bot will keep this much in reserve.</div>';
+      var targetLucky = baseLucky * scaling;
+      var targetLuckyFrenzy = baseLuckyFrenzy * scaling;
+
+      // Lucky progress
+      var luckyPercent = Math.min(100, (Game.cookies / targetLucky) * 100);
+      var luckyColor = Game.cookies >= targetLucky ? '#6f6' : '#fc6';
+      progressHtml += '<div style="margin-bottom: 6px;">';
+      progressHtml += '<div style="font-size: 10px; color: ' + luckyColor + ';" title="Reserve for Lucky golden cookie bonus (7x your cookies). Requires ' + Beautify(targetLucky) + ' cookies.">';
+      progressHtml += (Game.cookies >= targetLucky ? '✓ ' : '○ ') + 'Lucky: ' + Beautify(targetLucky);
+      progressHtml += '</div>';
+      if (Game.cookies < targetLucky) {
+        progressHtml += '<div style="background: #333; height: 8px; border: 1px solid #666; margin-top: 2px;"><div style="background: linear-gradient(to right, #fc6, #f90); height: 100%; width: ' + luckyPercent + '%;"></div></div>';
+        progressHtml += '<div style="font-size: 9px; color: #888; margin-top: 1px;">' + Beautify(Game.cookies) + ' / ' + Beautify(targetLucky) + ' (' + luckyPercent.toFixed(1) + '%)</div>';
       }
+      progressHtml += '</div>';
+
+      // Lucky Frenzy progress (only if Get Lucky upgrade is bought)
+      if (hasGetLucky) {
+        var luckyFrenzyPercent = Math.min(100, (Game.cookies / targetLuckyFrenzy) * 100);
+        var luckyFrenzyColor = Game.cookies >= targetLuckyFrenzy ? '#6f6' : '#fc6';
+        progressHtml += '<div style="margin-bottom: 6px;">';
+        progressHtml += '<div style="font-size: 10px; color: ' + luckyFrenzyColor + ';" title="Reserve for Lucky Frenzy golden cookie bonus (777x your cookies). Requires Get Lucky upgrade and ' + Beautify(targetLuckyFrenzy) + ' cookies.">';
+        progressHtml += (Game.cookies >= targetLuckyFrenzy ? '✓ ' : '○ ') + 'Lucky Frenzy: ' + Beautify(targetLuckyFrenzy);
+        progressHtml += '</div>';
+        if (Game.cookies < targetLuckyFrenzy) {
+          progressHtml += '<div style="background: #333; height: 8px; border: 1px solid #666; margin-top: 2px;"><div style="background: linear-gradient(to right, #f96, #f66); height: 100%; width: ' + luckyFrenzyPercent + '%;"></div></div>';
+          progressHtml += '<div style="font-size: 9px; color: #888; margin-top: 1px;">' + Beautify(Game.cookies) + ' / ' + Beautify(targetLuckyFrenzy) + ' (' + luckyFrenzyPercent.toFixed(1) + '%)</div>';
+        }
+        progressHtml += '</div>';
+      } else {
+        progressHtml += '<div style="font-size: 9px; color: #666; font-style: italic; margin-bottom: 6px;" title="Purchase the Get Lucky upgrade to unlock Lucky Frenzy bonuses (777x cookies).">○ Lucky Frenzy: Locked (need Get Lucky upgrade)</div>';
+      }
+
       progressHtml += '</div>';
     }
 
