@@ -2311,14 +2311,7 @@ AutoPlay.positionDashboard = function() {
   dashboard.style.borderTop = '2px solid #6f6';
   dashboard.style.zIndex = '10000';
 
-  if (AutoPlay.Config.ShowDashboard == 0) {
-    dashboard.style.display = 'none';
-  }
-
-  // Force reflow to get accurate height
-  void dashboard.offsetHeight;
-
-  // Get dashboard height - will be correct based on collapsed/expanded state
+  // Get dashboard height BEFORE hiding (must be visible to get accurate height)
   var dashboardHeight = dashboard.offsetHeight;
 
   // Update #game div's bottom to account for all bottom bars including ours
@@ -2326,6 +2319,11 @@ AutoPlay.positionDashboard = function() {
   if (game) {
     var totalBottomHeight = bottomOffset + dashboardHeight;
     game.style.bottom = totalBottomHeight + 'px';
+  }
+
+  // Hide dashboard AFTER we've calculated and applied the game offset
+  if (AutoPlay.Config.ShowDashboard == 0) {
+    dashboard.style.display = 'none';
   }
 }
 
