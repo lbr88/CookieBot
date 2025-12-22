@@ -2329,6 +2329,7 @@ AutoPlay.Disp.AddMenuPref = function() {
   frag.appendChild(listing('ClickMode',null));
   frag.appendChild(listing('GoldenClickMode',null));
   frag.appendChild(listing('SavingStrategy',null));
+  frag.appendChild(listing('HardcoreMode',null));
   frag.appendChild(header('Cheating'));
   frag.appendChild(listing('CheatLumps',null));
   frag.appendChild(listing('CheatGolden',null));
