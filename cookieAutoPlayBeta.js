@@ -2648,6 +2648,11 @@ AutoPlay.launch = function() {
       "cookie clicker version " + AutoPlay.gameVersion);
   AutoPlay.createDashboard();
   AutoPlay.updateDashboard();
+
+  // Update dashboard every second for real-time stats
+  setInterval(function() {
+    AutoPlay.updateDashboard();
+  }, 1000);
 }
 
 AutoPlay.launch();
