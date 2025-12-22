@@ -2241,38 +2241,19 @@ AutoPlay.createDashboard = function() {
 
   dashboard.appendChild(header);
   dashboard.appendChild(content);
-  document.body.appendChild(dashboard);
+
+  // Append to wrapper element (like Cookie Monster does)
+  var wrapper = document.getElementById('wrapper');
+  if (wrapper) {
+    wrapper.appendChild(dashboard);
+  } else {
+    document.body.appendChild(dashboard);
+  }
 
   // Apply config setting for visibility
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
   }
-
-  // Adjust game layout to push game up (like Cookie Monster does)
-  setTimeout(function() {
-    AutoPlay.adjustGameLayout();
-  }, 100);
-}
-
-AutoPlay.adjustGameLayout = function() {
-  var game = document.getElementById('game');
-  var dashboard = document.getElementById('cookieBotDashboard');
-  if (!game || !dashboard) return;
-
-  // Store original bottom position on first call (set by Cookie Monster or default)
-  if (typeof AutoPlay.gameOriginalBottom === 'undefined') {
-    AutoPlay.gameOriginalBottom = parseInt(getComputedStyle(game).bottom) || 0;
-  }
-
-  // Calculate our dashboard height
-  var dashboardHeight = 0;
-  if (dashboard.style.display !== 'none' && AutoPlay.Config.ShowDashboard !== 0) {
-    dashboardHeight = dashboard.offsetHeight;
-  }
-
-  // Set game bottom to original position + our dashboard height
-  var newBottom = AutoPlay.gameOriginalBottom + dashboardHeight;
-  game.style.bottom = newBottom + 'px';
 }
 
 AutoPlay.toggleDashboard = function() {
@@ -2288,11 +2269,6 @@ AutoPlay.toggleDashboard = function() {
     content.style.display = 'flex';
     toggle.textContent = '▼ Collapse';
   }
-
-  // Adjust game layout to match new dashboard height (delay for DOM update)
-  setTimeout(function() {
-    AutoPlay.adjustGameLayout();
-  }, 50);
 }
 
 AutoPlay.toggleDashboardConfig = function() {
@@ -2301,10 +2277,6 @@ AutoPlay.toggleDashboardConfig = function() {
   if (dashboard) {
     dashboard.style.display = AutoPlay.Config.ShowDashboard ? 'block' : 'none';
   }
-  // Adjust game layout when toggling visibility (delay for DOM update)
-  setTimeout(function() {
-    AutoPlay.adjustGameLayout();
-  }, 50);
 }
 
 AutoPlay.updateDashboard = function() {
