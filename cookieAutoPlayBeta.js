@@ -1948,7 +1948,14 @@ AutoPlay.doAscend = function(str,log) {
     AutoPlay.delay = 10;
   } else {
     AutoPlay.info(str); AutoPlay.loggingInfo=log?str:0;
-    AutoPlay.logAction('Ascending', str);
+    // Log prestige gain
+    var prestigeGain = Game.ascendMeterLevel;
+    var newPrestige = Game.prestige + prestigeGain;
+    if (typeof Beautify !== 'undefined' && prestigeGain > 0) {
+      AutoPlay.logAction('Ascending', str + ' | Prestige: ' + Beautify(Game.prestige) + ' → ' + Beautify(newPrestige) + ' (+' + Beautify(prestigeGain) + ')');
+    } else {
+      AutoPlay.logAction('Ascending', str);
+    }
     AutoPlay.logging(); AutoPlay.delay=15; Game.Ascend(true);
     AutoPlay.onAscend=true;
   }
@@ -2061,18 +2068,26 @@ AutoPlay.leaveGame = function() {
 
 //===================== Handle Heavenly Upgrades ==========================
 AutoPlay.buyHeavenlyUpgrades = function() {
+  var upgradesPurchased = [];
   AutoPlay.prioUpgrades.forEach(function(id) {
     var e = Game.UpgradesById[id];
     if (e.canBePurchased && !e.bought && e.buy(true)) {
       AutoPlay.info("buying "+e.name);
+      upgradesPurchased.push(e.name);
     }
   });
   for (var me in Game.UpgradesById) {
       var e = Game.UpgradesById[me];
       if (e.canBePurchased && !e.bought && e.buy(true)) {
           AutoPlay.info("buying " + e.name);
+          upgradesPurchased.push(e.name);
       }
   };
+
+  // Log all purchased heavenly upgrades
+  if (upgradesPurchased.length > 0) {
+    AutoPlay.logAction('Purchased heavenly upgrades', upgradesPurchased.join(', '));
+  }
   AutoPlay.assignPermanentSlot(1,AutoPlay.kittens);
   AutoPlay.assignPermanentSlot(2,AutoPlay.maxBuildings);
   if (!Game.Achievements["Reincarnation"].won) { // for many ascends
