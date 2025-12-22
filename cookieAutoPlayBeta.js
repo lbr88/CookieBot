@@ -90,12 +90,8 @@ AutoPlay.run = function() {
     AutoPlay.handleAscend(); // check ascend often for lucky payout
   }
   if (AutoPlay.now<AutoPlay.deadline) return;  // end of speed activity
-
-  // Skip all periodic actions if user has a menu open
-  if (Game.onMenu && Game.onMenu !== '') return;
-
   // run periodically from here (every 15 seconds)
-  if (Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName) {
+  if (Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName && (!Game.onMenu || Game.onMenu === '')) {
     Game.bakeryNameL.textContent = AutoPlay.robotName+Game.bakeryNameL.textContent;
   } // write the robot name in front of the bakery name
   AutoPlay.activities = AutoPlay.mainActivity;
