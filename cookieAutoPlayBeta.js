@@ -106,9 +106,29 @@ AutoPlay.run = function() {
     var needsForPurchase = AutoPlay.nextPurchasePrice - availableCookies;
 
     if (needsForPurchase > 0) {
-      // Calculate seconds until affordable
+      // Calculate seconds until affordable (with small buffer to catch it early)
       var timeToAfford = (needsForPurchase / Game.cookiesPs) * 1000; // Convert to milliseconds
-      dynamicDeadline = Math.min(timeToAfford, 15000); // Cap at 15 seconds
+      var bufferTime = 500; // Check 0.5s before affordable to ensure we don't miss it
+      timeToAfford = Math.max(timeToAfford - bufferTime, 100);
+
+      // Smart deadline calculation to avoid overshooting
+      if (timeToAfford <= 15000) {
+        // Can check exactly when it's affordable
+        dynamicDeadline = timeToAfford;
+      } else {
+        // For longer waits, check at intervals that lead up to affordable time
+        // Calculate remainder after 15-second intervals
+        var remainder = timeToAfford % 15000;
+        if (remainder > 1000) {
+          // Check at the remainder time to align with affordable moment
+          // Example: 35s total -> check at 5s, then 15s, then 15s -> reaches 35s exactly
+          dynamicDeadline = remainder;
+        } else {
+          // Remainder is small, just use standard 15s interval
+          dynamicDeadline = 15000;
+        }
+      }
+
       dynamicDeadline = Math.max(dynamicDeadline, 100); // Minimum 100ms to prevent thrashing
     } else {
       // Already affordable - check immediately
