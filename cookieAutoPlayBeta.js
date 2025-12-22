@@ -1983,7 +1983,7 @@ AutoPlay.setMainActivity = function(str) {
   AutoPlay.info(str);
   // Only log as status, not action (goal changes are status updates, not actions)
   // This prevents duplicate entries in the combined activity feed
-  AutoPlay.logStatus('goal', str);
+  AutoPlay.logStatus('goal', 'Target: ' + str);
 }
 
 AutoPlay.findNextAchievement = function() {
