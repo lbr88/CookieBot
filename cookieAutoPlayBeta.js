@@ -2250,12 +2250,19 @@ AutoPlay.createDashboard = function() {
   }
 
   // Calculate bottom offset based on other bottom bars
-  AutoPlay.positionDashboard();
+  // Defer initial positioning to ensure DOM is fully settled
+  setTimeout(function() {
+    AutoPlay.positionDashboard();
+  }, 100);
 
   // Watch for new elements being added to wrapper (like Cookie Monster loading later)
   if (wrapper && typeof MutationObserver !== 'undefined') {
     AutoPlay.dashboardObserver = new MutationObserver(function(mutations) {
-      AutoPlay.positionDashboard();
+      // Debounce to avoid multiple rapid calls
+      clearTimeout(AutoPlay.positionTimeout);
+      AutoPlay.positionTimeout = setTimeout(function() {
+        AutoPlay.positionDashboard();
+      }, 50);
     });
     AutoPlay.dashboardObserver.observe(wrapper, { childList: true });
   }
