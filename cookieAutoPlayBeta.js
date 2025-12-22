@@ -2528,7 +2528,6 @@ AutoPlay.positionDashboard = function() {
   if (game) {
     var totalBottomHeight = bottomOffset + dashboardHeight;
     game.style.bottom = totalBottomHeight + 'px';
-    console.log('CookieBot: Setting game bottom to ' + totalBottomHeight + 'px (bottomOffset: ' + bottomOffset + ', dashboardHeight: ' + dashboardHeight + ')');
   }
 
   // Hide dashboard if config says to
@@ -3058,7 +3057,6 @@ AutoPlay.updateDashboard = function() {
 //===================== Auxiliary ==========================
 
 AutoPlay.info = function(s) {
-  console.log("### "+s);
   Game.Notify("CookieBot",s,1,100);
   AutoPlay.debugLogging("### "+s)
 }
