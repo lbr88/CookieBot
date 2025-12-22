@@ -2252,6 +2252,14 @@ AutoPlay.createDashboard = function() {
   // Calculate bottom offset based on other bottom bars
   AutoPlay.positionDashboard();
 
+  // Watch for new elements being added to wrapper (like Cookie Monster loading later)
+  if (wrapper && typeof MutationObserver !== 'undefined') {
+    AutoPlay.dashboardObserver = new MutationObserver(function(mutations) {
+      AutoPlay.positionDashboard();
+    });
+    AutoPlay.dashboardObserver.observe(wrapper, { childList: true });
+  }
+
   // Apply config setting for visibility
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
@@ -2278,6 +2286,17 @@ AutoPlay.positionDashboard = function() {
         var height = child.offsetHeight;
         if (height > 0) {
           bottomOffset += height;
+
+          // Watch this element for size changes
+          if (typeof ResizeObserver !== 'undefined' && !child.hasAttribute('data-cookiebot-watched')) {
+            child.setAttribute('data-cookiebot-watched', 'true');
+            if (!AutoPlay.resizeObserver) {
+              AutoPlay.resizeObserver = new ResizeObserver(function() {
+                AutoPlay.positionDashboard();
+              });
+            }
+            AutoPlay.resizeObserver.observe(child);
+          }
         }
       }
     }
