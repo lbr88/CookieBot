@@ -725,8 +725,8 @@ AutoPlay.handleSeasons = function() {
     Game.UpgradeSanta();
     Game.ToggleSpecialMenu(0);
   }
-  // Skip Christmas elf achievement check if user has menu open - it calls ShowMenu('') which closes the menu
-  if (Game.season == "christmas" && !Game.Achievements["Baby it\'s old outside"].won && !Game.onMenu) {
+  // Skip Christmas elf achievement check if no grandmas bought yet (elf can't appear without grandmas)
+  if (Game.season == "christmas" && !Game.Achievements["Baby it\'s old outside"].won && Game.Objects["Grandma"].amount > 0) {
     if (Game.onMenu) Game.ShowMenu('');
     Game.Objects['Grandma'].canvas.parentElement.scrollIntoView()
     elfGrandmas = Game.Objects["Grandma"].pics.filter(function(p) { return p.pic=="elfGrandma.png"; });
