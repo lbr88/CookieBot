@@ -401,7 +401,7 @@ AutoPlay.handleSavings = function() {
   const delayTime = 5 * 60 * 1000;  // wait before starting to save
   const targetTime = 400 * 60 * 1000;  // after start, time to target amount
   let elapsedTime = AutoPlay.now-AutoPlay.savingsStart - startTime;
-  let scaling = Math.min(elapsedTime / targetTime, 1);  //fraction of time to target
+  let scaling = Math.max(0, Math.min(elapsedTime / targetTime, 1));  //fraction of time to target
   if (elapsedTime < 0) {
     AutoPlay.savingsGoal = 0;
     AutoPlay.logStatus('reserve:startup', 'No reserve yet (startup period)');
@@ -432,7 +432,7 @@ AutoPlay.handleSavings = function() {
   // if fallen behind savings plan, reset to current fraction
   // this happens if you stop the bot for a while or buy something with
   // a big payback
-  if (fractionSaved < 0.8) {
+  if (fractionSaved < 0.8 && scaling > 0) {
     AutoPlay.savingsStart = AutoPlay.now - startTime -
       targetTime * fractionSaved / scaling;  // fraction towards goal
   }
@@ -2732,7 +2732,7 @@ AutoPlay.updateDashboard = function() {
         const startTime = 30 * 60 * 1000;
         const targetTime = 400 * 60 * 1000;
         var elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
-        scaling = Math.min(elapsedTime / targetTime, 1);
+        scaling = Math.max(0, Math.min(elapsedTime / targetTime, 1));
 
         if (scaling < 1) {
           progressHtml += '<div style="font-size: 9px; color: #888; margin-bottom: 4px;" title="The reserve target gradually increases over 400 minutes after a 30-minute startup period. This prevents the bot from over-saving early in the run.">⏱ Target ramping up: ' + (scaling * 100).toFixed(1) + '% (full at ' + (targetTime/60000).toFixed(0) + ' min)</div>';
