@@ -2311,7 +2311,16 @@ AutoPlay.positionDashboard = function() {
   dashboard.style.borderTop = '2px solid #6f6';
   dashboard.style.zIndex = '10000';
 
-  // Get dashboard height BEFORE hiding (must be visible to get accurate height)
+  // Temporarily ensure dashboard is visible to measure height accurately
+  var wasHidden = dashboard.style.display === 'none';
+  if (wasHidden) {
+    dashboard.style.display = 'block';
+  }
+
+  // Force reflow to ensure accurate measurement
+  void dashboard.offsetHeight;
+
+  // Get dashboard height (includes header + content if expanded, or just header if collapsed)
   var dashboardHeight = dashboard.offsetHeight;
 
   // Update #game div's bottom to account for all bottom bars including ours
@@ -2319,9 +2328,10 @@ AutoPlay.positionDashboard = function() {
   if (game) {
     var totalBottomHeight = bottomOffset + dashboardHeight;
     game.style.bottom = totalBottomHeight + 'px';
+    console.log('CookieBot: Setting game bottom to ' + totalBottomHeight + 'px (bottomOffset: ' + bottomOffset + ', dashboardHeight: ' + dashboardHeight + ')');
   }
 
-  // Hide dashboard AFTER we've calculated and applied the game offset
+  // Hide dashboard if config says to
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
   }
