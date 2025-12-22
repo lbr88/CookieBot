@@ -2689,10 +2689,14 @@ AutoPlay.updateDashboard = function() {
       // List of all "bake X cookies" achievement IDs
       var bakingAchievements = [225, 227, 229, 279, 280, 372, 373, 374, 375, 390, 391, 429, 451, 452, 453, 470, 471, 472, 534, 535, 536, 578, 579, 586, 587, 592, 593];
 
-      // Check for special achievements: Hardcore, Neverclick, True Neverclick
-      var isHardcore = (achiev && achiev.name === "Hardcore");
-      var isNeverclick = (achiev && achiev.name === "Neverclick");
-      var isTrueNeverclick = (achiev && achiev.name === "True Neverclick");
+      // Check for special achievements by ID (more reliable than name)
+      var hardcoreId = Game.Achievements["Hardcore"] ? Game.Achievements["Hardcore"].id : -1;
+      var neverclickId = Game.Achievements["Neverclick"] ? Game.Achievements["Neverclick"].id : -1;
+      var trueNeverclickId = Game.Achievements["True Neverclick"] ? Game.Achievements["True Neverclick"].id : -1;
+
+      var isHardcore = (achiev && achiev.id === hardcoreId);
+      var isNeverclick = (achiev && achiev.id === neverclickId);
+      var isTrueNeverclick = (achiev && achiev.id === trueNeverclickId);
       var isSpecialAchievement = isHardcore || isNeverclick || isTrueNeverclick;
 
       if (achiev && (bakingAchievements.indexOf(achiev.id) !== -1 || isSpecialAchievement)) {
