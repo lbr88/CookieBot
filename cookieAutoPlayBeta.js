@@ -2275,57 +2275,65 @@ AutoPlay.toggleDashboardConfig = function() {
 AutoPlay.updateDashboard = function() {
   if (!document.getElementById('cookieBotDashboard')) return;
 
-  // Update Next Actions
-  var nextHtml = AutoPlay.mainActivity;
-  if (AutoPlay.activities && AutoPlay.activities !== AutoPlay.mainActivity) {
-    nextHtml += '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">';
-    nextHtml += AutoPlay.activities.replace(AutoPlay.mainActivity, '').replace(/<div class="line"><\/div>/g, '<br>');
-    nextHtml += '</div>';
-  }
-  document.getElementById('dashNextContent').innerHTML = nextHtml || 'Idle...';
-
-  // Update Progress
-  var progressHtml = '';
-
-  // Current achievement progress
-  if (AutoPlay.nextAchievement) {
-    var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
-    if (achiev) {
-      progressHtml += '<div style="margin-bottom: 8px;"><div style="color: #fc6;">Target: ' + achiev.name + '</div><div style="font-size: 10px; color: #aaa;">' + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '') + '</div></div>';
+  try {
+    // Update Next Actions
+    var nextHtml = AutoPlay.mainActivity || 'Initializing...';
+    if (AutoPlay.activities && AutoPlay.activities !== AutoPlay.mainActivity) {
+      nextHtml += '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">';
+      nextHtml += AutoPlay.activities.replace(AutoPlay.mainActivity, '').replace(/<div class="line"><\/div>/g, '<br>');
+      nextHtml += '</div>';
     }
+    document.getElementById('dashNextContent').innerHTML = nextHtml;
+
+    // Update Progress
+    var progressHtml = '';
+
+    // Current achievement progress
+    if (AutoPlay.nextAchievement && Game.AchievementsById) {
+      var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
+      if (achiev) {
+        progressHtml += '<div style="margin-bottom: 8px;"><div style="color: #fc6;">Target: ' + achiev.name + '</div><div style="font-size: 10px; color: #aaa;">' + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '') + '</div></div>';
+      }
+    }
+
+    // Savings progress bar
+    if (AutoPlay.savingsGoal > 0 && Game.cookies < AutoPlay.savingsGoal && typeof Beautify !== 'undefined') {
+      var percent = Math.min(100, (Game.cookies / AutoPlay.savingsGoal) * 100);
+      progressHtml += '<div style="margin-bottom: 8px;"><div style="color: #ccc; font-size: 10px;">Saving: ' + Beautify(Game.cookies) + ' / ' + Beautify(AutoPlay.savingsGoal) + '</div><div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;"><div style="background: linear-gradient(to right, #6f6, #4d4); height: 100%; width: ' + percent + '%;"></div></div><div style="font-size: 10px; color: #aaa; margin-top: 2px;">' + percent.toFixed(1) + '%</div></div>';
+    }
+
+    // Time in run
+    if (AutoPlay.now && Game.startDate && typeof Game.sayTime !== 'undefined') {
+      var timeInRun = AutoPlay.now - Game.startDate;
+      progressHtml += '<div style="font-size: 10px; color: #aaa;">Time in run: ' + Game.sayTime(timeInRun/1000*Game.fps, -1) + '</div>';
+    }
+
+    // CPS
+    if (typeof Beautify !== 'undefined' && Game.cookiesPs !== undefined) {
+      progressHtml += '<div style="font-size: 10px; color: #aaa;">CPS: ' + Beautify(Game.cookiesPs) + ' (' + (AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0') + 'x multiplier)</div>';
+    }
+
+    document.getElementById('dashProgressContent').innerHTML = progressHtml || 'No active goals';
+
+    // Update History
+    var historyHtml = '';
+    if (AutoPlay.actionHistory && AutoPlay.actionHistory.length > 0) {
+      AutoPlay.actionHistory.forEach(function(entry) {
+        var timeStr = entry.time.toLocaleTimeString();
+        var color = '#ccc';
+        if (entry.action.includes('Bought') || entry.action.includes('Upgraded')) color = '#6f6';
+        if (entry.action.includes('Clicked')) color = '#fc6';
+        if (entry.action.includes('Ascend') || entry.action.includes('Achievement')) color = '#f66';
+
+        historyHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + entry.action + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
+      });
+    } else {
+      historyHtml = '<div style="color: #888;">No actions logged yet...</div>';
+    }
+    document.getElementById('dashHistoryContent').innerHTML = historyHtml;
+  } catch (e) {
+    console.log('Dashboard update error:', e);
   }
-
-  // Savings progress bar
-  if (AutoPlay.savingsGoal > 0 && Game.cookies < AutoPlay.savingsGoal) {
-    var percent = Math.min(100, (Game.cookies / AutoPlay.savingsGoal) * 100);
-    progressHtml += '<div style="margin-bottom: 8px;"><div style="color: #ccc; font-size: 10px;">Saving: ' + Beautify(Game.cookies) + ' / ' + Beautify(AutoPlay.savingsGoal) + '</div><div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;"><div style="background: linear-gradient(to right, #6f6, #4d4); height: 100%; width: ' + percent + '%;"></div></div><div style="font-size: 10px; color: #aaa; margin-top: 2px;">' + percent.toFixed(1) + '%</div></div>';
-  }
-
-  // Time in run
-  var timeInRun = AutoPlay.now - Game.startDate;
-  progressHtml += '<div style="font-size: 10px; color: #aaa;">Time in run: ' + Game.sayTime(timeInRun/1000*Game.fps, -1) + '</div>';
-
-  // CPS
-  progressHtml += '<div style="font-size: 10px; color: #aaa;">CPS: ' + Beautify(Game.cookiesPs) + ' (' + (AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0') + 'x multiplier)</div>';
-
-  document.getElementById('dashProgressContent').innerHTML = progressHtml || 'No active goals';
-
-  // Update History
-  var historyHtml = '';
-  if (AutoPlay.actionHistory && AutoPlay.actionHistory.length > 0) {
-    AutoPlay.actionHistory.forEach(function(entry) {
-      var timeStr = entry.time.toLocaleTimeString();
-      var color = '#ccc';
-      if (entry.action.includes('Bought') || entry.action.includes('Upgraded')) color = '#6f6';
-      if (entry.action.includes('Clicked')) color = '#fc6';
-      if (entry.action.includes('Ascend') || entry.action.includes('Achievement')) color = '#f66';
-
-      historyHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + entry.action + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
-    });
-  } else {
-    historyHtml = '<div style="color: #888;">No actions logged yet...</div>';
-  }
-  document.getElementById('dashHistoryContent').innerHTML = historyHtml;
 }
 
 //===================== Auxiliary ==========================
@@ -2447,19 +2455,23 @@ AutoPlay.addActivity = function(str) {
 }
 
 AutoPlay.logAction = function(action, details) {
-  var timestamp = new Date();
-  var entry = {
-    time: timestamp,
-    action: action,
-    details: details || ''
-  };
+  try {
+    var timestamp = new Date();
+    var entry = {
+      time: timestamp,
+      action: action,
+      details: details || ''
+    };
 
-  AutoPlay.actionHistory.unshift(entry); // Add to beginning
-  if (AutoPlay.actionHistory.length > AutoPlay.maxHistorySize) {
-    AutoPlay.actionHistory.pop(); // Remove oldest
+    AutoPlay.actionHistory.unshift(entry); // Add to beginning
+    if (AutoPlay.actionHistory.length > AutoPlay.maxHistorySize) {
+      AutoPlay.actionHistory.pop(); // Remove oldest
+    }
+
+    AutoPlay.updateDashboard(); // Refresh display
+  } catch (e) {
+    console.log('Log action error:', e);
   }
-
-  AutoPlay.updateDashboard(); // Refresh display
 }
 
 //===================== Init & Start ==========================
