@@ -655,7 +655,10 @@ AutoPlay.avoidbuy = function(up) { //normally we do not buy 227, 71, ...
 //===================== Handle Buildings ==========================
 AutoPlay.handleBuildings = function() {
   var buyAmount = 100, checkAmount = 1;
-  if (Game.buyMode==-1) Game.storeBulkButton(0);
+  // Only change buy mode if necessary and no menu is open (prevents closing menus)
+  if (Game.buyMode==-1 && (!Game.onMenu || Game.onMenu === '')) {
+    Game.storeBulkButton(0);
+  }
   if ((AutoPlay.now-Game.startDate) > 10*60*1000) {
     buyAmount = 1; // buy single after 10 minutes
     var maxBuilding = Game.ObjectsById[Game.ObjectsById.length-1];
