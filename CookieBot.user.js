@@ -28,9 +28,8 @@
         console.log('Cookie Clicker loaded, injecting CookieBot...');
 
         // Load CookieBot from GitHub
-        // Change this URL to point to your fork's raw file or your own hosted version
         var script = document.createElement('script');
-        script.src = 'https://raw.githubusercontent.com/prinzstani/CookieBot/development/cookieAutoPlayBeta.js';
+        script.src = 'https://raw.githubusercontent.com/lbr88/CookieBot/development/cookieAutoPlayBeta.js';
         script.onload = function() {
             console.log('CookieBot loaded successfully!');
             if (typeof AutoPlay !== 'undefined') {
