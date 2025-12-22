@@ -2429,7 +2429,7 @@ AutoPlay.createDashboard = function() {
   content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 250px; overflow-y: auto;';
 
   // Three columns: Stats & Reserve | Next Actions | Recent Activity
-  content.innerHTML = '<div id="dashProgress" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Stats & Reserve</div><div id="dashProgressContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div></div><div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div></div><div id="dashActivity" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Activity</div><div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No activity yet...</div></div>';
+  content.innerHTML = '<div id="dashProgress" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Stats & Reserve</div><div id="dashProgressContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div></div><div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 200px; overflow-y: auto;">Loading...</div></div><div id="dashActivity" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Activity</div><div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No activity yet...</div></div>';
 
   // Add toggle functionality
   header.onclick = AutoPlay.toggleDashboard;
@@ -2644,16 +2644,39 @@ AutoPlay.updateDashboard = function() {
       nextHtml += '<div style="color: #888; font-size: 11px; margin-bottom: 12px;">No purchase planned yet...</div>';
     }
 
-    // Show main activity/goal
+    // Show main activity/goal in styled box
     if (AutoPlay.mainActivity) {
-      nextHtml += '<div style="color: #ccc; font-size: 11px; margin-bottom: 6px;">' + AutoPlay.mainActivity + '</div>';
+      var goalColor = '#9cf';
+      var goalIcon = '🎯';
+
+      // Determine icon based on activity type
+      if (AutoPlay.mainActivity.toLowerCase().indexOf('achievement') !== -1) {
+        goalIcon = '🏆';
+        goalColor = '#fc6';
+      } else if (AutoPlay.mainActivity.toLowerCase().indexOf('ascend') !== -1) {
+        goalIcon = '⬆️';
+        goalColor = '#f9f';
+      }
+
+      nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,200,200,0.08); border: 2px solid ' + goalColor + '; border-radius: 4px; min-height: 40px;" title="Current bot objective">';
+      nextHtml += '<div style="color: ' + goalColor + '; font-weight: bold; font-size: 11px; margin-bottom: 4px;">';
+      nextHtml += goalIcon + ' Current Goal';
+      nextHtml += '</div>';
+      nextHtml += '<div style="color: #ccc; font-size: 10px; line-height: 1.4;">' + AutoPlay.mainActivity + '</div>';
+      nextHtml += '</div>';
     }
 
-    // Show additional activities
+    // Show additional activities in styled box if present
     if (AutoPlay.activities && AutoPlay.activities !== AutoPlay.mainActivity) {
-      nextHtml += '<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #444; font-size: 10px; color: #aaa;">';
-      nextHtml += AutoPlay.activities.replace(AutoPlay.mainActivity, '').replace(/<div class="line"><\/div>/g, '<br>');
-      nextHtml += '</div>';
+      var extraActivities = AutoPlay.activities.replace(AutoPlay.mainActivity, '').replace(/<div class="line"><\/div>/g, '');
+      if (extraActivities.trim()) {
+        nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(100,100,100,0.08); border: 2px solid #888; border-radius: 4px; min-height: 40px;" title="Additional bot activities">';
+        nextHtml += '<div style="color: #888; font-weight: bold; font-size: 11px; margin-bottom: 4px;">';
+        nextHtml += 'ℹ️ Additional Info';
+        nextHtml += '</div>';
+        nextHtml += '<div style="color: #aaa; font-size: 10px; line-height: 1.4;">' + extraActivities + '</div>';
+        nextHtml += '</div>';
+      }
     }
 
     document.getElementById('dashNextContent').innerHTML = nextHtml || 'Initializing...';
