@@ -1829,8 +1829,10 @@ AutoPlay.neverclickWarn=true;
 
 AutoPlay.canContinue = function() {
   var needAchievement = false;
+  var targetActivity = '';
+
   if (!Game.Achievements["True Neverclick"].won && Game.cookieClicks==0) {
-    AutoPlay.setMainActivity("Trying to get achievement: True Neverclick.");
+    targetActivity = "Trying to get achievement: True Neverclick.";
     if (AutoPlay.neverclickWarn)
 	  Game.Prompt('<h3>Attention</h3><div class="block">'+
       '<p>Cookie Bot is trying to get the true neverclick achievement.</p>'+
@@ -1839,31 +1841,42 @@ AutoPlay.canContinue = function() {
     AutoPlay.neverclickWarn=false;
     needAchievement = true;
   }
-  if (!Game.Achievements["Neverclick"].won && Game.cookieClicks<=15) {
-    AutoPlay.setMainActivity("Trying to get achievement: Neverclick.");
+  else if (!Game.Achievements["Neverclick"].won && Game.cookieClicks<=15) {
+    targetActivity = "Trying to get achievement: Neverclick.";
     needAchievement = true;
   }
-  if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned==0) {
-    AutoPlay.setMainActivity("Trying to get achievement: Hardcore.");
+  else if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned==0) {
+    targetActivity = "Trying to get achievement: Hardcore.";
     needAchievement = true;
   }
-  if (needAchievement) return true;
+
+  if (needAchievement) {
+    // Only update if the goal changed
+    if (AutoPlay.mainActivity !== targetActivity) {
+      AutoPlay.setMainActivity(targetActivity);
+    }
+    return true;
+  }
 
   if (!Game.Achievements["Speed baking I"].won &&
             (AutoPlay.now-Game.startDate <= 1000*60*35)) {
-    AutoPlay.setMainActivity("Trying to get achievement: Speed baking I, II, and III.");
+    targetActivity = "Trying to get achievement: Speed baking I, II, and III.";
   } else if (!Game.Achievements["Speed baking II"].won &&
             (AutoPlay.now-Game.startDate <= 1000*60*25)) {
-    AutoPlay.setMainActivity("Trying to get achievement: Speed baking II and III.");
+    targetActivity = "Trying to get achievement: Speed baking II and III.";
     for (var i = 1; i<3; i++) // threefold clicking speed
       setTimeout(function(){Game.ClickCookie(0, Game.computedMouseCps);}, 60*i);
   } else if (!Game.Achievements["Speed baking III"].won &&
             (AutoPlay.now-Game.startDate <= 1000*60*15)) {
-    AutoPlay.setMainActivity("Trying to get achievement: Speed baking III.");
+    targetActivity = "Trying to get achievement: Speed baking III.";
     for (var i = 1; i<5; i++) // fivefold clicking speed
       setTimeout(function(){Game.ClickCookie(0, Game.computedMouseCps);}, 30*i);
   } else return false;
 
+  // Only update if the goal changed
+  if (AutoPlay.mainActivity !== targetActivity) {
+    AutoPlay.setMainActivity(targetActivity);
+  }
   AutoPlay.hyperActive=true; // full activity for speed baking
   return true;
 }
