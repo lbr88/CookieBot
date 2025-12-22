@@ -138,7 +138,10 @@ AutoPlay.run = function() {
 
   AutoPlay.deadline=AutoPlay.now+dynamicDeadline;
   AutoPlay.setDeadline(AutoPlay.now+(AutoPlay.now-Game.startDate)/10); // quick start
-  AutoPlay.updateDashboard(); // Update dashboard every cycle
+  // Skip dashboard update if user has a menu open (prevents closing menus on mobile)
+  if (!Game.onMenu || Game.onMenu === '') {
+    AutoPlay.updateDashboard();
+  }
 
   // run periodically (every 15 seconds)
   if (AutoPlay.Config.CheatLumps!=4) AutoPlay.handleSugarLumps();
