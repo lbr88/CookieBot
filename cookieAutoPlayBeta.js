@@ -338,8 +338,8 @@ AutoPlay.handleSavings = function() {
   let scaling = Math.min(elapsedTime / targetTime, 1);  //fraction of time to target
   if (elapsedTime < 0) {
     AutoPlay.savingsGoal = 0;
-    AutoPlay.addActivity('Not saving for first ' + (startTime / 60 / 1000) +
-          '+ minutes!');
+    var minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
+    AutoPlay.addActivity('No golden cookie reserve yet (' + minutesRemaining + ' min remaining in startup period)');
     return;
   }
   if (Game.UpgradesById[52].bought && Game.UpgradesById[53].bought) {
@@ -347,7 +347,7 @@ AutoPlay.handleSavings = function() {
   }
   else {
     AutoPlay.savingsGoal = 0;
-    AutoPlay.addActivity('Not saving until golden cookie upgrades are purchased.');
+    AutoPlay.addActivity('Waiting for golden cookie upgrades before building reserve.');
     return;
   }
   if (Game.UpgradesById[86].bought)  // get lucky
@@ -355,11 +355,11 @@ AutoPlay.handleSavings = function() {
   // scale goal between 0 and 1 based on elapsed time
   if (elapsedTime < targetTime) {
     AutoPlay.savingsGoal *= scaling;
-    AutoPlay.addActivity('Saving to ' + Beautify(AutoPlay.savingsGoal) +
-      ' cookies (' + (scaling * 100).toFixed(1) + '%)');
+    AutoPlay.addActivity('Building golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
+      ' cookies (' + (scaling * 100).toFixed(1) + '% of max)');
   }
   else {
-    AutoPlay.addActivity('Saving to ' + Beautify(AutoPlay.savingsGoal) +
+    AutoPlay.addActivity('Maintaining golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
       ' cookies');
   }
   if (AutoPlay.savingsGoal > Game.Objects["Cursor"].getPrice()) { // saving is too expensive
@@ -2479,6 +2479,18 @@ AutoPlay.updateDashboard = function() {
       var savingsColor = Game.cookies >= AutoPlay.savingsGoal ? '#6f6' : '#fc6';
       progressHtml += '<div style="margin-bottom: 8px;">';
       progressHtml += '<div style="color: ' + savingsColor + '; font-size: 10px;">🍪 Golden Cookie Reserve: ' + Beautify(AutoPlay.savingsGoal) + '</div>';
+
+      // Calculate ramp-up progress
+      if (AutoPlay.savingsStart !== undefined && AutoPlay.now && Game.startDate) {
+        const startTime = 30 * 60 * 1000;
+        const targetTime = 400 * 60 * 1000;
+        var elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
+        var rampProgress = Math.min(100, Math.max(0, (elapsedTime / targetTime) * 100));
+
+        if (rampProgress < 100) {
+          progressHtml += '<div style="font-size: 9px; color: #888; margin-top: 2px;">Reserve growing: ' + rampProgress.toFixed(1) + '% of target (full at ' + (targetTime/60000).toFixed(0) + ' min)</div>';
+        }
+      }
 
       if (Game.cookies < AutoPlay.savingsGoal) {
         progressHtml += '<div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;"><div style="background: linear-gradient(to right, #fc6, #f96); height: 100%; width: ' + percent + '%;"></div></div>';
