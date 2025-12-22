@@ -2243,14 +2243,15 @@ AutoPlay.createDashboard = function() {
   dashboard.appendChild(content);
   document.body.appendChild(dashboard);
 
-  // Push game content up to make room for dashboard
-  AutoPlay.adjustGameLayout();
-
   // Apply config setting for visibility
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
-    AutoPlay.adjustGameLayout();
   }
+
+  // Push game content up to make room for dashboard (delay to ensure DOM is rendered)
+  setTimeout(function() {
+    AutoPlay.adjustGameLayout();
+  }, 100);
 }
 
 AutoPlay.adjustGameLayout = function() {
@@ -2259,23 +2260,15 @@ AutoPlay.adjustGameLayout = function() {
 
   var dashboardHeight = 0;
   if (dashboard.style.display !== 'none' && AutoPlay.Config.ShowDashboard !== 0) {
-    // Calculate actual height: header + content (if expanded)
-    var headerHeight = 40; // approximate header height
-    var contentHeight = AutoPlay.dashboardCollapsed ? 0 : 280; // content height when expanded
-    dashboardHeight = headerHeight + contentHeight;
+    // Get actual height of dashboard
+    dashboardHeight = dashboard.offsetHeight;
   }
 
-  // Add padding to game wrapper to push content up
-  var wrapper = document.getElementById('wrapper');
-  if (wrapper) {
-    wrapper.style.paddingBottom = dashboardHeight + 'px';
-  }
+  // Add margin to body to push all content up
+  document.body.style.marginBottom = dashboardHeight + 'px';
 
-  // Also adjust the game element
-  var game = document.getElementById('game');
-  if (game) {
-    game.style.marginBottom = '0px';
-  }
+  // Also ensure the dashboard stays at bottom
+  dashboard.style.bottom = '0';
 }
 
 AutoPlay.toggleDashboard = function() {
@@ -2292,8 +2285,10 @@ AutoPlay.toggleDashboard = function() {
     toggle.textContent = '▼ Collapse';
   }
 
-  // Adjust game layout to match new dashboard height
-  AutoPlay.adjustGameLayout();
+  // Adjust game layout to match new dashboard height (delay for DOM update)
+  setTimeout(function() {
+    AutoPlay.adjustGameLayout();
+  }, 50);
 }
 
 AutoPlay.toggleDashboardConfig = function() {
@@ -2302,8 +2297,10 @@ AutoPlay.toggleDashboardConfig = function() {
   if (dashboard) {
     dashboard.style.display = AutoPlay.Config.ShowDashboard ? 'block' : 'none';
   }
-  // Adjust game layout when toggling visibility
-  AutoPlay.adjustGameLayout();
+  // Adjust game layout when toggling visibility (delay for DOM update)
+  setTimeout(function() {
+    AutoPlay.adjustGameLayout();
+  }, 50);
 }
 
 AutoPlay.updateDashboard = function() {
