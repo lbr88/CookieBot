@@ -2683,6 +2683,52 @@ AutoPlay.updateDashboard = function() {
       progressHtml += '</div>';
     }
 
+    // Achievement progress (for "bake X cookies" achievements)
+    if (AutoPlay.nextAchievement && typeof Beautify !== 'undefined') {
+      var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
+      // List of all "bake X cookies" achievement IDs
+      var bakingAchievements = [225, 227, 229, 279, 280, 372, 373, 374, 375, 390, 391, 429, 451, 452, 453, 470, 471, 472, 534, 535, 536, 578, 579, 586, 587, 592, 593];
+
+      if (achiev && bakingAchievements.indexOf(achiev.id) !== -1) {
+        // This is a baking achievement - show progress
+        var cookieThreshold = achiev.threshold;
+        if (cookieThreshold && cookieThreshold > 0) {
+          var currentCookies = Game.cookiesEarned;
+          var progressPercent = Math.min(100, (currentCookies / cookieThreshold) * 100);
+          var remaining = Math.max(0, cookieThreshold - currentCookies);
+
+          progressHtml += '<div style="margin-bottom: 8px; margin-top: 8px;">';
+          progressHtml += '<div style="color: #6f6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="Progress toward next cookie baking achievement">🎯 Achievement Progress</div>';
+          progressHtml += '<div style="font-size: 10px; color: #ccc; margin-bottom: 4px;">' + achiev.name + '</div>';
+
+          // Progress bar
+          var barColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
+          progressHtml += '<div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px; margin-bottom: 2px;"><div style="background: linear-gradient(to right, ' + barColor + ', ' + (progressPercent < 50 ? '#f90' : (progressPercent < 80 ? '#6f6' : '#0f0')) + '); height: 100%; width: ' + progressPercent + '%;"></div></div>';
+          progressHtml += '<div style="font-size: 9px; color: #aaa;">' + Beautify(currentCookies) + ' / ' + Beautify(cookieThreshold) + ' (' + progressPercent.toFixed(1) + '%)</div>';
+
+          // Time estimate
+          if (remaining > 0 && Game.cookiesPs > 0) {
+            var timeRemaining = remaining / Game.cookiesPs;
+            var timeStr = '';
+            if (timeRemaining < 60) {
+              timeStr = timeRemaining.toFixed(0) + ' seconds';
+            } else if (timeRemaining < 3600) {
+              timeStr = (timeRemaining / 60).toFixed(1) + ' minutes';
+            } else if (timeRemaining < 86400) {
+              timeStr = (timeRemaining / 3600).toFixed(1) + ' hours';
+            } else {
+              timeStr = (timeRemaining / 86400).toFixed(1) + ' days';
+            }
+            progressHtml += '<div style="font-size: 9px; color: #fc6; margin-top: 2px;" title="Estimated time to reach this achievement based on current CPS">⏱ Est. time: ' + timeStr + '</div>';
+          } else if (remaining === 0) {
+            progressHtml += '<div style="font-size: 9px; color: #6f6; margin-top: 2px; font-weight: bold;">✓ Ready to unlock!</div>';
+          }
+
+          progressHtml += '</div>';
+        }
+      }
+    }
+
     // Time in run
     if (AutoPlay.now && Game.startDate && typeof Game.sayTime !== 'undefined') {
       var timeInRun = AutoPlay.now - Game.startDate;
