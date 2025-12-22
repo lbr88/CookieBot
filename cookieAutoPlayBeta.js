@@ -149,14 +149,24 @@ AutoPlay.run = function() {
   }
 
   // run periodically (every 15 seconds)
-  if (AutoPlay.Config.CheatLumps!=4) AutoPlay.handleSugarLumps();
-  AutoPlay.handleSavings();
-  AutoPlay.handleSeasons();
-  AutoPlay.handleDragon();
-  AutoPlay.handleWrinklers();
-  AutoPlay.handleAscend();
-  AutoPlay.handleMinigames();
-  AutoPlay.handleNotes();
+
+  // DEBUG: Check which handle function closes menu
+  var wasMenuOpen = Game.onMenu;
+  function checkMenu(fname) {
+    if (wasMenuOpen && !Game.onMenu) {
+      var msg = document.getElementById('cookiebot-debug');
+      if (msg) msg.innerHTML += '<br><span style="color:#f00;">CLOSED BY: ' + fname + '</span>';
+    }
+  }
+
+  if (AutoPlay.Config.CheatLumps!=4) { AutoPlay.handleSugarLumps(); checkMenu('handleSugarLumps'); }
+  AutoPlay.handleSavings(); checkMenu('handleSavings');
+  AutoPlay.handleSeasons(); checkMenu('handleSeasons');
+  AutoPlay.handleDragon(); checkMenu('handleDragon');
+  AutoPlay.handleWrinklers(); checkMenu('handleWrinklers');
+  AutoPlay.handleAscend(); checkMenu('handleAscend');
+  AutoPlay.handleMinigames(); checkMenu('handleMinigames');
+  AutoPlay.handleNotes(); checkMenu('handleNotes');
   // add some more hints what the bot is doing (but only if not working on special achievements)
   if (!AutoPlay.workingOnSpecialAchievement) {
     if (!Game.HasAchiev('Elder')) AutoPlay.addActivity("Getting 7 grandma types");
