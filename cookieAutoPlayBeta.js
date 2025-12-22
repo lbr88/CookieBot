@@ -1721,14 +1721,31 @@ AutoPlay.redeemPresent = function() {
 AutoPlay.ascendLimit = 0.9*Math.floor(2*(1-Game.ascendMeterPercent));
 AutoPlay.wantAscend = false;
 AutoPlay.onAscend = false;
+AutoPlay.loggedAchievements = {}; // Track which achievements we've already logged
+
+// Check all achievements and log newly won ones
+AutoPlay.checkAchievements = function() {
+  for (var i in Game.Achievements) {
+    var achiev = Game.Achievements[i];
+    if (achiev.won && !AutoPlay.loggedAchievements[achiev.id]) {
+      // This achievement was just won
+      AutoPlay.loggedAchievements[achiev.id] = true;
+      AutoPlay.logAction('Achievement unlocked', achiev.name + ' - ' + achiev.ddesc.replace(/<q>.*?<\/q>/ig, ''));
+    }
+  }
+}
 
 AutoPlay.handleAscend = function() {
+  // Check for newly won achievements
+  AutoPlay.checkAchievements();
+
   if (Game.OnAscend) {
     AutoPlay.doReincarnate();
     AutoPlay.findNextAchievement();
     AutoPlay.setDeadline(0); // reactivate all activities
     AutoPlay.savingsStart = AutoPlay.now;
     AutoPlay.onAscend=false;
+    AutoPlay.loggedAchievements = {}; // Reset achievement tracking for new run
     return;
   }
   if (AutoPlay.onAscend && Game.AscendTimer==0) Game.Ascend(true);
@@ -1737,6 +1754,20 @@ AutoPlay.handleAscend = function() {
   if (Game.AchievementsById[AutoPlay.nextAchievement].won) {
     var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
     AutoPlay.logStatus('achievement', 'Unlocked: ' + achiev.name);
+
+    // Check if this is first ascension and if we should wait for 365+ prestige
+    var isFirstRun = (Game.prestige == 0);
+    var currentPrestige = Game.ascendMeterLevel;
+    var isHardcoreAchievement = (achiev.id == Game.Achievements["Hardcore"].id ||
+                                  achiev.id == Game.Achievements["Neverclick"].id ||
+                                  achiev.id == Game.Achievements["True Neverclick"].id);
+
+    if (isFirstRun && currentPrestige < 365 && !isHardcoreAchievement) {
+      // Don't ascend yet - need to reach 365+ prestige for first ascension
+      AutoPlay.logStatus('prestige', 'Waiting for 365+ prestige before first ascension (currently ' + Math.floor(currentPrestige) + ')');
+      return;
+    }
+
     var date = new Date();
     date.setTime(AutoPlay.now-Game.startDate);
     var legacyTime = Game.sayTime(date.getTime()/1000*Game.fps,-1);
