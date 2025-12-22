@@ -56,6 +56,9 @@ AutoPlay.savingsGoal = 0;
 AutoPlay.savingsStart = Game.startDate;  // time since start of saving
 AutoPlay.buy10 = false;
 AutoPlay.hyperActive=false;
+AutoPlay.actionHistory = [];
+AutoPlay.maxHistorySize = 20;
+AutoPlay.dashboardCollapsed = false;
 
 AutoPlay.run = function() {
   if (Game.AscendTimer>0 || Game.ReincarnateTimer>0) return;
@@ -95,6 +98,7 @@ AutoPlay.run = function() {
     AutoPlay.addActivity("Make sure to harvest the new plant before ascend!");
   AutoPlay.deadline=AutoPlay.now+60000; // wait one minute before next step
   AutoPlay.setDeadline(AutoPlay.now+(AutoPlay.now-Game.startDate)/10); // quick start
+  AutoPlay.updateDashboard(); // Update dashboard once per minute
 
   // run only once a minute
   if (AutoPlay.Config.CheatLumps!=4) AutoPlay.handleSugarLumps();
@@ -224,13 +228,18 @@ AutoPlay.handleGoldenCookies = function() { // pop first golden cookie or reinde
   for (var sx in Game.shimmers) {
     var s = Game.shimmers[sx];
     AutoPlay.hyperActive=true; // check whether full activity
-    if (s.force == "cookie storm drop" && AutoPlay.Config.GoldenClickMode==2) s.pop();
+    if (s.force == "cookie storm drop" && AutoPlay.Config.GoldenClickMode==2) {
+      s.pop();
+      AutoPlay.logAction('Clicked cookie storm drop', s.type);
+    }
     if (s.type!="golden" || s.life<Game.fps || !Game.Achievements["Early bird"].won) {
       s.pop();
+      AutoPlay.logAction('Clicked ' + s.type, s.force || 'shimmer');
       return;
     }
     if ((s.life/Game.fps)<(s.dur-2) && (Game.Achievements["Fading luck"].won)) {
       s.pop();
+      AutoPlay.logAction('Clicked golden cookie', s.force || 'fading luck');
       return;
     }
   }
@@ -368,7 +377,9 @@ AutoPlay.handleSavings = function() {
 
 AutoPlay.buyBuilding = function(building, checkAmount=1, buyAmount=1) {
   if (building.getSumPrice(checkAmount) < Game.cookies - AutoPlay.savingsGoal) {
+    var price = building.getSumPrice(checkAmount);
     building.buy(buyAmount);
+    AutoPlay.logAction('Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''), Beautify(price) + ' cookies');
     AutoPlay.hyperActive=true; // might buy more soon
     return true;
   }
@@ -377,7 +388,9 @@ AutoPlay.buyBuilding = function(building, checkAmount=1, buyAmount=1) {
 
 AutoPlay.buyUpgrade = function(upgrade, bypass=true) {
   if (upgrade.getPrice() < Game.cookies - AutoPlay.savingsGoal) {
+    var price = upgrade.getPrice();
     upgrade.buy(bypass);
+    AutoPlay.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
     AutoPlay.hyperActive=true;  // might buy more soon
   }
 }
@@ -1823,6 +1836,7 @@ AutoPlay.doAscend = function(str,log) {
     AutoPlay.delay = 10;
   } else {
     AutoPlay.info(str); AutoPlay.loggingInfo=log?str:0;
+    AutoPlay.logAction('Ascending', str);
     AutoPlay.logging(); AutoPlay.delay=15; Game.Ascend(true);
     AutoPlay.onAscend=true;
   }
@@ -1861,6 +1875,7 @@ AutoPlay.activities = AutoPlay.mainActivity;
 AutoPlay.setMainActivity = function(str) {
   AutoPlay.mainActivity = str;
   AutoPlay.info(str);
+  AutoPlay.logAction('Goal changed', str);
 }
 
 AutoPlay.findNextAchievement = function() {
@@ -2123,12 +2138,14 @@ AutoPlay.ConfigData.CheatLumps =
   {label: ['OFF', 'AUTO', 'LITTLE', 'MEDIUM', 'MUCH'], desc: 'Cheating of sugar lumps'};
 AutoPlay.ConfigData.CheatGolden =
   {label: ['OFF', 'AUTO', 'LITTLE', 'MEDIUM', 'MUCH'], desc: 'Cheating of golden cookies'};
+AutoPlay.ConfigData.ShowDashboard =
+  {label: ['HIDE', 'SHOW'], desc: 'Toggle dashboard visibility'};
 AutoPlay.ConfigData.CleanLog = {label: ['Clean Log'], desc: 'Cleaning the log'};
 AutoPlay.ConfigData.ShowLog = {label: ['Show Log'], desc: 'Showing the log'};
 
 AutoPlay.ConfigDefault = {BotMode: 1, NightMode: 1, ClickMode: 1, GoldenClickMode: 1,
                           SavingStrategy: 1, CheatLumps: 1, CheatGolden: 1,
-                          CleanLog: 0, ShowLog: 0};
+                          ShowDashboard: 1, CleanLog: 0, ShowLog: 0};
 
 AutoPlay.LoadConfig();
 
@@ -2176,6 +2193,8 @@ AutoPlay.Disp.AddMenuPref = function() {
   frag.appendChild(header('Cheating'));
   frag.appendChild(listing('CheatLumps',null));
   frag.appendChild(listing('CheatGolden',null));
+  frag.appendChild(header('Display'));
+  frag.appendChild(listing('ShowDashboard',AutoPlay.toggleDashboardConfig));
   frag.appendChild(header('Logging'));
   frag.appendChild(listing('CleanLog',AutoPlay.cleanLog));
   frag.appendChild(listing('ShowLog',AutoPlay.showLog));
@@ -2194,6 +2213,119 @@ AutoPlay.setBotMode = function() {
 Game.UpdateMenu = function() {
   AutoPlay.Backup.UpdateMenu();
   if (Game.onMenu == 'prefs') AutoPlay.Disp.AddMenuPref();
+}
+
+//===================== Dashboard ==========================
+
+AutoPlay.createDashboard = function() {
+  // Create container
+  var dashboard = document.createElement('div');
+  dashboard.id = 'cookieBotDashboard';
+  dashboard.style.cssText = 'position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6; z-index: 10000; transition: transform 0.3s ease;';
+
+  // Create header with toggle button
+  var header = document.createElement('div');
+  header.style.cssText = 'padding: 8px 16px; background: rgba(0, 100, 0, 0.3); cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
+  header.innerHTML = '<span style="color: #6f6; font-size: 14px; font-weight: bold;">CookieBot Dashboard</span><span id="dashboardToggle" style="color: #6f6; font-size: 12px;">▼ Collapse</span>';
+
+  // Create content area
+  var content = document.createElement('div');
+  content.id = 'dashboardContent';
+  content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 250px; overflow-y: auto;';
+
+  // Three columns: Next Actions | Progress | Recent History
+  content.innerHTML = '<div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div></div><div id="dashProgress" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Progress</div><div id="dashProgressContent" style="color: #fff; font-size: 11px;">Loading...</div></div><div id="dashHistory" style="flex: 1; min-width: 300px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Actions (Last 20)</div><div id="dashHistoryContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No actions yet...</div></div>';
+
+  // Add toggle functionality
+  header.onclick = AutoPlay.toggleDashboard;
+
+  dashboard.appendChild(header);
+  dashboard.appendChild(content);
+  document.body.appendChild(dashboard);
+
+  // Apply config setting for visibility
+  if (AutoPlay.Config.ShowDashboard == 0) {
+    dashboard.style.display = 'none';
+  }
+}
+
+AutoPlay.toggleDashboard = function() {
+  var content = document.getElementById('dashboardContent');
+  var toggle = document.getElementById('dashboardToggle');
+
+  AutoPlay.dashboardCollapsed = !AutoPlay.dashboardCollapsed;
+
+  if (AutoPlay.dashboardCollapsed) {
+    content.style.display = 'none';
+    toggle.textContent = '▲ Expand';
+  } else {
+    content.style.display = 'flex';
+    toggle.textContent = '▼ Collapse';
+  }
+}
+
+AutoPlay.toggleDashboardConfig = function() {
+  AutoPlay.ToggleConfig('ShowDashboard');
+  var dashboard = document.getElementById('cookieBotDashboard');
+  if (dashboard) {
+    dashboard.style.display = AutoPlay.Config.ShowDashboard ? 'block' : 'none';
+  }
+}
+
+AutoPlay.updateDashboard = function() {
+  if (!document.getElementById('cookieBotDashboard')) return;
+
+  // Update Next Actions
+  var nextHtml = AutoPlay.mainActivity;
+  if (AutoPlay.activities && AutoPlay.activities !== AutoPlay.mainActivity) {
+    nextHtml += '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">';
+    nextHtml += AutoPlay.activities.replace(AutoPlay.mainActivity, '').replace(/<div class="line"><\/div>/g, '<br>');
+    nextHtml += '</div>';
+  }
+  document.getElementById('dashNextContent').innerHTML = nextHtml || 'Idle...';
+
+  // Update Progress
+  var progressHtml = '';
+
+  // Current achievement progress
+  if (AutoPlay.nextAchievement) {
+    var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
+    if (achiev) {
+      progressHtml += '<div style="margin-bottom: 8px;"><div style="color: #fc6;">Target: ' + achiev.name + '</div><div style="font-size: 10px; color: #aaa;">' + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '') + '</div></div>';
+    }
+  }
+
+  // Savings progress bar
+  if (AutoPlay.savingsGoal > 0 && Game.cookies < AutoPlay.savingsGoal) {
+    var percent = Math.min(100, (Game.cookies / AutoPlay.savingsGoal) * 100);
+    progressHtml += '<div style="margin-bottom: 8px;"><div style="color: #ccc; font-size: 10px;">Saving: ' + Beautify(Game.cookies) + ' / ' + Beautify(AutoPlay.savingsGoal) + '</div><div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;"><div style="background: linear-gradient(to right, #6f6, #4d4); height: 100%; width: ' + percent + '%;"></div></div><div style="font-size: 10px; color: #aaa; margin-top: 2px;">' + percent.toFixed(1) + '%</div></div>';
+  }
+
+  // Time in run
+  var timeInRun = AutoPlay.now - Game.startDate;
+  progressHtml += '<div style="font-size: 10px; color: #aaa;">Time in run: ' + Game.sayTime(timeInRun/1000*Game.fps, -1) + '</div>';
+
+  // CPS
+  progressHtml += '<div style="font-size: 10px; color: #aaa;">CPS: ' + Beautify(Game.cookiesPs) + ' (' + (AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0') + 'x multiplier)</div>';
+
+  document.getElementById('dashProgressContent').innerHTML = progressHtml || 'No active goals';
+
+  // Update History
+  var historyHtml = '';
+  if (AutoPlay.actionHistory && AutoPlay.actionHistory.length > 0) {
+    AutoPlay.actionHistory.forEach(function(entry) {
+      var timeStr = entry.time.toLocaleTimeString();
+      var color = '#ccc';
+      if (entry.action.includes('Bought') || entry.action.includes('Upgraded')) color = '#6f6';
+      if (entry.action.includes('Clicked')) color = '#fc6';
+      if (entry.action.includes('Ascend') || entry.action.includes('Achievement')) color = '#f66';
+
+      historyHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + entry.action + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
+    });
+  } else {
+    historyHtml = '<div style="color: #888;">No actions logged yet...</div>';
+  }
+  document.getElementById('dashHistoryContent').innerHTML = historyHtml;
 }
 
 //===================== Auxiliary ==========================
@@ -2314,6 +2446,22 @@ AutoPlay.addActivity = function(str) {
   } else return false;
 }
 
+AutoPlay.logAction = function(action, details) {
+  var timestamp = new Date();
+  var entry = {
+    time: timestamp,
+    action: action,
+    details: details || ''
+  };
+
+  AutoPlay.actionHistory.unshift(entry); // Add to beginning
+  if (AutoPlay.actionHistory.length > AutoPlay.maxHistorySize) {
+    AutoPlay.actionHistory.pop(); // Remove oldest
+  }
+
+  AutoPlay.updateDashboard(); // Refresh display
+}
+
 //===================== Init & Start ==========================
 AutoPlay.launchCount = 0;
 AutoPlay.launch = function() {
@@ -2342,6 +2490,8 @@ AutoPlay.launch = function() {
   if (Game.version!=AutoPlay.gameVersion)
     AutoPlay.info("Warning: cookieBot is last tested with "+
       "cookie clicker version " + AutoPlay.gameVersion);
+  AutoPlay.createDashboard();
+  AutoPlay.updateDashboard();
 }
 
 AutoPlay.launch();
