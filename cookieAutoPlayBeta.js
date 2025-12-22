@@ -104,10 +104,6 @@ AutoPlay.run = function() {
   if (AutoPlay.plantPending)
     AutoPlay.addActivity("Make sure to harvest the new plant before ascend!");
 
-  // DEBUG
-  var wasOpen = Game.onMenu;
-  if (wasOpen) console.log('CookieBot: After status section, menu:', Game.onMenu || 'CLOSED');
-
   // Calculate dynamic deadline based on when next purchase is affordable
   var dynamicDeadline = 15000; // Default 15 seconds
   if (AutoPlay.nextPurchasePrice && Game.cookiesPs > 0) {
@@ -145,16 +141,12 @@ AutoPlay.run = function() {
     }
   }
 
-  if (wasOpen) console.log('CookieBot: After deadline calc, menu:', Game.onMenu || 'CLOSED');
   AutoPlay.deadline=AutoPlay.now+dynamicDeadline;
-  if (wasOpen) console.log('CookieBot: After deadline set, menu:', Game.onMenu || 'CLOSED');
   AutoPlay.setDeadline(AutoPlay.now+(AutoPlay.now-Game.startDate)/10); // quick start
-  if (wasOpen) console.log('CookieBot: After setDeadline, menu:', Game.onMenu || 'CLOSED');
   // Skip dashboard update if user has a menu open (prevents closing menus on mobile)
   if (!Game.onMenu || Game.onMenu === '') {
     AutoPlay.updateDashboard();
   }
-  if (wasOpen) console.log('CookieBot: After updateDashboard, menu:', Game.onMenu || 'CLOSED');
 
   // run periodically (every 15 seconds)
 
@@ -727,23 +719,16 @@ AutoPlay.handleBuildings = function() {
 
 //===================== Handle Seasons ==========================
 AutoPlay.handleSeasons = function() {
-  var menuBefore = Game.onMenu;
-  if (menuBefore) console.log('handleSeasons START, menu:', menuBefore);
-
   if (Game.Upgrades["A festive hat"].bought &&
       !Game.Upgrades["Santa's dominion"].unlocked) { // develop santa
-    if (menuBefore) console.log('Before santa upgrade');
     Game.specialTab = "santa";
     Game.UpgradeSanta();
     Game.ToggleSpecialMenu(0);
-    if (menuBefore) console.log('After santa upgrade, menu:', Game.onMenu || 'CLOSED');
   }
-  if (Game.season == "christmas" && !Game.Achievements["Baby it\'s old outside"].won) {
-    if (menuBefore) console.log('Before christmas check');
+  // Skip Christmas elf achievement check if user has menu open - it calls ShowMenu('') which closes the menu
+  if (Game.season == "christmas" && !Game.Achievements["Baby it\'s old outside"].won && !Game.onMenu) {
     if (Game.onMenu) Game.ShowMenu('');
-    if (menuBefore) console.log('After ShowMenu, menu:', Game.onMenu || 'CLOSED');
     Game.Objects['Grandma'].canvas.parentElement.scrollIntoView()
-    if (menuBefore) console.log('After scrollIntoView, menu:', Game.onMenu || 'CLOSED');
     elfGrandmas = Game.Objects["Grandma"].pics.filter(function(p) { return p.pic=="elfGrandma.png"; });
     if (elfGrandmas.length) {
       elfGranny = elfGrandmas[0];
