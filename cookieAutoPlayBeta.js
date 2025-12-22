@@ -1854,6 +1854,7 @@ AutoPlay.canContinue = function() {
     // Only update if the goal changed
     if (AutoPlay.mainActivity !== targetActivity) {
       AutoPlay.setMainActivity(targetActivity);
+      AutoPlay.activities = targetActivity; // Also update activities to match
     }
     return true;
   }
@@ -1876,6 +1877,7 @@ AutoPlay.canContinue = function() {
   // Only update if the goal changed
   if (AutoPlay.mainActivity !== targetActivity) {
     AutoPlay.setMainActivity(targetActivity);
+    AutoPlay.activities = targetActivity; // Also update activities to match
   }
   AutoPlay.hyperActive=true; // full activity for speed baking
   return true;
