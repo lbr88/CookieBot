@@ -2455,7 +2455,7 @@ AutoPlay.updateDashboard = function() {
     // Show next purchase
     if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
       var purchaseColor = AutoPlay.nextPurchaseType === 'building' ? '#6f6' : '#fc6';
-      nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,200,0,0.08); border: 2px solid ' + purchaseColor + '; border-radius: 4px;">';
+      nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,200,0,0.08); border: 2px solid ' + purchaseColor + '; border-radius: 4px;" title="The next item the bot plans to purchase based on efficiency calculations">';
       nextHtml += '<div style="color: ' + purchaseColor + '; font-weight: bold; font-size: 13px; margin-bottom: 6px;">';
       nextHtml += (AutoPlay.nextPurchaseType === 'building' ? '🏢 ' : '⬆️ ') + AutoPlay.nextPurchase;
       nextHtml += '</div>';
@@ -2468,16 +2468,16 @@ AutoPlay.updateDashboard = function() {
       if (needsForPurchase > 0) {
         // Not enough cookies after reserves
         var timeToAfford = needsForPurchase / Game.cookiesPs;
-        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;">⏳ Time left: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
         nextHtml += '<div style="color: #888; font-size: 10px;">Need ' + Beautify(needsForPurchase) + ' more cookies';
         if (AutoPlay.savingsGoal > 0) {
-          nextHtml += ' (after ' + Beautify(AutoPlay.savingsGoal) + ' reserve)';
+          nextHtml += ' <span title="The bot keeps a reserve of cookies for Lucky and Lucky Frenzy golden cookie bonuses. This amount is not available for purchases.">(after ' + Beautify(AutoPlay.savingsGoal) + ' reserve)</span>';
         }
         nextHtml += '</div>';
       } else if (AutoPlay.nextPurchasePrice > Game.cookies) {
         // Can't afford at all (even without reserves)
         var timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
-        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;">⏳ Time left: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
         nextHtml += '<div style="color: #888; font-size: 10px;">Need ' + Beautify(AutoPlay.nextPurchasePrice - Game.cookies) + ' more cookies</div>';
       } else {
         // Can afford now!
@@ -2491,12 +2491,12 @@ AutoPlay.updateDashboard = function() {
       }
 
       if (AutoPlay.nextPurchasePP !== undefined && AutoPlay.nextPurchasePP !== null && AutoPlay.nextPurchasePP < Infinity) {
-        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 4px;">Payback: ' + (AutoPlay.nextPurchasePP < 60 ? AutoPlay.nextPurchasePP.toFixed(1) + 's' : (AutoPlay.nextPurchasePP < 3600 ? (AutoPlay.nextPurchasePP/60).toFixed(1) + 'm' : (AutoPlay.nextPurchasePP/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 4px;" title="How long it will take for this purchase to pay for itself through increased CPS (shorter is better)">Payback: ' + (AutoPlay.nextPurchasePP < 60 ? AutoPlay.nextPurchasePP.toFixed(1) + 's' : (AutoPlay.nextPurchasePP < 3600 ? (AutoPlay.nextPurchasePP/60).toFixed(1) + 'm' : (AutoPlay.nextPurchasePP/3600).toFixed(1) + 'h')) + '</div>';
       }
 
       // Show if using fallback logic (no Cookie Monster)
       if (typeof CookieMonsterData === 'undefined') {
-        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 4px; font-style: italic;">Using simple buying logic (Cookie Monster not installed)</div>';
+        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 4px; font-style: italic;" title="Cookie Monster mod provides better purchase calculations. Without it, the bot uses simpler logic that may not always be optimal.">Using simple buying logic (Cookie Monster not installed)</div>';
       }
       nextHtml += '</div>';
     } else {
@@ -2525,7 +2525,7 @@ AutoPlay.updateDashboard = function() {
       var percent = Math.min(100, (Game.cookies / AutoPlay.savingsGoal) * 100);
       var savingsColor = Game.cookies >= AutoPlay.savingsGoal ? '#6f6' : '#fc6';
       progressHtml += '<div style="margin-bottom: 8px;">';
-      progressHtml += '<div style="color: ' + savingsColor + '; font-size: 10px;">🍪 Golden Cookie Reserve: ' + Beautify(AutoPlay.savingsGoal) + '</div>';
+      progressHtml += '<div style="color: ' + savingsColor + '; font-size: 10px;" title="The bot keeps a reserve of cookies to maximize Lucky and Lucky Frenzy golden cookie bonuses. This amount is unavailable for purchases.">🍪 Golden Cookie Reserve: ' + Beautify(AutoPlay.savingsGoal) + '</div>';
 
       // Calculate ramp-up progress
       if (AutoPlay.savingsStart !== undefined && AutoPlay.now && Game.startDate) {
@@ -2535,12 +2535,12 @@ AutoPlay.updateDashboard = function() {
         var rampProgress = Math.min(100, Math.max(0, (elapsedTime / targetTime) * 100));
 
         if (rampProgress < 100) {
-          progressHtml += '<div style="font-size: 9px; color: #888; margin-top: 2px;">Reserve growing: ' + rampProgress.toFixed(1) + '% of target (full at ' + (targetTime/60000).toFixed(0) + ' min)</div>';
+          progressHtml += '<div style="font-size: 9px; color: #888; margin-top: 2px;" title="The reserve target gradually increases over 400 minutes after a 30-minute startup period. This prevents the bot from over-saving early in the run.">Reserve growing: ' + rampProgress.toFixed(1) + '% of target (full at ' + (targetTime/60000).toFixed(0) + ' min)</div>';
         }
       }
 
       if (Game.cookies < AutoPlay.savingsGoal) {
-        progressHtml += '<div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;"><div style="background: linear-gradient(to right, #fc6, #f96); height: 100%; width: ' + percent + '%;"></div></div>';
+        progressHtml += '<div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;" title="Progress toward the reserve goal. This shows how many cookies you have saved compared to the target reserve amount."><div style="background: linear-gradient(to right, #fc6, #f96); height: 100%; width: ' + percent + '%;"></div></div>';
         progressHtml += '<div style="font-size: 10px; color: #aaa; margin-top: 2px;">' + Beautify(Game.cookies) + ' / ' + Beautify(AutoPlay.savingsGoal) + ' (' + percent.toFixed(1) + '%)</div>';
       } else {
         progressHtml += '<div style="font-size: 10px; color: #6f6; margin-top: 2px;">✓ Goal reached! Bot will keep this much in reserve.</div>';
@@ -2551,17 +2551,17 @@ AutoPlay.updateDashboard = function() {
     // Time in run
     if (AutoPlay.now && Game.startDate && typeof Game.sayTime !== 'undefined') {
       var timeInRun = AutoPlay.now - Game.startDate;
-      progressHtml += '<div style="font-size: 10px; color: #aaa;">Time in run: ' + Game.sayTime(timeInRun/1000*Game.fps, -1) + '</div>';
+      progressHtml += '<div style="font-size: 10px; color: #aaa;" title="Total time elapsed since the start of this game run">Time in run: ' + Game.sayTime(timeInRun/1000*Game.fps, -1) + '</div>';
     }
 
     // CPS
     if (typeof Beautify !== 'undefined' && Game.cookiesPs !== undefined) {
-      progressHtml += '<div style="font-size: 10px; color: #aaa;">CPS: ' + Beautify(Game.cookiesPs) + ' (' + (AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0') + 'x multiplier)</div>';
+      progressHtml += '<div style="font-size: 10px; color: #aaa;" title="Current cookies per second production rate. The multiplier includes buffs from golden cookies, frenzies, etc.">CPS: ' + Beautify(Game.cookiesPs) + ' (' + (AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0') + 'x multiplier)</div>';
     }
 
     // Buildings and Upgrades
     if (Game.BuildingsOwned !== undefined && Game.UpgradesOwned !== undefined) {
-      progressHtml += '<div style="font-size: 10px; color: #aaa;">Buildings: ' + Game.BuildingsOwned + ' | Upgrades: ' + Game.UpgradesOwned + '</div>';
+      progressHtml += '<div style="font-size: 10px; color: #aaa;" title="Total number of buildings and upgrades you currently own">Buildings: ' + Game.BuildingsOwned + ' | Upgrades: ' + Game.UpgradesOwned + '</div>';
     }
 
     // Prestige
@@ -2569,9 +2569,9 @@ AutoPlay.updateDashboard = function() {
       var nextPrestige = Game.HowMuchPrestige(Game.cookiesReset + Game.cookiesEarned);
       var prestigeGain = Math.floor(nextPrestige - Game.prestige);
       if (prestigeGain > 0) {
-        progressHtml += '<div style="font-size: 10px; color: #aaa;">Prestige: ' + Beautify(Game.prestige) + ' (+' + Beautify(prestigeGain) + ' on ascend)</div>';
+        progressHtml += '<div style="font-size: 10px; color: #aaa;" title="Current prestige level. Ascending now would give you additional prestige levels, which permanently increase your CPS.">Prestige: ' + Beautify(Game.prestige) + ' (+' + Beautify(prestigeGain) + ' on ascend)</div>';
       } else {
-        progressHtml += '<div style="font-size: 10px; color: #aaa;">Prestige: ' + Beautify(Game.prestige) + '</div>';
+        progressHtml += '<div style="font-size: 10px; color: #aaa;" title="Current prestige level. Prestige permanently increases your CPS.">Prestige: ' + Beautify(Game.prestige) + '</div>';
       }
     }
 
@@ -2586,7 +2586,7 @@ AutoPlay.updateDashboard = function() {
         }
       }
       if (activeBuffs.length > 0) {
-        progressHtml += '<div style="font-size: 10px; color: #fc6; margin-top: 4px;">✨ ' + activeBuffs.join(', ') + '</div>';
+        progressHtml += '<div style="font-size: 10px; color: #fc6; margin-top: 4px;" title="Currently active temporary buffs from golden cookies, frenzies, and other bonuses">✨ ' + activeBuffs.join(', ') + '</div>';
       }
     }
 
@@ -2602,16 +2602,38 @@ AutoPlay.updateDashboard = function() {
 
         // Extract base type (e.g., 'reserve:startup' -> 'reserve')
         var baseType = entry.type.split(':')[0];
+        var tooltip = '';
 
-        if (baseType === 'goal') { color = '#fc6'; icon = '🎯'; }
-        else if (baseType === 'reserve') { color = '#f96'; icon = '🍪'; }
-        else if (baseType === 'achievement') { color = '#f66'; icon = '🏆'; }
-        else if (baseType === 'mode') { color = '#6f6'; icon = '⚙️'; }
-        else if (baseType === 'ascend') { color = '#f6f'; icon = '⬆️'; }
-        else if (baseType === 'dragon') { color = '#c9f'; icon = '🐉'; }
-        else if (baseType === 'wrinkler') { color = '#a8a'; icon = '🪱'; }
+        if (baseType === 'goal') {
+          color = '#fc6'; icon = '🎯';
+          tooltip = 'Bot\'s current goal or target (e.g., achievement, ascension, or upgrade milestone)';
+        }
+        else if (baseType === 'reserve') {
+          color = '#f96'; icon = '🍪';
+          tooltip = 'Golden cookie reserve status - the bot keeps cookies saved for Lucky/Lucky Frenzy bonuses';
+        }
+        else if (baseType === 'achievement') {
+          color = '#f66'; icon = '🏆';
+          tooltip = 'Achievement-related status update';
+        }
+        else if (baseType === 'mode') {
+          color = '#6f6'; icon = '⚙️';
+          tooltip = 'Bot mode or behavior change';
+        }
+        else if (baseType === 'ascend') {
+          color = '#f6f'; icon = '⬆️';
+          tooltip = 'Ascension-related status update';
+        }
+        else if (baseType === 'dragon') {
+          color = '#c9f'; icon = '🐉';
+          tooltip = 'Dragon aura change or update';
+        }
+        else if (baseType === 'wrinkler') {
+          color = '#a8a'; icon = '🪱';
+          tooltip = 'Wrinkler management status';
+        }
 
-        statusHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + icon + ' ' + entry.message + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
+        statusHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';" title="' + tooltip + '"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + icon + ' ' + entry.message + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
       });
     } else {
       statusHtml = '<div style="color: #888;">No status updates yet...</div>';
