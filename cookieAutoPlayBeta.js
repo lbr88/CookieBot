@@ -2221,7 +2221,7 @@ AutoPlay.createDashboard = function() {
   // Create container
   var dashboard = document.createElement('div');
   dashboard.id = 'cookieBotDashboard';
-  dashboard.style.cssText = 'width: 100%; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6; margin-top: 10px;';
+  dashboard.style.cssText = 'position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6;';
 
   // Create header with toggle button
   var header = document.createElement('div');
@@ -2242,7 +2242,7 @@ AutoPlay.createDashboard = function() {
   dashboard.appendChild(header);
   dashboard.appendChild(content);
 
-  // Append to wrapper element (like Cookie Monster does)
+  // Append to wrapper element
   var wrapper = document.getElementById('wrapper');
   if (wrapper) {
     wrapper.appendChild(dashboard);
