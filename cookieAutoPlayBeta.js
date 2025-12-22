@@ -2683,23 +2683,56 @@ AutoPlay.updateDashboard = function() {
       progressHtml += '</div>';
     }
 
-    // Achievement progress (for "bake X cookies" achievements)
+    // Achievement progress (for "bake X cookies" achievements and special achievements)
     if (AutoPlay.nextAchievement && typeof Beautify !== 'undefined') {
       var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
       // List of all "bake X cookies" achievement IDs
       var bakingAchievements = [225, 227, 229, 279, 280, 372, 373, 374, 375, 390, 391, 429, 451, 452, 453, 470, 471, 472, 534, 535, 536, 578, 579, 586, 587, 592, 593];
 
-      if (achiev && bakingAchievements.indexOf(achiev.id) !== -1) {
-        // This is a baking achievement - show progress
-        var cookieThreshold = achiev.threshold;
+      // Check for special achievements: Hardcore, Neverclick, True Neverclick
+      var isHardcore = (achiev && achiev.name === "Hardcore");
+      var isNeverclick = (achiev && achiev.name === "Neverclick");
+      var isTrueNeverclick = (achiev && achiev.name === "True Neverclick");
+      var isSpecialAchievement = isHardcore || isNeverclick || isTrueNeverclick;
+
+      if (achiev && (bakingAchievements.indexOf(achiev.id) !== -1 || isSpecialAchievement)) {
+        // This is a trackable achievement - show progress
+        var cookieThreshold;
+        var currentCookies = Game.cookiesEarned;
+
+        // Set thresholds for special achievements
+        if (isHardcore) {
+          cookieThreshold = 1000000000; // 1 billion
+        } else if (isNeverclick || isTrueNeverclick) {
+          cookieThreshold = 1000000; // 1 million
+        } else {
+          cookieThreshold = achiev.threshold;
+        }
+
         if (cookieThreshold && cookieThreshold > 0) {
-          var currentCookies = Game.cookiesEarned;
           var progressPercent = Math.min(100, (currentCookies / cookieThreshold) * 100);
           var remaining = Math.max(0, cookieThreshold - currentCookies);
 
           progressHtml += '<div style="margin-bottom: 8px; margin-top: 8px;">';
-          progressHtml += '<div style="color: #6f6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="Progress toward next cookie baking achievement">🎯 Achievement Progress</div>';
+          progressHtml += '<div style="color: #6f6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="Progress toward next achievement">🎯 Achievement Progress</div>';
           progressHtml += '<div style="font-size: 10px; color: #ccc; margin-bottom: 4px;">' + achiev.name + '</div>';
+
+          // Show special requirements for Hardcore/Neverclick achievements
+          if (isSpecialAchievement) {
+            if (isHardcore) {
+              var upgradesStatus = Game.UpgradesOwned === 0 ? '✓' : '✗';
+              var upgradesColor = Game.UpgradesOwned === 0 ? '#6f6' : '#f66';
+              progressHtml += '<div style="font-size: 9px; color: ' + upgradesColor + '; margin-bottom: 2px;">' + upgradesStatus + ' No upgrades purchased (' + Game.UpgradesOwned + ' owned)</div>';
+            } else if (isTrueNeverclick) {
+              var clicksStatus = Game.cookieClicks === 0 ? '✓' : '✗';
+              var clicksColor = Game.cookieClicks === 0 ? '#6f6' : '#f66';
+              progressHtml += '<div style="font-size: 9px; color: ' + clicksColor + '; margin-bottom: 2px;">' + clicksStatus + ' No cookie clicks (' + Game.cookieClicks + ' clicks)</div>';
+            } else if (isNeverclick) {
+              var clicksStatus = Game.cookieClicks <= 15 ? '✓' : '✗';
+              var clicksColor = Game.cookieClicks <= 15 ? '#6f6' : '#f66';
+              progressHtml += '<div style="font-size: 9px; color: ' + clicksColor + '; margin-bottom: 2px;">' + clicksStatus + ' Max 15 cookie clicks (' + Game.cookieClicks + '/15 used)</div>';
+            }
+          }
 
           // Progress bar
           var barColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
@@ -2721,7 +2754,17 @@ AutoPlay.updateDashboard = function() {
             }
             progressHtml += '<div style="font-size: 9px; color: #fc6; margin-top: 2px;" title="Estimated time to reach this achievement based on current CPS">⏱ Est. time: ' + timeStr + '</div>';
           } else if (remaining === 0) {
-            progressHtml += '<div style="font-size: 9px; color: #6f6; margin-top: 2px; font-weight: bold;">✓ Ready to unlock!</div>';
+            // Check if special requirements are met
+            var requirementsMet = true;
+            if (isHardcore && Game.UpgradesOwned !== 0) requirementsMet = false;
+            if (isTrueNeverclick && Game.cookieClicks !== 0) requirementsMet = false;
+            if (isNeverclick && Game.cookieClicks > 15) requirementsMet = false;
+
+            if (requirementsMet) {
+              progressHtml += '<div style="font-size: 9px; color: #6f6; margin-top: 2px; font-weight: bold;">✓ Ready to unlock!</div>';
+            } else {
+              progressHtml += '<div style="font-size: 9px; color: #f66; margin-top: 2px; font-weight: bold;">✗ Requirements not met</div>';
+            }
           }
 
           progressHtml += '</div>';
