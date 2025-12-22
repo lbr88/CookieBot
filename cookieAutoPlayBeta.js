@@ -98,7 +98,25 @@ AutoPlay.run = function() {
   AutoPlay.status(false);
   if (AutoPlay.plantPending)
     AutoPlay.addActivity("Make sure to harvest the new plant before ascend!");
-  AutoPlay.deadline=AutoPlay.now+15000; // check every 15 seconds instead of 60
+
+  // Calculate dynamic deadline based on when next purchase is affordable
+  var dynamicDeadline = 15000; // Default 15 seconds
+  if (AutoPlay.nextPurchasePrice && Game.cookiesPs > 0) {
+    var availableCookies = Game.cookies - (AutoPlay.savingsGoal || 0);
+    var needsForPurchase = AutoPlay.nextPurchasePrice - availableCookies;
+
+    if (needsForPurchase > 0) {
+      // Calculate seconds until affordable
+      var timeToAfford = (needsForPurchase / Game.cookiesPs) * 1000; // Convert to milliseconds
+      dynamicDeadline = Math.min(timeToAfford, 15000); // Cap at 15 seconds
+      dynamicDeadline = Math.max(dynamicDeadline, 100); // Minimum 100ms to prevent thrashing
+    } else {
+      // Already affordable - check immediately
+      dynamicDeadline = 100;
+    }
+  }
+
+  AutoPlay.deadline=AutoPlay.now+dynamicDeadline;
   AutoPlay.setDeadline(AutoPlay.now+(AutoPlay.now-Game.startDate)/10); // quick start
   AutoPlay.updateDashboard(); // Update dashboard every cycle
 
@@ -2557,25 +2575,39 @@ AutoPlay.updateDashboard = function() {
       if (needsForPurchase > 0) {
         // Not enough cookies after reserves
         var timeToAfford = needsForPurchase / Game.cookiesPs;
+        var timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
         nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
         nextHtml += '<div style="color: #888; font-size: 10px;">Need ' + Beautify(needsForPurchase) + ' more cookies';
         if (AutoPlay.savingsGoal > 0) {
           nextHtml += ' <span title="The bot keeps a reserve of cookies for Lucky and Lucky Frenzy golden cookie bonuses. This amount is not available for purchases.">(after ' + Beautify(AutoPlay.savingsGoal) + ' reserve)</span>';
         }
         nextHtml += '</div>';
+        // Show when bot will check
+        if (timeUntilCheck < timeToAfford) {
+          nextHtml += '<div style="color: #6f6; font-size: 9px; margin-top: 2px;">⚡ Auto-check in ' + timeUntilCheck.toFixed(1) + 's</div>';
+        }
       } else if (AutoPlay.nextPurchasePrice > Game.cookies) {
         // Can't afford at all (even without reserves)
         var timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
+        var timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
         nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
         nextHtml += '<div style="color: #888; font-size: 10px;">Need ' + Beautify(AutoPlay.nextPurchasePrice - Game.cookies) + ' more cookies</div>';
+        // Show when bot will check
+        if (timeUntilCheck < timeToAfford) {
+          nextHtml += '<div style="color: #6f6; font-size: 9px; margin-top: 2px;">⚡ Auto-check in ' + timeUntilCheck.toFixed(1) + 's</div>';
+        }
       } else {
         // Can afford now!
         nextHtml += '<div style="color: #6f6; font-size: 11px; margin-top: 4px; font-weight: bold;">✓ Ready to buy!</div>';
         if (AutoPlay.hyperActive) {
-          nextHtml += '<div style="color: #6f6; font-size: 10px;">🚀 High activity mode - buying frequently</div>';
+          nextHtml += '<div style="color: #6f6; font-size: 10px;">🚀 High activity mode - buying immediately</div>';
         } else {
           var timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
-          nextHtml += '<div style="color: #888; font-size: 10px;">Next check in ' + timeUntilCheck.toFixed(0) + 's</div>';
+          if (timeUntilCheck < 1) {
+            nextHtml += '<div style="color: #6f6; font-size: 10px;">⚡ Buying in < 1s</div>';
+          } else {
+            nextHtml += '<div style="color: #888; font-size: 10px;">Next check in ' + timeUntilCheck.toFixed(1) + 's</div>';
+          }
         }
       }
 
