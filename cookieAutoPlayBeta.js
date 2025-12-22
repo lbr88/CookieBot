@@ -2466,7 +2466,7 @@ AutoPlay.updateDashboard = function() {
       if (needsForPurchase > 0) {
         // Not enough cookies after reserves
         var timeToAfford = needsForPurchase / Game.cookiesPs;
-        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;">⏳ Waiting: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;">⏳ Time left: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
         nextHtml += '<div style="color: #888; font-size: 10px;">Need ' + Beautify(needsForPurchase) + ' more cookies';
         if (AutoPlay.savingsGoal > 0) {
           nextHtml += ' (after ' + Beautify(AutoPlay.savingsGoal) + ' reserve)';
@@ -2475,7 +2475,7 @@ AutoPlay.updateDashboard = function() {
       } else if (AutoPlay.nextPurchasePrice > Game.cookies) {
         // Can't afford at all (even without reserves)
         var timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
-        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;">⏳ Waiting: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;">⏳ Time left: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
         nextHtml += '<div style="color: #888; font-size: 10px;">Need ' + Beautify(AutoPlay.nextPurchasePrice - Game.cookies) + ' more cookies</div>';
       } else {
         // Can afford now!
