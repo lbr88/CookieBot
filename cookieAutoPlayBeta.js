@@ -2308,6 +2308,13 @@ AutoPlay.positionDashboard = function() {
   if (AutoPlay.Config.ShowDashboard == 0) {
     dashboard.style.display = 'none';
   }
+
+  // Update #game div's bottom to account for all bottom bars including ours
+  var game = document.getElementById('game');
+  if (game) {
+    var totalBottomHeight = bottomOffset + dashboard.offsetHeight;
+    game.style.bottom = totalBottomHeight + 'px';
+  }
 }
 
 AutoPlay.toggleDashboard = function() {
