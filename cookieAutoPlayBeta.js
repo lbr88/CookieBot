@@ -104,6 +104,18 @@ AutoPlay.run = function() {
   if (AutoPlay.plantPending)
     AutoPlay.addActivity("Make sure to harvest the new plant before ascend!");
 
+  // DEBUG
+  var wasOpen = Game.onMenu;
+  function debugCheck(label) {
+    if (wasOpen) {
+      var msg = document.getElementById('cookiebot-debug');
+      if (msg) {
+        msg.innerHTML += '<br>' + label + ': ' + (Game.onMenu || '<span style="color:#f00;">CLOSED</span>');
+      }
+    }
+  }
+  debugCheck('After status section');
+
   // Calculate dynamic deadline based on when next purchase is affordable
   var dynamicDeadline = 15000; // Default 15 seconds
   if (AutoPlay.nextPurchasePrice && Game.cookiesPs > 0) {
@@ -141,12 +153,16 @@ AutoPlay.run = function() {
     }
   }
 
+  debugCheck('After deadline calc');
   AutoPlay.deadline=AutoPlay.now+dynamicDeadline;
+  debugCheck('After deadline set');
   AutoPlay.setDeadline(AutoPlay.now+(AutoPlay.now-Game.startDate)/10); // quick start
+  debugCheck('After setDeadline');
   // Skip dashboard update if user has a menu open (prevents closing menus on mobile)
   if (!Game.onMenu || Game.onMenu === '') {
     AutoPlay.updateDashboard();
   }
+  debugCheck('After updateDashboard');
 
   // run periodically (every 15 seconds)
 
