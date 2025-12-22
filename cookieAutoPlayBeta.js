@@ -2625,18 +2625,31 @@ AutoPlay.updateDashboard = function() {
     var progressHtml = '';
 
     // Savings progress bar (golden cookie reserve)
-    if (AutoPlay.savingsGoal > 0 && typeof Beautify !== 'undefined') {
-      progressHtml += '<div style="margin-bottom: 8px;">';
-      progressHtml += '<div style="color: #fc6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="The bot keeps a reserve of cookies to maximize Lucky and Lucky Frenzy golden cookie bonuses. This amount is unavailable for purchases.">🍪 Golden Cookie Reserve</div>';
-
+    // Show reserve info even when not actively saving (e.g., during Hardcore mode)
+    if (typeof Beautify !== 'undefined' && Game.unbuffedCps > 0) {
       // Calculate base thresholds (without time scaling)
       var baseLucky = Game.unbuffedCps * 60 * 100; // 6000 seconds of CPS
       var baseLuckyFrenzy = baseLucky * 7; // 42000 seconds of CPS
       var hasGetLucky = Game.UpgradesById[86] && Game.UpgradesById[86].bought;
 
+      // Check if we're actively saving or just showing info
+      var isSavingActive = AutoPlay.savingsGoal > 0;
+      var reserveStatus = isSavingActive ? '🍪 Golden Cookie Reserve' : '🍪 Golden Cookie Info (Reserve Disabled)';
+      var reserveTooltip = isSavingActive
+        ? 'The bot keeps a reserve of cookies to maximize Lucky and Lucky Frenzy golden cookie bonuses. This amount is unavailable for purchases.'
+        : 'Golden cookie thresholds shown for reference. Reserve is disabled during special achievements like Hardcore.';
+
+      progressHtml += '<div style="margin-bottom: 8px;">';
+      progressHtml += '<div style="color: #fc6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="' + reserveTooltip + '">' + reserveStatus + '</div>';
+
+      // Show note if in special mode (Hardcore/Born Again)
+      if (!isSavingActive && Game.ascensionMode == 1) {
+        progressHtml += '<div style="font-size: 9px; color: #888; font-style: italic; margin-bottom: 4px;">Note: During Hardcore, all cookies are available for purchases</div>';
+      }
+
       // Calculate actual target with time scaling
       var scaling = 1;
-      if (AutoPlay.savingsStart !== undefined && AutoPlay.now && Game.startDate) {
+      if (isSavingActive && AutoPlay.savingsStart !== undefined && AutoPlay.now && Game.startDate) {
         const startTime = 30 * 60 * 1000;
         const targetTime = 400 * 60 * 1000;
         var elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
