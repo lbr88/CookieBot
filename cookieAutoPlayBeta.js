@@ -2221,7 +2221,7 @@ AutoPlay.createDashboard = function() {
   // Create container
   var dashboard = document.createElement('div');
   dashboard.id = 'cookieBotDashboard';
-  dashboard.style.cssText = 'position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6; z-index: 10000;';
+  dashboard.style.cssText = 'position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.9); border-top: 2px solid #6f6; z-index: 10000; display: block;';
 
   // Create header with toggle button
   var header = document.createElement('div');
