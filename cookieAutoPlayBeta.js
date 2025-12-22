@@ -1834,12 +1834,10 @@ AutoPlay.canContinue = function() {
   var targetActivity = '';
   AutoPlay.workingOnSpecialAchievement = false; // Clear flag by default
 
-  // Check prestige threshold for Hardcore/Neverclick achievements
-  var prestigeThresholds = [0, 100, 500, 1000, 5000];
-  var minPrestige = prestigeThresholds[AutoPlay.Config.HardcorePrestigeMin] || 0;
-  var hasEnoughPrestige = Game.prestige >= minPrestige;
+  // Check if Hardcore/Neverclick mode is enabled (AUTO = 1, SKIP = 0)
+  var shouldAttemptHardcore = AutoPlay.Config.HardcoreMode === 1;
 
-  if (!Game.Achievements["True Neverclick"].won && Game.cookieClicks==0 && hasEnoughPrestige) {
+  if (shouldAttemptHardcore && !Game.Achievements["True Neverclick"].won && Game.cookieClicks==0) {
     var achiev = Game.Achievements["True Neverclick"];
     targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
     if (AutoPlay.neverclickWarn)
@@ -1850,12 +1848,12 @@ AutoPlay.canContinue = function() {
     AutoPlay.neverclickWarn=false;
     needAchievement = true;
   }
-  else if (!Game.Achievements["Neverclick"].won && Game.cookieClicks<=15 && hasEnoughPrestige) {
+  else if (shouldAttemptHardcore && !Game.Achievements["Neverclick"].won && Game.cookieClicks<=15) {
     var achiev = Game.Achievements["Neverclick"];
     targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
     needAchievement = true;
   }
-  else if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned==0 && hasEnoughPrestige) {
+  else if (shouldAttemptHardcore && !Game.Achievements["Hardcore"].won && Game.UpgradesOwned==0) {
     var achiev = Game.Achievements["Hardcore"];
     targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
     needAchievement = true;
@@ -2279,14 +2277,14 @@ AutoPlay.ConfigData.CheatGolden =
   {label: ['OFF', 'AUTO', 'LITTLE', 'MEDIUM', 'MUCH'], desc: 'Cheating of golden cookies'};
 AutoPlay.ConfigData.ShowDashboard =
   {label: ['HIDE', 'SHOW'], desc: 'Toggle dashboard visibility'};
-AutoPlay.ConfigData.HardcorePrestigeMin =
-  {label: ['OFF', '100+', '500+', '1000+', '5000+'], desc: 'Minimum prestige before attempting Hardcore/Neverclick achievements'};
+AutoPlay.ConfigData.HardcoreMode =
+  {label: ['SKIP', 'AUTO'], desc: 'Hardcore/Neverclick achievements: SKIP (ignore them) or AUTO (attempt on first run)'};
 AutoPlay.ConfigData.CleanLog = {label: ['Clean Log'], desc: 'Cleaning the log'};
 AutoPlay.ConfigData.ShowLog = {label: ['Show Log'], desc: 'Showing the log'};
 
 AutoPlay.ConfigDefault = {BotMode: 1, NightMode: 1, ClickMode: 1, GoldenClickMode: 1,
                           SavingStrategy: 1, CheatLumps: 1, CheatGolden: 1,
-                          ShowDashboard: 1, HardcorePrestigeMin: 0, CleanLog: 0, ShowLog: 0};
+                          ShowDashboard: 1, HardcoreMode: 1, CleanLog: 0, ShowLog: 0};
 
 AutoPlay.LoadConfig();
 
