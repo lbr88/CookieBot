@@ -361,11 +361,13 @@ AutoPlay.handleSavings = function() {
   // scale goal between 0 and 1 based on elapsed time
   if (elapsedTime < targetTime) {
     AutoPlay.savingsGoal *= scaling;
-    var scalingPct = (scaling * 100).toFixed(0);
-    var statusMsg = 'Building reserve: ' + Beautify(AutoPlay.savingsGoal) + ' (' + (scaling * 100).toFixed(1) + '% of max)';
+    // Calculate actual savings progress (cookies saved vs goal)
+    var actualProgress = Math.min(100, (Game.cookies / AutoPlay.savingsGoal) * 100);
+    var progressPct = actualProgress.toFixed(0);
+    var statusMsg = 'Building reserve: ' + Beautify(AutoPlay.savingsGoal) + ' (' + actualProgress.toFixed(1) + '% saved)';
     AutoPlay.addActivity('Building golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
-      ' cookies (' + (scaling * 100).toFixed(1) + '% of max)');
-    AutoPlay.logStatus('reserve:building-' + Math.floor(scalingPct/10)*10, 'Reserve growing: ' + scalingPct + '% of max');
+      ' cookies (' + actualProgress.toFixed(1) + '% saved)');
+    AutoPlay.logStatus('reserve:building-' + Math.floor(progressPct/10)*10, 'Reserve growing: ' + progressPct + '% saved');
   }
   else {
     var statusMsg = 'Maintaining reserve: ' + Beautify(AutoPlay.savingsGoal);
