@@ -1836,7 +1836,7 @@ AutoPlay.canContinue = function() {
 
   if (!Game.Achievements["True Neverclick"].won && Game.cookieClicks==0) {
     var achiev = Game.Achievements["True Neverclick"];
-    targetActivity = "Trying to get achievement: " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
     if (AutoPlay.neverclickWarn)
 	  Game.Prompt('<h3>Attention</h3><div class="block">'+
       '<p>Cookie Bot is trying to get the true neverclick achievement.</p>'+
@@ -1847,12 +1847,12 @@ AutoPlay.canContinue = function() {
   }
   else if (!Game.Achievements["Neverclick"].won && Game.cookieClicks<=15) {
     var achiev = Game.Achievements["Neverclick"];
-    targetActivity = "Trying to get achievement: " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
     needAchievement = true;
   }
   else if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned==0) {
     var achiev = Game.Achievements["Hardcore"];
-    targetActivity = "Trying to get achievement: " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
     needAchievement = true;
   }
 
@@ -1869,17 +1869,17 @@ AutoPlay.canContinue = function() {
   if (!Game.Achievements["Speed baking I"].won &&
             (AutoPlay.now-Game.startDate <= 1000*60*35)) {
     var achiev = Game.Achievements["Speed baking I"];
-    targetActivity = "Trying to get achievement: " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
   } else if (!Game.Achievements["Speed baking II"].won &&
             (AutoPlay.now-Game.startDate <= 1000*60*25)) {
     var achiev = Game.Achievements["Speed baking II"];
-    targetActivity = "Trying to get achievement: " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
     for (var i = 1; i<3; i++) // threefold clicking speed
       setTimeout(function(){Game.ClickCookie(0, Game.computedMouseCps);}, 60*i);
   } else if (!Game.Achievements["Speed baking III"].won &&
             (AutoPlay.now-Game.startDate <= 1000*60*15)) {
     var achiev = Game.Achievements["Speed baking III"];
-    targetActivity = "Trying to get achievement: " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
     for (var i = 1; i<5; i++) // fivefold clicking speed
       setTimeout(function(){Game.ClickCookie(0, Game.computedMouseCps);}, 30*i);
   } else return false;
