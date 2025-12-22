@@ -88,7 +88,7 @@ AutoPlay.run = function() {
     AutoPlay.handleAscend(); // check ascend often for lucky payout
   }
   if (AutoPlay.now<AutoPlay.deadline) return;  // end of speed activity
-  // run only once a minute from here
+  // run periodically from here (every 15 seconds)
   if (Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName) {
     Game.bakeryNameL.textContent = AutoPlay.robotName+Game.bakeryNameL.textContent;
   } // write the robot name in front of the bakery name
@@ -96,11 +96,11 @@ AutoPlay.run = function() {
   AutoPlay.status(false);
   if (AutoPlay.plantPending)
     AutoPlay.addActivity("Make sure to harvest the new plant before ascend!");
-  AutoPlay.deadline=AutoPlay.now+60000; // wait one minute before next step
+  AutoPlay.deadline=AutoPlay.now+15000; // check every 15 seconds instead of 60
   AutoPlay.setDeadline(AutoPlay.now+(AutoPlay.now-Game.startDate)/10); // quick start
-  AutoPlay.updateDashboard(); // Update dashboard once per minute
+  AutoPlay.updateDashboard(); // Update dashboard every cycle
 
-  // run only once a minute
+  // run periodically (every 15 seconds)
   if (AutoPlay.Config.CheatLumps!=4) AutoPlay.handleSugarLumps();
   AutoPlay.handleSavings();
   AutoPlay.handleSeasons();
