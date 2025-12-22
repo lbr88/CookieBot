@@ -57,8 +57,10 @@ AutoPlay.savingsStart = Game.startDate;  // time since start of saving
 AutoPlay.buy10 = false;
 AutoPlay.hyperActive=false;
 AutoPlay.actionHistory = [];
+AutoPlay.statusHistory = [];
 AutoPlay.maxHistorySize = 20;
 AutoPlay.dashboardCollapsed = false;
+AutoPlay.lastStatus = {}; // Track last status to avoid duplicates
 
 AutoPlay.run = function() {
   if (Game.AscendTimer>0 || Game.ReincarnateTimer>0) return;
@@ -339,7 +341,9 @@ AutoPlay.handleSavings = function() {
   if (elapsedTime < 0) {
     AutoPlay.savingsGoal = 0;
     var minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
-    AutoPlay.addActivity('No golden cookie reserve yet (' + minutesRemaining + ' min remaining in startup period)');
+    var statusMsg = 'No golden cookie reserve yet (' + minutesRemaining + ' min remaining in startup period)';
+    AutoPlay.addActivity(statusMsg);
+    AutoPlay.logStatus('reserve', statusMsg);
     return;
   }
   if (Game.UpgradesById[52].bought && Game.UpgradesById[53].bought) {
@@ -347,7 +351,9 @@ AutoPlay.handleSavings = function() {
   }
   else {
     AutoPlay.savingsGoal = 0;
-    AutoPlay.addActivity('Waiting for golden cookie upgrades before building reserve.');
+    var statusMsg = 'Waiting for golden cookie upgrades before building reserve';
+    AutoPlay.addActivity(statusMsg + '.');
+    AutoPlay.logStatus('reserve', statusMsg);
     return;
   }
   if (Game.UpgradesById[86].bought)  // get lucky
@@ -355,12 +361,16 @@ AutoPlay.handleSavings = function() {
   // scale goal between 0 and 1 based on elapsed time
   if (elapsedTime < targetTime) {
     AutoPlay.savingsGoal *= scaling;
+    var statusMsg = 'Building reserve: ' + Beautify(AutoPlay.savingsGoal) + ' (' + (scaling * 100).toFixed(1) + '% of max)';
     AutoPlay.addActivity('Building golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
       ' cookies (' + (scaling * 100).toFixed(1) + '% of max)');
+    AutoPlay.logStatus('reserve', statusMsg);
   }
   else {
+    var statusMsg = 'Maintaining reserve: ' + Beautify(AutoPlay.savingsGoal);
     AutoPlay.addActivity('Maintaining golden cookie reserve: ' + Beautify(AutoPlay.savingsGoal) +
       ' cookies');
+    AutoPlay.logStatus('reserve', statusMsg);
   }
   if (AutoPlay.savingsGoal > Game.Objects["Cursor"].getPrice()) { // saving is too expensive
     AutoPlay.savingsStart += delayTime; // delay saving
@@ -1897,6 +1907,7 @@ AutoPlay.setMainActivity = function(str) {
   AutoPlay.mainActivity = str;
   AutoPlay.info(str);
   AutoPlay.logAction('Goal changed', str);
+  AutoPlay.logStatus('goal', 'Goal: ' + str);
 }
 
 AutoPlay.findNextAchievement = function() {
@@ -2253,8 +2264,8 @@ AutoPlay.createDashboard = function() {
   content.id = 'dashboardContent';
   content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 250px; overflow-y: auto;';
 
-  // Three columns: Next Actions | Progress | Recent History
-  content.innerHTML = '<div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div></div><div id="dashProgress" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Progress</div><div id="dashProgressContent" style="color: #fff; font-size: 11px;">Loading...</div></div><div id="dashHistory" style="flex: 1; min-width: 300px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Actions (Last 20)</div><div id="dashHistoryContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No actions yet...</div></div>';
+  // Three columns: Next Actions & Progress | Recent Status | Recent Actions
+  content.innerHTML = '<div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div><div id="dashProgressContent" style="color: #fff; font-size: 11px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #444;">Loading...</div></div><div id="dashStatus" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Status</div><div id="dashStatusContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No status updates yet...</div></div><div id="dashHistory" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Actions</div><div id="dashHistoryContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No actions yet...</div></div>';
 
   // Add toggle functionality
   header.onclick = AutoPlay.toggleDashboard;
@@ -2545,7 +2556,28 @@ AutoPlay.updateDashboard = function() {
 
     document.getElementById('dashProgressContent').innerHTML = progressHtml || 'No active goals';
 
-    // Update History
+    // Update Status History
+    var statusHtml = '';
+    if (AutoPlay.statusHistory && AutoPlay.statusHistory.length > 0) {
+      AutoPlay.statusHistory.forEach(function(entry) {
+        var timeStr = entry.time.toLocaleTimeString();
+        var color = '#ccc';
+        var icon = '📊';
+
+        if (entry.type === 'goal') { color = '#fc6'; icon = '🎯'; }
+        else if (entry.type === 'reserve') { color = '#f96'; icon = '🍪'; }
+        else if (entry.type === 'achievement') { color = '#f66'; icon = '🏆'; }
+        else if (entry.type === 'mode') { color = '#6f6'; icon = '⚙️'; }
+        else if (entry.type === 'ascend') { color = '#f6f'; icon = '⬆️'; }
+
+        statusHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + icon + ' ' + entry.message + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
+      });
+    } else {
+      statusHtml = '<div style="color: #888;">No status updates yet...</div>';
+    }
+    document.getElementById('dashStatusContent').innerHTML = statusHtml;
+
+    // Update Action History
     var historyHtml = '';
     if (AutoPlay.actionHistory && AutoPlay.actionHistory.length > 0) {
       AutoPlay.actionHistory.forEach(function(entry) {
@@ -2701,6 +2733,32 @@ AutoPlay.logAction = function(action, details) {
     AutoPlay.updateDashboard(); // Refresh display
   } catch (e) {
     console.log('Log action error:', e);
+  }
+}
+
+AutoPlay.logStatus = function(statusType, message, details) {
+  try {
+    // Only log if status changed
+    var statusKey = statusType + ':' + message;
+    if (AutoPlay.lastStatus[statusType] === statusKey) return;
+    AutoPlay.lastStatus[statusType] = statusKey;
+
+    var timestamp = new Date();
+    var entry = {
+      time: timestamp,
+      type: statusType, // 'goal', 'reserve', 'mode', 'achievement', etc.
+      message: message,
+      details: details || ''
+    };
+
+    AutoPlay.statusHistory.unshift(entry); // Add to beginning
+    if (AutoPlay.statusHistory.length > AutoPlay.maxHistorySize) {
+      AutoPlay.statusHistory.pop(); // Remove oldest
+    }
+
+    AutoPlay.updateDashboard(); // Refresh display
+  } catch (e) {
+    console.log('Log status error:', e);
   }
 }
 
