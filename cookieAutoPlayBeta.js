@@ -2248,27 +2248,31 @@ AutoPlay.createDashboard = function() {
     dashboard.style.display = 'none';
   }
 
-  // Push game content up to make room for dashboard (delay to ensure DOM is rendered)
+  // Adjust game layout to push game up (like Cookie Monster does)
   setTimeout(function() {
     AutoPlay.adjustGameLayout();
   }, 100);
 }
 
 AutoPlay.adjustGameLayout = function() {
+  var game = document.getElementById('game');
   var dashboard = document.getElementById('cookieBotDashboard');
-  if (!dashboard) return;
+  if (!game || !dashboard) return;
 
+  // Store original bottom position on first call (set by Cookie Monster or default)
+  if (typeof AutoPlay.gameOriginalBottom === 'undefined') {
+    AutoPlay.gameOriginalBottom = parseInt(getComputedStyle(game).bottom) || 0;
+  }
+
+  // Calculate our dashboard height
   var dashboardHeight = 0;
   if (dashboard.style.display !== 'none' && AutoPlay.Config.ShowDashboard !== 0) {
-    // Get actual height of dashboard
     dashboardHeight = dashboard.offsetHeight;
   }
 
-  // Add margin to body to push all content up
-  document.body.style.marginBottom = dashboardHeight + 'px';
-
-  // Also ensure the dashboard stays at bottom
-  dashboard.style.bottom = '0';
+  // Set game bottom to original position + our dashboard height
+  var newBottom = AutoPlay.gameOriginalBottom + dashboardHeight;
+  game.style.bottom = newBottom + 'px';
 }
 
 AutoPlay.toggleDashboard = function() {
