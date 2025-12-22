@@ -2413,15 +2413,37 @@ AutoPlay.updateDashboard = function() {
       nextHtml += '</div>';
       nextHtml += '<div style="color: #ccc; font-size: 10px;">Cost: ' + Beautify(AutoPlay.nextPurchasePrice) + '</div>';
 
-      if (AutoPlay.nextPurchasePrice > Game.cookies) {
+      // Calculate available cookies (total - savings reserve)
+      var availableCookies = Game.cookies - (AutoPlay.savingsGoal || 0);
+      var needsForPurchase = AutoPlay.nextPurchasePrice - availableCookies;
+
+      if (needsForPurchase > 0) {
+        // Not enough cookies after reserves
+        var timeToAfford = needsForPurchase / Game.cookiesPs;
+        nextHtml += '<div style="color: #f96; font-size: 10px; margin-top: 4px;">⏳ Waiting: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #888; font-size: 9px;">Need ' + Beautify(needsForPurchase) + ' more cookies';
+        if (AutoPlay.savingsGoal > 0) {
+          nextHtml += ' (after ' + Beautify(AutoPlay.savingsGoal) + ' reserve)';
+        }
+        nextHtml += '</div>';
+      } else if (AutoPlay.nextPurchasePrice > Game.cookies) {
+        // Can't afford at all (even have reserves)
         var timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
-        nextHtml += '<div style="color: #aaa; font-size: 10px;">Time to afford: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford/60).toFixed(1) + 'm') + '</div>';
+        nextHtml += '<div style="color: #f96; font-size: 10px; margin-top: 4px;">⏳ Waiting: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #888; font-size: 9px;">Need ' + Beautify(AutoPlay.nextPurchasePrice - Game.cookies) + ' more cookies</div>';
       } else {
-        nextHtml += '<div style="color: #6f6; font-size: 10px;">✓ Can afford now!</div>';
+        // Can afford now!
+        nextHtml += '<div style="color: #6f6; font-size: 10px; margin-top: 4px;">✓ Ready to buy!</div>';
+        if (AutoPlay.hyperActive) {
+          nextHtml += '<div style="color: #6f6; font-size: 9px;">🚀 High activity mode - buying frequently</div>';
+        } else {
+          var timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
+          nextHtml += '<div style="color: #888; font-size: 9px;">Next check in ' + timeUntilCheck.toFixed(0) + 's</div>';
+        }
       }
 
       if (AutoPlay.nextPurchasePP !== undefined && AutoPlay.nextPurchasePP < Infinity) {
-        nextHtml += '<div style="color: #888; font-size: 9px;">Payback: ' + (AutoPlay.nextPurchasePP < 60 ? AutoPlay.nextPurchasePP.toFixed(1) + 's' : (AutoPlay.nextPurchasePP/60).toFixed(1) + 'm') + '</div>';
+        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 2px;">Payback period: ' + (AutoPlay.nextPurchasePP < 60 ? AutoPlay.nextPurchasePP.toFixed(1) + 's' : (AutoPlay.nextPurchasePP < 3600 ? (AutoPlay.nextPurchasePP/60).toFixed(1) + 'm' : (AutoPlay.nextPurchasePP/3600).toFixed(1) + 'h')) + '</div>';
       }
       nextHtml += '</div>';
     }
