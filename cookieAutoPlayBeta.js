@@ -399,14 +399,25 @@ AutoPlay.buyUpgrade = function(upgrade, bypass=true) {
 AutoPlay.bestBuy = function() {
   // if cookie monster isn't installed
   if (typeof CookieMonsterData == 'undefined') {
+    // Clear purchase tracking when CookieMonster isn't available
+    AutoPlay.nextPurchase = null;
+    AutoPlay.nextPurchaseType = null;
+    AutoPlay.nextPurchasePP = null;
+    AutoPlay.nextPurchasePrice = null;
     AutoPlay.handleBuildings();
     AutoPlay.handleUpgrades();
     return;
   }
 
   // this happens with cursed finger
-  if (AutoPlay.cpsMult == 0)
+  if (AutoPlay.cpsMult == 0) {
+    // Clear purchase tracking during cursed finger
+    AutoPlay.nextPurchase = null;
+    AutoPlay.nextPurchaseType = null;
+    AutoPlay.nextPurchasePP = null;
+    AutoPlay.nextPurchasePrice = null;
     return;
+  }
 
   // initialize with cursor, when cps = 0 all pp = inf
   let best = Game.ObjectsById[0].name;
@@ -2465,6 +2476,42 @@ AutoPlay.updateDashboard = function() {
     // CPS
     if (typeof Beautify !== 'undefined' && Game.cookiesPs !== undefined) {
       progressHtml += '<div style="font-size: 10px; color: #aaa;">CPS: ' + Beautify(Game.cookiesPs) + ' (' + (AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0') + 'x multiplier)</div>';
+    }
+
+    // Bank
+    if (typeof Beautify !== 'undefined' && Game.cookies !== undefined) {
+      progressHtml += '<div style="font-size: 10px; color: #aaa;">Bank: ' + Beautify(Game.cookies) + '</div>';
+    }
+
+    // Buildings and Upgrades
+    if (Game.BuildingsOwned !== undefined && Game.UpgradesOwned !== undefined) {
+      progressHtml += '<div style="font-size: 10px; color: #aaa;">Buildings: ' + Game.BuildingsOwned + ' | Upgrades: ' + Game.UpgradesOwned + '</div>';
+    }
+
+    // Prestige
+    if (Game.prestige !== undefined && typeof Beautify !== 'undefined') {
+      var nextPrestige = Game.HowMuchPrestige(Game.cookiesReset + Game.cookiesEarned);
+      var prestigeGain = Math.floor(nextPrestige - Game.prestige);
+      if (prestigeGain > 0) {
+        progressHtml += '<div style="font-size: 10px; color: #aaa;">Prestige: ' + Beautify(Game.prestige) + ' (+' + Beautify(prestigeGain) + ' on ascend)</div>';
+      } else {
+        progressHtml += '<div style="font-size: 10px; color: #aaa;">Prestige: ' + Beautify(Game.prestige) + '</div>';
+      }
+    }
+
+    // Active buffs
+    if (Game.buffs) {
+      var activeBuffs = [];
+      for (var buff in Game.buffs) {
+        if (Game.buffs[buff].time > 0) {
+          var buffName = Game.buffs[buff].type.name;
+          var timeLeft = Math.ceil(Game.buffs[buff].time / Game.fps);
+          activeBuffs.push(buffName + ' (' + timeLeft + 's)');
+        }
+      }
+      if (activeBuffs.length > 0) {
+        progressHtml += '<div style="font-size: 10px; color: #fc6; margin-top: 4px;">✨ ' + activeBuffs.join(', ') + '</div>';
+      }
     }
 
     document.getElementById('dashProgressContent').innerHTML = progressHtml || 'No active goals';
