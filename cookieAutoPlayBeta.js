@@ -91,8 +91,20 @@ AutoPlay.run = function() {
   }
   if (AutoPlay.now<AutoPlay.deadline) return;  // end of speed activity
   // run periodically from here (every 15 seconds)
-  // Skip bakery name modification for first 60 seconds to avoid menu closing on fresh games
-  if ((AutoPlay.now - Game.startDate) > 60000 && Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName) {
+
+  // DEBUG: Log what menu is open when timer hits 0
+  if (Game.onMenu) {
+    var debugMsg = document.getElementById('cookiebot-debug');
+    if (!debugMsg) {
+      debugMsg = document.createElement('div');
+      debugMsg.id = 'cookiebot-debug';
+      debugMsg.style.cssText = 'position:fixed;top:50px;right:10px;background:#000;color:#ff0;padding:10px;border:2px solid #ff0;z-index:99999;font-family:monospace;max-width:300px;';
+      document.body.appendChild(debugMsg);
+    }
+    debugMsg.textContent = 'Timer hit 0. Menu open: ' + Game.onMenu + '\nAbout to run periodic checks...';
+  }
+
+  if (Game.bakeryNameL.textContent.slice(0,AutoPlay.robotName.length)!=AutoPlay.robotName) {
     Game.bakeryNameL.textContent = AutoPlay.robotName+Game.bakeryNameL.textContent;
   } // write the robot name in front of the bakery name
   AutoPlay.activities = AutoPlay.mainActivity;
