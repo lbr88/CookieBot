@@ -111,11 +111,13 @@ AutoPlay.run = function() {
   AutoPlay.handleAscend();
   AutoPlay.handleMinigames();
   AutoPlay.handleNotes();
-  // add some more hints what the bot is doing
-  if (!Game.HasAchiev('Elder')) AutoPlay.addActivity("Getting 7 grandma types");
-  if (Game.HasAchiev('Elder') && Game.Upgrades['Bingo center/Research facility'].unlocked &&
-      Game.ascensionMode!=1 && !Game.Upgrades['Bingo center/Research facility'].bought)
-    AutoPlay.addActivity("Funding the grandma research facility");
+  // add some more hints what the bot is doing (but only if not working on special achievements)
+  if (!AutoPlay.workingOnSpecialAchievement) {
+    if (!Game.HasAchiev('Elder')) AutoPlay.addActivity("Getting 7 grandma types");
+    if (Game.HasAchiev('Elder') && Game.Upgrades['Bingo center/Research facility'].unlocked &&
+        Game.ascensionMode!=1 && !Game.Upgrades['Bingo center/Research facility'].bought)
+      AutoPlay.addActivity("Funding the grandma research facility");
+  }
 }
 
 AutoPlay.runRightCount=0;
@@ -1830,6 +1832,7 @@ AutoPlay.neverclickWarn=true;
 AutoPlay.canContinue = function() {
   var needAchievement = false;
   var targetActivity = '';
+  AutoPlay.workingOnSpecialAchievement = false; // Clear flag by default
 
   if (!Game.Achievements["True Neverclick"].won && Game.cookieClicks==0) {
     targetActivity = "Trying to get achievement: True Neverclick.";
@@ -1856,6 +1859,7 @@ AutoPlay.canContinue = function() {
       AutoPlay.setMainActivity(targetActivity);
       AutoPlay.activities = targetActivity; // Also update activities to match
     }
+    AutoPlay.workingOnSpecialAchievement = true; // Flag to skip adding extra activity hints
     return true;
   }
 
@@ -1879,6 +1883,7 @@ AutoPlay.canContinue = function() {
     AutoPlay.setMainActivity(targetActivity);
     AutoPlay.activities = targetActivity; // Also update activities to match
   }
+  AutoPlay.workingOnSpecialAchievement = true; // Flag to skip adding extra activity hints
   AutoPlay.hyperActive=true; // full activity for speed baking
   return true;
 }
@@ -1976,8 +1981,9 @@ AutoPlay.activities = AutoPlay.mainActivity;
 AutoPlay.setMainActivity = function(str) {
   AutoPlay.mainActivity = str;
   AutoPlay.info(str);
-  AutoPlay.logAction('Goal changed', str);
-  AutoPlay.logStatus('goal', 'Goal: ' + str);
+  // Only log as status, not action (goal changes are status updates, not actions)
+  // This prevents duplicate entries in the combined activity feed
+  AutoPlay.logStatus('goal', str);
 }
 
 AutoPlay.findNextAchievement = function() {
