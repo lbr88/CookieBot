@@ -2684,20 +2684,46 @@ AutoPlay.updateDashboard = function() {
     }
 
     // Achievement progress (for "bake X cookies" achievements and special achievements)
-    if (AutoPlay.nextAchievement && typeof Beautify !== 'undefined') {
+    if (AutoPlay.nextAchievement && typeof Beautify !== 'undefined' && Game.AchievementsById) {
       var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
       // List of all "bake X cookies" achievement IDs
       var bakingAchievements = [225, 227, 229, 279, 280, 372, 373, 374, 375, 390, 391, 429, 451, 452, 453, 470, 471, 472, 534, 535, 536, 578, 579, 586, 587, 592, 593];
 
-      // Check for special achievements by ID (more reliable than name)
-      var hardcoreId = Game.Achievements["Hardcore"] ? Game.Achievements["Hardcore"].id : -1;
-      var neverclickId = Game.Achievements["Neverclick"] ? Game.Achievements["Neverclick"].id : -1;
-      var trueNeverclickId = Game.Achievements["True Neverclick"] ? Game.Achievements["True Neverclick"].id : -1;
+      // Check for special achievements - check both by ID and by description/name
+      var isHardcore = false;
+      var isNeverclick = false;
+      var isTrueNeverclick = false;
 
-      var isHardcore = (achiev && achiev.id === hardcoreId);
-      var isNeverclick = (achiev && achiev.id === neverclickId);
-      var isTrueNeverclick = (achiev && achiev.id === trueNeverclickId);
+      if (achiev) {
+        // Check by name in the description
+        var achievDesc = (achiev.ddesc || '').toLowerCase();
+        var achievName = (achiev.name || '').toLowerCase();
+
+        if (achievName.indexOf('hardcore') !== -1 || achievDesc.indexOf('1 billion') !== -1) {
+          isHardcore = true;
+        } else if (achievName.indexOf('true neverclick') !== -1) {
+          isTrueNeverclick = true;
+        } else if (achievName.indexOf('neverclick') !== -1) {
+          isNeverclick = true;
+        }
+
+        // Also check by ID if we can
+        if (Game.Achievements["Hardcore"] && achiev.id === Game.Achievements["Hardcore"].id) isHardcore = true;
+        if (Game.Achievements["Neverclick"] && achiev.id === Game.Achievements["Neverclick"].id) isNeverclick = true;
+        if (Game.Achievements["True Neverclick"] && achiev.id === Game.Achievements["True Neverclick"].id) isTrueNeverclick = true;
+      }
+
       var isSpecialAchievement = isHardcore || isNeverclick || isTrueNeverclick;
+
+      // Also check if we're working on a special achievement
+      if (!isSpecialAchievement && AutoPlay.workingOnSpecialAchievement && achiev) {
+        // Fallback check based on activity text
+        var activityText = (AutoPlay.mainActivity || '').toLowerCase();
+        if (activityText.indexOf('hardcore') !== -1) isHardcore = true;
+        if (activityText.indexOf('true neverclick') !== -1) isTrueNeverclick = true;
+        if (activityText.indexOf('neverclick') !== -1 && activityText.indexOf('true') === -1) isNeverclick = true;
+        isSpecialAchievement = isHardcore || isNeverclick || isTrueNeverclick;
+      }
 
       if (achiev && (bakingAchievements.indexOf(achiev.id) !== -1 || isSpecialAchievement)) {
         // This is a trackable achievement - show progress
