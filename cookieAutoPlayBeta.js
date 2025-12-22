@@ -2329,8 +2329,8 @@ AutoPlay.createDashboard = function() {
   content.id = 'dashboardContent';
   content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 250px; overflow-y: auto;';
 
-  // Three columns: Next Actions & Progress | Recent Status | Recent Actions
-  content.innerHTML = '<div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div><div id="dashProgressContent" style="color: #fff; font-size: 11px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #444;">Loading...</div></div><div id="dashStatus" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Status</div><div id="dashStatusContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No status updates yet...</div></div><div id="dashHistory" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Actions</div><div id="dashHistoryContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No actions yet...</div></div>';
+  // Two columns: Next Actions & Progress | Recent Activity (status + actions combined)
+  content.innerHTML = '<div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div><div id="dashProgressContent" style="color: #fff; font-size: 11px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #444;">Loading...</div></div><div id="dashActivity" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Activity</div><div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No activity yet...</div></div>';
 
   // Add toggle functionality
   header.onclick = AutoPlay.toggleDashboard;
@@ -2651,16 +2651,16 @@ AutoPlay.updateDashboard = function() {
 
     document.getElementById('dashProgressContent').innerHTML = progressHtml || 'No active goals';
 
-    // Update Status History
-    var statusHtml = '';
+    // Update Combined Activity Feed (status + actions)
+    var activityHtml = '';
+    var combinedActivity = [];
+
+    // Add status entries
     if (AutoPlay.statusHistory && AutoPlay.statusHistory.length > 0) {
       AutoPlay.statusHistory.forEach(function(entry) {
-        var timeStr = entry.time.toLocaleTimeString();
+        var baseType = entry.type.split(':')[0];
         var color = '#ccc';
         var icon = '📊';
-
-        // Extract base type (e.g., 'reserve:startup' -> 'reserve')
-        var baseType = entry.type.split(':')[0];
         var tooltip = '';
 
         if (baseType === 'goal') {
@@ -2692,29 +2692,54 @@ AutoPlay.updateDashboard = function() {
           tooltip = 'Wrinkler management status';
         }
 
-        statusHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';" title="' + tooltip + '"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + icon + ' ' + entry.message + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
+        combinedActivity.push({
+          time: entry.time,
+          type: 'status',
+          color: color,
+          icon: icon,
+          tooltip: tooltip,
+          message: entry.message,
+          details: entry.details
+        });
       });
-    } else {
-      statusHtml = '<div style="color: #888;">No status updates yet...</div>';
     }
-    document.getElementById('dashStatusContent').innerHTML = statusHtml;
 
-    // Update Action History
-    var historyHtml = '';
+    // Add action entries
     if (AutoPlay.actionHistory && AutoPlay.actionHistory.length > 0) {
       AutoPlay.actionHistory.forEach(function(entry) {
-        var timeStr = entry.time.toLocaleTimeString();
         var color = '#ccc';
-        if (entry.action.includes('Bought') || entry.action.includes('Upgraded')) color = '#6f6';
-        if (entry.action.includes('Clicked')) color = '#fc6';
-        if (entry.action.includes('Ascend') || entry.action.includes('Achievement')) color = '#f66';
+        var icon = '⚡';
+        if (entry.action.includes('Bought') || entry.action.includes('Upgraded')) { color = '#6f6'; icon = '🛒'; }
+        if (entry.action.includes('Clicked')) { color = '#fc6'; icon = '👆'; }
+        if (entry.action.includes('Ascend') || entry.action.includes('Achievement')) { color = '#f66'; icon = '🏆'; }
 
-        historyHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + color + ';"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + color + ';">' + entry.action + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
+        combinedActivity.push({
+          time: entry.time,
+          type: 'action',
+          color: color,
+          icon: icon,
+          tooltip: 'Action performed by the bot',
+          message: entry.action,
+          details: entry.details
+        });
+      });
+    }
+
+    // Sort by time (newest first)
+    combinedActivity.sort(function(a, b) {
+      return b.time - a.time;
+    });
+
+    // Generate HTML
+    if (combinedActivity.length > 0) {
+      combinedActivity.forEach(function(entry) {
+        var timeStr = entry.time.toLocaleTimeString();
+        activityHtml += '<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ' + entry.color + ';" title="' + entry.tooltip + '"><span style="color: #888; font-size: 9px;">' + timeStr + '</span> <span style="color: ' + entry.color + ';">' + entry.icon + ' ' + entry.message + '</span>' + (entry.details ? ' <span style="color: #aaa; font-size: 10px;"> - ' + entry.details + '</span>' : '') + '</div>';
       });
     } else {
-      historyHtml = '<div style="color: #888;">No actions logged yet...</div>';
+      activityHtml = '<div style="color: #888;">No activity yet...</div>';
     }
-    document.getElementById('dashHistoryContent').innerHTML = historyHtml;
+    document.getElementById('dashActivityContent').innerHTML = activityHtml;
   } catch (e) {
     console.log('Dashboard update error:', e);
   }
