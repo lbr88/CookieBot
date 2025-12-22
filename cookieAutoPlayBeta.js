@@ -235,12 +235,40 @@ AutoPlay.handleGoldenCookies = function() { // pop first golden cookie or reinde
       AutoPlay.logAction('Clicked cookie storm drop', s.type);
     }
     if (s.type!="golden" || s.life<Game.fps || !Game.Achievements["Early bird"].won) {
+      // Track cookies before clicking for Lucky/Lucky Frenzy bonus calculation
+      var cookiesBefore = Game.cookies;
       s.pop();
+      var cookiesGained = Game.cookies - cookiesBefore;
+
+      // Check if this was a Lucky or Lucky Frenzy golden cookie
+      if (s.type === "golden" && cookiesGained > 0 && typeof Beautify !== 'undefined') {
+        var bonusType = s.force || 'shimmer';
+        // Lucky and Lucky Frenzy both have "lucky" in their force name
+        if (bonusType.toLowerCase().includes('lucky')) {
+          AutoPlay.logAction('Clicked ' + bonusType + ' golden cookie', '💰 +' + Beautify(cookiesGained) + ' cookies');
+          return;
+        }
+      }
+
       AutoPlay.logAction('Clicked ' + s.type, s.force || 'shimmer');
       return;
     }
     if ((s.life/Game.fps)<(s.dur-2) && (Game.Achievements["Fading luck"].won)) {
+      // Track cookies before clicking for Lucky/Lucky Frenzy bonus calculation
+      var cookiesBefore = Game.cookies;
       s.pop();
+      var cookiesGained = Game.cookies - cookiesBefore;
+
+      // Check if this was a Lucky or Lucky Frenzy golden cookie
+      if (cookiesGained > 0 && typeof Beautify !== 'undefined') {
+        var bonusType = s.force || 'fading luck';
+        // Lucky and Lucky Frenzy both have "lucky" in their force name
+        if (bonusType.toLowerCase().includes('lucky')) {
+          AutoPlay.logAction('Clicked ' + bonusType + ' golden cookie', '💰 +' + Beautify(cookiesGained) + ' cookies');
+          return;
+        }
+      }
+
       AutoPlay.logAction('Clicked golden cookie', s.force || 'fading luck');
       return;
     }
