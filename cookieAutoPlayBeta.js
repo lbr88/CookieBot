@@ -2440,10 +2440,20 @@ AutoPlay.updateDashboard = function() {
       }
     }
 
-    // Savings progress bar
-    if (AutoPlay.savingsGoal > 0 && Game.cookies < AutoPlay.savingsGoal && typeof Beautify !== 'undefined') {
+    // Savings progress bar (golden cookie reserve)
+    if (AutoPlay.savingsGoal > 0 && typeof Beautify !== 'undefined') {
       var percent = Math.min(100, (Game.cookies / AutoPlay.savingsGoal) * 100);
-      progressHtml += '<div style="margin-bottom: 8px;"><div style="color: #ccc; font-size: 10px;">Saving: ' + Beautify(Game.cookies) + ' / ' + Beautify(AutoPlay.savingsGoal) + '</div><div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;"><div style="background: linear-gradient(to right, #6f6, #4d4); height: 100%; width: ' + percent + '%;"></div></div><div style="font-size: 10px; color: #aaa; margin-top: 2px;">' + percent.toFixed(1) + '%</div></div>';
+      var savingsColor = Game.cookies >= AutoPlay.savingsGoal ? '#6f6' : '#fc6';
+      progressHtml += '<div style="margin-bottom: 8px;">';
+      progressHtml += '<div style="color: ' + savingsColor + '; font-size: 10px;">🍪 Golden Cookie Reserve: ' + Beautify(AutoPlay.savingsGoal) + '</div>';
+
+      if (Game.cookies < AutoPlay.savingsGoal) {
+        progressHtml += '<div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px;"><div style="background: linear-gradient(to right, #fc6, #f96); height: 100%; width: ' + percent + '%;"></div></div>';
+        progressHtml += '<div style="font-size: 10px; color: #aaa; margin-top: 2px;">' + Beautify(Game.cookies) + ' / ' + Beautify(AutoPlay.savingsGoal) + ' (' + percent.toFixed(1) + '%)</div>';
+      } else {
+        progressHtml += '<div style="font-size: 10px; color: #6f6; margin-top: 2px;">✓ Goal reached! Bot will keep this much in reserve.</div>';
+      }
+      progressHtml += '</div>';
     }
 
     // Time in run
