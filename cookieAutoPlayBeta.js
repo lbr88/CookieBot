@@ -556,11 +556,23 @@ AutoPlay.bestBuy = function() {
 //===================== Handle Upgrades ==========================
 AutoPlay.handleUpgrades = function() {
   if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned==0) return;
-    for (var me in Game.UpgradesById) {
-        var e = Game.UpgradesById[me];
-        if (e.unlocked && !e.bought && !AutoPlay.avoidbuy(e))
-            AutoPlay.buyUpgrade(e, true);  // checks price, bypass = true
-    };
+
+  // Track best upgrade for dashboard
+  var bestUpgrade = null;
+  for (var me in Game.UpgradesById) {
+    var e = Game.UpgradesById[me];
+    if (e.unlocked && !e.bought && !AutoPlay.avoidbuy(e)) {
+      if (!bestUpgrade) {
+        bestUpgrade = e;
+        AutoPlay.nextPurchase = e.name;
+        AutoPlay.nextPurchaseType = 'upgrade';
+        AutoPlay.nextPurchasePrice = e.getPrice();
+        AutoPlay.nextPurchasePP = null; // No payback calculation without Cookie Monster
+      }
+      AutoPlay.buyUpgrade(e, true);  // checks price, bypass = true
+    }
+  }
+
   if (AutoPlay.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
       !Game.Upgrades["Sugar frenzy"].bought &&
       (AutoPlay.now-Game.startDate) > 3*24*60*60*1000)
@@ -609,10 +621,20 @@ AutoPlay.handleBuildings = function() {
     var mycpc = me.storedCps / me.price;
     if (mycpc>cpc) cpc = mycpc;
   }
+
+  // Track best building for dashboard
+  var bestBuilding = null;
   for (var i = Game.ObjectsById.length-1; i>=0; i--) {
     var me = Game.ObjectsById[i];
     if (me.locked) continue;
     if (me.storedCps/me.price > cpc/2 || me.amount % 50 >= 40) {
+      if (!bestBuilding) {
+        bestBuilding = me;
+        AutoPlay.nextPurchase = me.name;
+        AutoPlay.nextPurchaseType = 'building';
+        AutoPlay.nextPurchasePrice = me.getPrice();
+        AutoPlay.nextPurchasePP = null; // No payback calculation without Cookie Monster
+      }
       //this checks price, sets deadline
       if (AutoPlay.buyBuilding(me, checkAmount, buyAmount)) return;
     }
@@ -2431,11 +2453,11 @@ AutoPlay.updateDashboard = function() {
     // Show next purchase
     if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
       var purchaseColor = AutoPlay.nextPurchaseType === 'building' ? '#6f6' : '#fc6';
-      nextHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-left: 3px solid ' + purchaseColor + ';">';
-      nextHtml += '<div style="color: ' + purchaseColor + '; font-weight: bold; margin-bottom: 4px;">';
+      nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,200,0,0.08); border: 2px solid ' + purchaseColor + '; border-radius: 4px;">';
+      nextHtml += '<div style="color: ' + purchaseColor + '; font-weight: bold; font-size: 13px; margin-bottom: 6px;">';
       nextHtml += (AutoPlay.nextPurchaseType === 'building' ? '🏢 ' : '⬆️ ') + AutoPlay.nextPurchase;
       nextHtml += '</div>';
-      nextHtml += '<div style="color: #ccc; font-size: 10px;">Cost: ' + Beautify(AutoPlay.nextPurchasePrice) + '</div>';
+      nextHtml += '<div style="color: #ccc; font-size: 11px; margin-bottom: 4px;">Cost: ' + Beautify(AutoPlay.nextPurchasePrice) + '</div>';
 
       // Calculate available cookies (total - savings reserve)
       var availableCookies = Game.cookies - (AutoPlay.savingsGoal || 0);
@@ -2444,32 +2466,39 @@ AutoPlay.updateDashboard = function() {
       if (needsForPurchase > 0) {
         // Not enough cookies after reserves
         var timeToAfford = needsForPurchase / Game.cookiesPs;
-        nextHtml += '<div style="color: #f96; font-size: 10px; margin-top: 4px;">⏳ Waiting: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
-        nextHtml += '<div style="color: #888; font-size: 9px;">Need ' + Beautify(needsForPurchase) + ' more cookies';
+        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;">⏳ Waiting: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #888; font-size: 10px;">Need ' + Beautify(needsForPurchase) + ' more cookies';
         if (AutoPlay.savingsGoal > 0) {
           nextHtml += ' (after ' + Beautify(AutoPlay.savingsGoal) + ' reserve)';
         }
         nextHtml += '</div>';
       } else if (AutoPlay.nextPurchasePrice > Game.cookies) {
-        // Can't afford at all (even have reserves)
+        // Can't afford at all (even without reserves)
         var timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
-        nextHtml += '<div style="color: #f96; font-size: 10px; margin-top: 4px;">⏳ Waiting: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
-        nextHtml += '<div style="color: #888; font-size: 9px;">Need ' + Beautify(AutoPlay.nextPurchasePrice - Game.cookies) + ' more cookies</div>';
+        nextHtml += '<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;">⏳ Waiting: ' + (timeToAfford < 60 ? timeToAfford.toFixed(1) + 's' : (timeToAfford < 3600 ? (timeToAfford/60).toFixed(1) + 'm' : (timeToAfford/3600).toFixed(1) + 'h')) + '</div>';
+        nextHtml += '<div style="color: #888; font-size: 10px;">Need ' + Beautify(AutoPlay.nextPurchasePrice - Game.cookies) + ' more cookies</div>';
       } else {
         // Can afford now!
-        nextHtml += '<div style="color: #6f6; font-size: 10px; margin-top: 4px;">✓ Ready to buy!</div>';
+        nextHtml += '<div style="color: #6f6; font-size: 11px; margin-top: 4px; font-weight: bold;">✓ Ready to buy!</div>';
         if (AutoPlay.hyperActive) {
-          nextHtml += '<div style="color: #6f6; font-size: 9px;">🚀 High activity mode - buying frequently</div>';
+          nextHtml += '<div style="color: #6f6; font-size: 10px;">🚀 High activity mode - buying frequently</div>';
         } else {
           var timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
-          nextHtml += '<div style="color: #888; font-size: 9px;">Next check in ' + timeUntilCheck.toFixed(0) + 's</div>';
+          nextHtml += '<div style="color: #888; font-size: 10px;">Next check in ' + timeUntilCheck.toFixed(0) + 's</div>';
         }
       }
 
-      if (AutoPlay.nextPurchasePP !== undefined && AutoPlay.nextPurchasePP < Infinity) {
-        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 2px;">Payback period: ' + (AutoPlay.nextPurchasePP < 60 ? AutoPlay.nextPurchasePP.toFixed(1) + 's' : (AutoPlay.nextPurchasePP < 3600 ? (AutoPlay.nextPurchasePP/60).toFixed(1) + 'm' : (AutoPlay.nextPurchasePP/3600).toFixed(1) + 'h')) + '</div>';
+      if (AutoPlay.nextPurchasePP !== undefined && AutoPlay.nextPurchasePP !== null && AutoPlay.nextPurchasePP < Infinity) {
+        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 4px;">Payback: ' + (AutoPlay.nextPurchasePP < 60 ? AutoPlay.nextPurchasePP.toFixed(1) + 's' : (AutoPlay.nextPurchasePP < 3600 ? (AutoPlay.nextPurchasePP/60).toFixed(1) + 'm' : (AutoPlay.nextPurchasePP/3600).toFixed(1) + 'h')) + '</div>';
+      }
+
+      // Show if using fallback logic (no Cookie Monster)
+      if (typeof CookieMonsterData === 'undefined') {
+        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 4px; font-style: italic;">Using simple buying logic (Cookie Monster not installed)</div>';
       }
       nextHtml += '</div>';
+    } else {
+      nextHtml += '<div style="color: #888; font-size: 11px; margin-bottom: 12px;">No purchase planned yet...</div>';
     }
 
     // Show main activity/goal
@@ -2488,14 +2517,6 @@ AutoPlay.updateDashboard = function() {
 
     // Update Progress
     var progressHtml = '';
-
-    // Current achievement progress
-    if (AutoPlay.nextAchievement && Game.AchievementsById) {
-      var achiev = Game.AchievementsById[AutoPlay.nextAchievement];
-      if (achiev) {
-        progressHtml += '<div style="margin-bottom: 8px;"><div style="color: #fc6;">Target: ' + achiev.name + '</div><div style="font-size: 10px; color: #aaa;">' + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '') + '</div></div>';
-      }
-    }
 
     // Savings progress bar (golden cookie reserve)
     if (AutoPlay.savingsGoal > 0 && typeof Beautify !== 'undefined') {
