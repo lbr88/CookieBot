@@ -2329,8 +2329,8 @@ AutoPlay.createDashboard = function() {
   content.id = 'dashboardContent';
   content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 250px; overflow-y: auto;';
 
-  // Two columns: Next Actions & Progress | Recent Activity (status + actions combined)
-  content.innerHTML = '<div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div><div id="dashProgressContent" style="color: #fff; font-size: 11px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #444;">Loading...</div></div><div id="dashActivity" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Activity</div><div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No activity yet...</div></div>';
+  // Three columns: Stats & Reserve | Next Actions | Recent Activity
+  content.innerHTML = '<div id="dashProgress" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Stats & Reserve</div><div id="dashProgressContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div></div><div id="dashNextActions" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div><div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div></div><div id="dashActivity" style="flex: 1; min-width: 250px;"><div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Activity</div><div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No activity yet...</div></div>';
 
   // Add toggle functionality
   header.onclick = AutoPlay.toggleDashboard;
