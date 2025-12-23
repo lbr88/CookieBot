@@ -14,6 +14,7 @@
  *
  * Original implementation: lines 1500-1591 in cookieAutoPlayBeta.js
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class StockMarketManager {
     private goodsList;
     private resetTime;
@@ -65,5 +66,9 @@ export declare class StockMarketManager {
      * Set ascension callback
      */
     setDoAscendCallback(callback: (reason: string) => void): void;
+    /**
+     * Get current stock market manager status
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=StockMarketManager.d.ts.map

@@ -91,6 +91,10 @@ export declare class Dashboard {
      */
     private getAchievementProgress;
     /**
+     * Update module status section
+     */
+    private updateModuleStatus;
+    /**
      * Update activity section
      */
     private updateActivity;

@@ -9,6 +9,7 @@
 declare const Game: any;
 declare const AutoPlay: any;
 
+import type { ModuleStatus } from '../types/moduleStatus';
 import { Logger } from '../utils/Logger';
 
 /**
@@ -303,6 +304,122 @@ export class DragonManager {
       return LUMP_HARVEST_ACHIEVEMENTS.includes((AutoPlay as any).nextAchievement);
     }
     return false;
+  }
+
+  /**
+   * Get current dragon manager status
+   */
+  getStatus(): ModuleStatus {
+    // Check if dragon egg is unlocked
+    if (!Game.Upgrades['A crumbly egg'].unlocked) {
+      return {
+        module: 'Dragon',
+        status: 'disabled',
+        currentAction: 'Not unlocked',
+        reason: 'Need to purchase "A crumbly egg" upgrade',
+        icon: '🐉',
+        details: {
+          'Dragon': 'Not unlocked'
+        }
+      };
+    }
+
+    const maxLevel = Game.dragonLevels.length - 1;
+    const currentLevel = Game.dragonLevel;
+    const aura1 = AURA_NAMES[Game.dragonAura] || 'None';
+    const aura2 = AURA_NAMES[Game.dragonAura2] || 'None';
+
+    // Check if dragon can level up
+    if (currentLevel < maxLevel) {
+      const currentLevelData = Game.dragonLevels[currentLevel];
+      const canLevel = currentLevelData.cost();
+
+      if (canLevel) {
+        // Determine what will be sacrificed
+        let sacrificeDesc = '';
+        if (currentLevel >= 5 && currentLevel < maxLevel - 3) {
+          const buildingIndex = currentLevel - 5;
+          const building = Game.ObjectsById[buildingIndex];
+          sacrificeDesc = `100 ${building.name}`;
+        } else if (currentLevel >= maxLevel - 3) {
+          const amount = currentLevel === maxLevel - 3 ? 50 : 200;
+          sacrificeDesc = `${amount} of all buildings`;
+        }
+
+        return {
+          module: 'Dragon',
+          status: 'active',
+          currentAction: 'Leveling up dragon',
+          reason: `Level ${currentLevel} → ${currentLevel + 1}`,
+          nextAction: sacrificeDesc ? `Sacrifice: ${sacrificeDesc}` : 'Training dragon',
+          icon: '🐉',
+          details: {
+            'Level': currentLevel,
+            'Max Level': maxLevel,
+            'Aura 1': aura1,
+            'Aura 2': currentLevel >= maxLevel ? aura2 : 'Not unlocked'
+          }
+        };
+      }
+
+      return {
+        module: 'Dragon',
+        status: 'waiting',
+        currentAction: 'Waiting to level',
+        reason: `Level ${currentLevel}/${maxLevel}`,
+        nextAction: 'Need resources to level up',
+        icon: '🐉',
+        details: {
+          'Level': currentLevel,
+          'Aura 1': aura1,
+          'Aura 2': currentLevel >= maxLevel ? aura2 : 'Not unlocked'
+        }
+      };
+    }
+
+    // Dragon is max level - check for drops
+    const missingDrops = DRAGON_DROPS.filter(
+      drop => !(Game as any).Has(drop) && !(Game as any).HasUnlocked(drop)
+    );
+
+    if (missingDrops.length > 0) {
+      return {
+        module: 'Dragon',
+        status: 'active',
+        currentAction: 'Petting for drops',
+        reason: `${missingDrops.length} drops remaining`,
+        nextAction: `Next: ${missingDrops[0]}`,
+        icon: '🐉',
+        details: {
+          'Level': 'Max',
+          'Aura 1': aura1,
+          'Aura 2': aura2,
+          'Drops Remaining': missingDrops.length
+        }
+      };
+    }
+
+    // Dragon is max level and has all drops - just managing auras
+    const hasPlentLumps = Game.lumps > 99;
+    const needsLumpAchievement = this.isHuntingLumpAchievement();
+    const usingLumpAura = Game.dragonAura === DragonAura.DragonsCurve;
+
+    return {
+      module: 'Dragon',
+      status: 'idle',
+      currentAction: 'Managing auras',
+      reason: usingLumpAura
+        ? (needsLumpAchievement ? 'Optimizing for lump achievements' : hasPlentLumps ? 'Using lump aura despite having 99+ lumps' : 'Fast lump ripening')
+        : (hasPlentLumps && !needsLumpAchievement ? 'Plenty lumps - using golden cookie aura' : 'Optimizing for golden cookies'),
+      icon: '🐉',
+      details: {
+        'Level': 'Max',
+        'Aura 1': aura1,
+        'Aura 2': aura2,
+        'Sugar Lumps': Game.lumps,
+        'All Drops': 'Collected'
+      }
+    };
   }
 
 }

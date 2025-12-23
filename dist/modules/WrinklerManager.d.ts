@@ -10,6 +10,7 @@
  */
 import type { AutoPlayState } from '../types/autoplay';
 import type { SeasonHandler } from './SeasonHandler';
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class WrinklerManager {
     private state;
     private seasonHandler?;
@@ -86,5 +87,9 @@ export declare class WrinklerManager {
      * (meaning we've completed all wanted achievements and moved to the end phase)
      */
     private isEndPhase;
+    /**
+     * Get current wrinkler manager status
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=WrinklerManager.d.ts.map

@@ -178,6 +178,116 @@ class GoldenCookieHandler {
         }
         return 0;
     }
+    /**
+     * Get current golden cookie handler status
+     */
+    getStatus() {
+        // Check if golden cookie clicking is enabled
+        if (!this.config.GoldenClickMode || this.config.GoldenClickMode === 0) {
+            return {
+                module: 'Golden Cookies',
+                status: 'disabled',
+                currentAction: 'Disabled in config',
+                reason: 'GoldenClickMode is set to 0 (off)',
+                icon: '✨',
+                details: {
+                    'Mode': 'Off'
+                }
+            };
+        }
+        const goldenCount = Game.shimmerTypes['golden']?.n || 0;
+        const activeShimmers = Game.shimmers.length;
+        // Check for Four-leaf cookie achievement attempt
+        if (!Game.Achievements['Four-leaf cookie'].won &&
+            Game.Objects['Wizard tower']?.amount > 500 &&
+            Game.Upgrades['Distilled essence of redoubled luck']?.bought) {
+            return {
+                module: 'Golden Cookies',
+                status: 'waiting',
+                currentAction: 'Attempting Four-leaf cookie',
+                reason: `Need 4 golden cookies on screen (currently ${goldenCount})`,
+                nextAction: goldenCount >= 2 ? 'Will cast Hand of Fate' : 'Waiting for more golden cookies',
+                icon: '✨',
+                details: {
+                    'Golden Cookies': goldenCount,
+                    'Target': 4,
+                    'Wizard Towers': Game.Objects['Wizard tower']?.amount || 0
+                }
+            };
+        }
+        // Check for active buffs
+        const activeFrenzy = this.hasFrenzyBuff();
+        const activeBuff = this.getActiveBuff();
+        // Check for cheating mode
+        if (this.config.CheatGolden && this.config.CheatGolden > 0) {
+            const level = this.config.CheatGolden === 1 ? 'Auto' : this.config.CheatGolden;
+            return {
+                module: 'Golden Cookies',
+                status: 'active',
+                currentAction: 'Clicking golden cookies',
+                reason: `Cheating enabled (level ${level})`,
+                nextAction: activeFrenzy ? `Active: ${activeBuff}` : 'Waiting for golden cookies',
+                icon: '✨',
+                details: {
+                    'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+                    'Cheat Level': level,
+                    'Active Shimmers': activeShimmers,
+                    'Golden Cookies': goldenCount,
+                    'Active Buff': activeBuff || 'None'
+                }
+            };
+        }
+        // Normal mode
+        if (activeShimmers > 0) {
+            return {
+                module: 'Golden Cookies',
+                status: 'active',
+                currentAction: 'Clicking shimmers',
+                reason: this.config.GoldenClickMode === 2 ? 'Aggressive mode (includes storm drops)' : 'Normal mode',
+                nextAction: activeFrenzy ? `Active buff: ${activeBuff}` : undefined,
+                icon: '✨',
+                details: {
+                    'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+                    'Active Shimmers': activeShimmers,
+                    'Golden Cookies': goldenCount,
+                    'Active Buff': activeBuff || 'None',
+                    'HyperActive': this.hyperActive
+                }
+            };
+        }
+        return {
+            module: 'Golden Cookies',
+            status: 'idle',
+            currentAction: 'Waiting for golden cookies',
+            reason: this.config.GoldenClickMode === 2 ? 'Aggressive mode' : 'Normal mode',
+            icon: '✨',
+            details: {
+                'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+                'Golden Cookies': goldenCount,
+                'Active Buff': activeBuff || 'None'
+            }
+        };
+    }
+    /**
+     * Get the name of the currently active buff (if any)
+     */
+    getActiveBuff() {
+        const buffOrder = [
+            'Elder frenzy',
+            'Click frenzy',
+            'Dragonflight',
+            'Dragon Harvest',
+            'Frenzy',
+            'Cursed finger',
+            'Building special'
+        ];
+        for (const buff of buffOrder) {
+            if (buff in Game.buffs) {
+                return buff;
+            }
+        }
+        return null;
+    }
 }
 
 ;// ./src/modules/SavingsManager.ts
@@ -843,6 +953,76 @@ class PurchaseManager {
             Game.Upgrades["Sugar frenzy"].buy();
         }
     }
+    /**
+     * Get current module status for dashboard
+     */
+    getStatus() {
+        // Check if Cookie Monster is available
+        const hasCookieMonster = typeof CookieMonsterData !== 'undefined';
+        // Check if waiting for Hardcore achievement
+        if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
+            return {
+                module: 'Purchases',
+                status: 'blocked',
+                currentAction: 'Waiting for first upgrade',
+                reason: 'Protecting Hardcore achievement (1M cookies without upgrades)',
+                nextAction: 'Will auto-buy after you manually buy your first upgrade',
+                icon: '🔒',
+                details: {
+                    'Hardcore Won': false,
+                    'Upgrades Owned': 0,
+                    'Action Required': 'Manually buy any upgrade to start auto-purchasing'
+                }
+            };
+        }
+        // Check if in cursed finger mode
+        if (this.cpsMult === 0) {
+            return {
+                module: 'Purchases',
+                status: 'waiting',
+                currentAction: 'Paused during Cursed Finger',
+                reason: 'CPS multiplier is 0',
+                icon: '👆',
+                details: {
+                    'CPS Multiplier': 0
+                }
+            };
+        }
+        // Active purchasing
+        if (this.state.nextPurchase) {
+            const canAfford = this.state.nextPurchasePrice && this.state.nextPurchasePrice < (Game.cookies - this.savingsGoal);
+            return {
+                module: 'Purchases',
+                status: canAfford ? 'active' : 'waiting',
+                currentAction: canAfford ? `Buying ${this.state.nextPurchase}` : `Saving for ${this.state.nextPurchase}`,
+                reason: hasCookieMonster
+                    ? `Best payback period: ${this.state.nextPurchasePP?.toFixed(1)}s`
+                    : 'Using fallback strategy (no Cookie Monster)',
+                nextAction: this.state.nextPurchase,
+                icon: this.state.nextPurchaseType === 'building' ? '🏢' : '⬆️',
+                details: {
+                    'Next Purchase': this.state.nextPurchase,
+                    'Type': this.state.nextPurchaseType || 'unknown',
+                    'Price': this.state.nextPurchasePrice || 0,
+                    'Available Cookies': Game.cookies - this.savingsGoal,
+                    'Cookie Monster': hasCookieMonster,
+                    'Buy 10 Mode': this.state.buy10
+                }
+            };
+        }
+        // Idle/looking for purchases
+        return {
+            module: 'Purchases',
+            status: 'active',
+            currentAction: 'Evaluating purchases',
+            reason: hasCookieMonster ? 'Using Cookie Monster strategy' : 'Using fallback strategy',
+            icon: '💰',
+            details: {
+                'Cookie Monster': hasCookieMonster,
+                'Savings Goal': this.savingsGoal
+            }
+        };
+    }
 }
 
 ;// ./src/utils/Logger.ts
@@ -1091,6 +1271,134 @@ class SeasonHandler {
             this.elfClickTimeout = null;
         }
     }
+    /**
+     * Get current season handler status
+     */
+    getStatus() {
+        const currentSeason = Game.season || 'none';
+        // Check if season switcher is unlocked
+        if (!Game.Upgrades["Season switcher"].bought) {
+            return {
+                module: 'Season',
+                status: 'disabled',
+                currentAction: 'Season switcher not unlocked',
+                reason: 'Need to unlock Season switcher upgrade',
+                icon: '🎄',
+                details: {
+                    'Current Season': currentSeason === '' ? 'None' : currentSeason,
+                    'Season Switcher': 'Not unlocked'
+                }
+            };
+        }
+        // Check Born Again mode
+        if (Game.ascensionMode === 1) {
+            return {
+                module: 'Season',
+                status: 'disabled',
+                currentAction: 'Born Again mode',
+                reason: 'Season cycling disabled in Born Again',
+                icon: '🎄',
+                details: {
+                    'Mode': 'Born Again',
+                    'Current Season': currentSeason === '' ? 'None' : currentSeason
+                }
+            };
+        }
+        // Check for too many switches
+        if (Game.seasonUses > 20) {
+            return {
+                module: 'Season',
+                status: 'idle',
+                currentAction: 'Season switching limit reached',
+                reason: 'Already switched 20+ times',
+                nextAction: 'Staying in current season',
+                icon: '🎄',
+                details: {
+                    'Current Season': currentSeason === '' ? 'None' : currentSeason,
+                    'Switches': Game.seasonUses
+                }
+            };
+        }
+        // Check for Santa development
+        if (Game.Upgrades["A festive hat"].bought &&
+            !Game.Upgrades["Santa's dominion"].unlocked) {
+            return {
+                module: 'Season',
+                status: 'active',
+                currentAction: 'Developing Santa',
+                reason: 'Upgrading Santa for dominion',
+                nextAction: 'Will cycle seasons after',
+                icon: '🎄',
+                details: {
+                    'Current Season': currentSeason === '' ? 'None' : currentSeason,
+                    'Santa': 'Upgrading'
+                }
+            };
+        }
+        // Check for Christmas elf achievement
+        if (currentSeason === 'christmas' &&
+            !Game.Achievements["Baby it's old outside"].won &&
+            Game.Objects["Grandma"].amount > 0) {
+            const elfGrandmas = Game.Objects["Grandma"].pics.filter((p) => p.pic === "elfGrandma.png");
+            if (elfGrandmas.length > 0) {
+                return {
+                    module: 'Season',
+                    status: 'active',
+                    currentAction: 'Hunting Christmas elf',
+                    reason: 'Working on "Baby it\'s old outside" achievement',
+                    icon: '🎄',
+                    details: {
+                        'Current Season': 'Christmas',
+                        'Elf Detected': true
+                    }
+                };
+            }
+        }
+        // Check if current season is finished
+        const seasonDone = this.seasonFinished(currentSeason);
+        const allSeasonUpgradesUnlocked = this.allUnlocked(this.allSeasonUpgrades);
+        if (!seasonDone) {
+            // Still collecting upgrades in current season
+            const seasonUpgrades = currentSeason === 'valentines' ? this.valentineUpgrades
+                : currentSeason === 'christmas' ? this.christmasUpgrades
+                    : currentSeason === 'easter' ? this.easterUpgrades
+                        : currentSeason === 'halloween' ? this.halloweenUpgrades
+                            : [];
+            const unlockedCount = seasonUpgrades.filter(id => Game.UpgradesById[id].unlocked).length;
+            const totalCount = seasonUpgrades.length;
+            return {
+                module: 'Season',
+                status: 'waiting',
+                currentAction: `Collecting ${currentSeason} upgrades`,
+                reason: `${unlockedCount}/${totalCount} upgrades collected`,
+                nextAction: seasonDone ? 'Will switch to next season' : 'Waiting for more drops',
+                icon: '🎄',
+                details: {
+                    'Current Season': currentSeason === '' ? 'None' : currentSeason,
+                    'Upgrades': `${unlockedCount}/${totalCount}`,
+                    'Finished': seasonDone
+                }
+            };
+        }
+        // Season is finished - ready to switch
+        const nextSeason = currentSeason === 'christmas' ? 'valentines'
+            : currentSeason === 'valentines' ? 'easter'
+                : currentSeason === 'easter' ? 'halloween'
+                    : 'christmas';
+        return {
+            module: 'Season',
+            status: 'active',
+            currentAction: 'Switching seasons',
+            reason: `${currentSeason} completed`,
+            nextAction: `Switching to ${nextSeason}`,
+            icon: '🎄',
+            details: {
+                'Current Season': currentSeason === '' ? 'None' : currentSeason,
+                'Next Season': nextSeason,
+                'All Upgrades': allSeasonUpgradesUnlocked ? 'Yes' : 'No'
+            }
+        };
+    }
 }
 
 ;// ./src/modules/SugarLumpManager.ts
@@ -1337,6 +1645,137 @@ class SugarLumpManager {
     isCheatLumps() {
         return this.cheatLumps;
     }
+    /**
+     * Get current sugar lump manager status
+     */
+    getStatus() {
+        const game = Game;
+        // Check if lumps are unlocked
+        if (!game.canLumps()) {
+            return {
+                module: 'Sugar Lumps',
+                status: 'disabled',
+                currentAction: 'Not unlocked',
+                reason: 'Need to bake 1 billion cookies first',
+                icon: '🍬',
+                details: {
+                    'Cookies Baked': Math.floor(Game.cookiesEarned)
+                }
+            };
+        }
+        // Check for Born Again mode
+        if (Game.ascensionMode === 1) {
+            return {
+                module: 'Sugar Lumps',
+                status: 'disabled',
+                currentAction: 'Born Again mode',
+                reason: 'Sugar lumps disabled in Born Again',
+                icon: '🍬',
+                details: {
+                    'Mode': 'Born Again'
+                }
+            };
+        }
+        const now = this.state.now;
+        const age = now - game.lumpT;
+        const matureAge = game.lumpMatureAge;
+        const ripeAge = game.lumpRipeAge;
+        const timeUntilRipe = Math.max(0, ripeAge - age);
+        const minutesUntilRipe = Math.floor(timeUntilRipe / 1000 / 60);
+        const hoursUntilRipe = Math.floor(minutesUntilRipe / 60);
+        const lumpType = ['Normal', 'Bifurcated', 'Golden', 'Meaty', 'Caramelized'][game.lumpCurrentType] || 'Unknown';
+        // Check if cheating lumps
+        if (this.cheatLumps) {
+            const speedup = this.cheatLumpsLevel === 1 ? '25x or 625x'
+                : this.cheatLumpsLevel === 2 ? '25x'
+                    : this.cheatLumpsLevel === 3 ? '625x'
+                        : '15625x';
+            return {
+                module: 'Sugar Lumps',
+                status: 'active',
+                currentAction: 'Cheating lumps',
+                reason: `${speedup} speedup + type manipulation`,
+                nextAction: `Harvesting in ${minutesUntilRipe}m`,
+                icon: '🍬',
+                details: {
+                    'Lumps': Game.lumps,
+                    'Type': lumpType,
+                    'Cheat Level': this.cheatLumpsLevel,
+                    'Time': `${minutesUntilRipe}m`
+                }
+            };
+        }
+        // Check if waiting for mature (Hand-picked achievement)
+        if (age >= matureAge && game.lumpCurrentType === 0 &&
+            this.minLumpsOK && !Game.Achievements["Hand-picked"].won) {
+            return {
+                module: 'Sugar Lumps',
+                status: 'active',
+                currentAction: 'Harvesting mature lump',
+                reason: 'Working on Hand-picked achievement',
+                nextAction: 'Will harvest normal lumps when mature',
+                icon: '🍬',
+                details: {
+                    'Lumps': Game.lumps,
+                    'Type': lumpType,
+                    'Age': 'Mature',
+                    'Achievement': 'Hand-picked'
+                }
+            };
+        }
+        // Check if ready to harvest
+        if (age >= ripeAge) {
+            return {
+                module: 'Sugar Lumps',
+                status: 'active',
+                currentAction: 'Harvesting lump',
+                reason: 'Lump is ripe',
+                icon: '🍬',
+                details: {
+                    'Lumps': Game.lumps,
+                    'Type': lumpType,
+                    'Age': 'Ripe'
+                }
+            };
+        }
+        // Check auto-spending status
+        const farm = Game.Objects["Farm"];
+        const cursor = Game.Objects["Cursor"];
+        let spendingStatus = '';
+        if (!farm || farm.level < 9) {
+            spendingStatus = `Upgrading Farm to level 9 (current: ${farm?.level || 0})`;
+        }
+        else if (!this.minLumpsOK) {
+            spendingStatus = 'Garden at level 9';
+        }
+        else if (cursor.level < 12) {
+            spendingStatus = `Upgrading Cursor to level 12 (current: ${cursor.level})`;
+        }
+        else if (!this.canUseLumps) {
+            spendingStatus = 'Upgrading all buildings to level 10';
+        }
+        else if (cursor.level < 20) {
+            spendingStatus = 'Upgrading Cursor to level 20 (Luminous gloves)';
+        }
+        else {
+            spendingStatus = 'All priority upgrades done';
+        }
+        // Growing
+        return {
+            module: 'Sugar Lumps',
+            status: 'waiting',
+            currentAction: 'Growing lump',
+            reason: hoursUntilRipe > 0 ? `${hoursUntilRipe}h ${minutesUntilRipe % 60}m until ripe` : `${minutesUntilRipe}m until ripe`,
+            nextAction: spendingStatus,
+            icon: '🍬',
+            details: {
+                'Lumps': Game.lumps,
+                'Type': lumpType,
+                'Time': `${hoursUntilRipe}h ${minutesUntilRipe % 60}m`,
+                'Auto-Spending': spendingStatus
+            }
+        };
+    }
 }
 
 ;// ./src/modules/WrinklerManager.ts
@@ -1538,6 +1977,94 @@ class WrinklerManager {
      */
     isEndPhase() {
         return this.wantedAchievements.indexOf(this.nextAchievement) < 0;
+    }
+    /**
+     * Get current wrinkler manager status
+     */
+    getStatus() {
+        // Check if wrinklers are unlocked
+        if (!Game.Upgrades["One mind"].bought) {
+            return {
+                module: 'Wrinklers',
+                status: 'disabled',
+                currentAction: 'Not unlocked',
+                reason: 'Need to purchase "One mind" upgrade',
+                icon: '🐛',
+                details: {
+                    'Grandmapocalypse': 'Not started'
+                }
+            };
+        }
+        const attachedCount = this.getAttachedWrinklerCount();
+        const shinyCount = this.getShinyWrinklerCount();
+        const totalValue = this.getTotalWrinklerValue();
+        const maxWrinklers = Game.getWrinklersMax();
+        // Check if popping all wrinklers
+        if (this.state.poppingWrinklers) {
+            return {
+                module: 'Wrinklers',
+                status: 'active',
+                currentAction: 'Popping all wrinklers',
+                reason: Game.season === 'easter' || Game.season === 'halloween'
+                    ? 'Season drops'
+                    : Game.Upgrades["Unholy bait"].bought && !Game.Achievements["Moistburster"].won
+                        ? 'Moistburster achievement'
+                        : 'Last Chance to See achievement',
+                icon: '🐛',
+                details: {
+                    'Attached': attachedCount,
+                    'Shiny': shinyCount,
+                    'Total Value': Math.floor(totalValue)
+                }
+            };
+        }
+        // Check for Wrinkler poker achievement
+        if (!Game.Achievements['Wrinkler poker'].won && Game.wrinklers[3].close === 1) {
+            return {
+                module: 'Wrinklers',
+                status: 'active',
+                currentAction: 'Popping wrinkler #3',
+                reason: 'Working on Wrinkler poker achievement',
+                nextAction: 'Then rotate popping every 2 hours',
+                icon: '🐛',
+                details: {
+                    'Attached': attachedCount,
+                    'Max Wrinklers': maxWrinklers
+                }
+            };
+        }
+        // Regular rotation mode
+        const minutesSinceLastPop = Math.floor((this.state.now - this.state.wrinklerTime) / 1000 / 60);
+        const minutesUntilNext = 120 - minutesSinceLastPop;
+        if (this.state.nextWrinkler === -1) {
+            return {
+                module: 'Wrinklers',
+                status: 'waiting',
+                currentAction: 'Waiting for spots to fill',
+                reason: `${attachedCount}/${maxWrinklers} wrinklers attached`,
+                nextAction: 'Will pop one every 2 hours when full',
+                icon: '🐛',
+                details: {
+                    'Attached': attachedCount,
+                    'Max Wrinklers': maxWrinklers,
+                    'Shiny': shinyCount
+                }
+            };
+        }
+        return {
+            module: 'Wrinklers',
+            status: minutesUntilNext <= 0 ? 'active' : 'waiting',
+            currentAction: minutesUntilNext <= 0 ? 'Popping oldest wrinkler' : 'Rotating wrinklers',
+            reason: `Pop one every 2 hours (last ${minutesSinceLastPop}m ago)`,
+            nextAction: minutesUntilNext > 0 ? `Next pop in ${minutesUntilNext} minutes` : undefined,
+            icon: '🐛',
+            details: {
+                'Attached': attachedCount,
+                'Shiny': shinyCount,
+                'Total Value': Math.floor(totalValue),
+                'Next Pop': minutesUntilNext > 0 ? `${minutesUntilNext}m` : 'Now'
+            }
+        };
     }
 }
 
@@ -2276,6 +2803,159 @@ class AscensionManager {
     getState() {
         return { ...this.state };
     }
+    /**
+     * Get current ascension manager status
+     */
+    getStatus() {
+        // Check if on ascension screen
+        if (Game.OnAscend) {
+            return {
+                module: 'Ascension',
+                status: 'active',
+                currentAction: 'Buying heavenly upgrades',
+                reason: 'On ascension screen',
+                nextAction: 'Will reincarnate',
+                icon: '🌟',
+                details: {
+                    'Heavenly Chips': Math.floor(Game.heavenlyChips),
+                    'Prestige': Math.floor(Game.prestige),
+                    'On Ascend Screen': true
+                }
+            };
+        }
+        // Check if ascending
+        if (this.state.onAscend) {
+            return {
+                module: 'Ascension',
+                status: 'active',
+                currentAction: 'Ascending',
+                reason: 'Ascension in progress',
+                nextAction: 'Wait for ascension screen',
+                icon: '🌟',
+                details: {
+                    'Prestige Gain': Math.floor(Game.ascendMeterLevel),
+                    'New Prestige': Math.floor(Game.prestige + Game.ascendMeterLevel)
+                }
+            };
+        }
+        const currentPrestige = Game.prestige;
+        const prestigeGain = Game.ascendMeterLevel;
+        const targetAchievement = Game.AchievementsById[this.context.nextAchievement];
+        const daysInRun = (this.context.now - Game.startDate) / 1000 / 60 / 60 / 24;
+        // Check for special achievement attempts
+        if (this.context.workingOnSpecialAchievement) {
+            let achievementName = '';
+            if (Game.cookieClicks === 0 && !Game.Achievements["True Neverclick"].won) {
+                achievementName = 'True Neverclick (0 clicks)';
+            }
+            else if (Game.cookieClicks <= 15 && !Game.Achievements["Neverclick"].won) {
+                achievementName = 'Neverclick (≤15 clicks)';
+            }
+            else if (Game.UpgradesOwned === 0 && !Game.Achievements["Hardcore"].won) {
+                achievementName = 'Hardcore (0 upgrades)';
+            }
+            else {
+                achievementName = 'Speed baking';
+            }
+            return {
+                module: 'Ascension',
+                status: 'active',
+                currentAction: `Working on ${achievementName}`,
+                reason: 'Special achievement run',
+                nextAction: 'Will ascend when complete',
+                icon: '🌟',
+                details: {
+                    'Achievement': achievementName,
+                    'Cookie Clicks': Game.cookieClicks,
+                    'Upgrades Owned': Game.UpgradesOwned,
+                    'Days in Run': daysInRun.toFixed(1)
+                }
+            };
+        }
+        // Check for endless cycle (1000 ascends)
+        if (this.context.endPhase() && !Game.Achievements["Endless cycle"].won &&
+            !Game.ascensionMode && Game.Upgrades["Sucralosia Inutilis"].bought) {
+            return {
+                module: 'Ascension',
+                status: 'active',
+                currentAction: 'Going for 1000 ascends',
+                reason: 'Endless cycle achievement',
+                nextAction: 'Rapid ascension mode',
+                icon: '🌟',
+                details: {
+                    'Resets': Game.resets,
+                    'Target': 1000,
+                    'Remaining': 1000 - Game.resets
+                }
+            };
+        }
+        // Check for reincarnation (100 ascends)
+        if (Game.Upgrades["Permanent upgrade slot V"].bought &&
+            !Game.Achievements["Reincarnation"].won && !Game.ascensionMode) {
+            return {
+                module: 'Ascension',
+                status: 'active',
+                currentAction: 'Going for 100 ascends',
+                reason: 'Reincarnation achievement',
+                nextAction: 'Rapid ascension mode',
+                icon: '🌟',
+                details: {
+                    'Resets': Game.resets,
+                    'Target': 100,
+                    'Remaining': 100 - Game.resets
+                }
+            };
+        }
+        // Check for lucky upgrades
+        if (!Game.Upgrades["Lucky payout"].bought && Game.heavenlyChips > 77777777) {
+            const sevenCount = ((Game.prestige + prestigeGain) + '').split('7').length - 1;
+            return {
+                module: 'Ascension',
+                status: 'active',
+                currentAction: 'Going for Lucky payout',
+                reason: `Need six 7s in prestige (currently ${sevenCount})`,
+                nextAction: sevenCount >= 4 ? 'Close! Will ascend soon' : 'Grinding prestige',
+                icon: '🌟',
+                details: {
+                    'Sevens': sevenCount,
+                    'Target': 6,
+                    'Prestige': Math.floor(Game.prestige + prestigeGain)
+                }
+            };
+        }
+        // Normal mode - waiting for target achievement
+        if (targetAchievement && !targetAchievement.won) {
+            return {
+                module: 'Ascension',
+                status: 'waiting',
+                currentAction: `Working on ${targetAchievement.name}`,
+                reason: targetAchievement.ddesc.replace(/<q>.*?<\/q>/ig, ''),
+                nextAction: `Will ascend when achieved`,
+                icon: '🌟',
+                details: {
+                    'Current Prestige': Math.floor(currentPrestige),
+                    'Prestige Gain': Math.floor(prestigeGain),
+                    'Days in Run': daysInRun.toFixed(1),
+                    'Target Achievement': targetAchievement.name
+                }
+            };
+        }
+        // Idle - no specific ascension plan
+        return {
+            module: 'Ascension',
+            status: 'idle',
+            currentAction: 'Playing normally',
+            reason: 'No immediate ascension planned',
+            nextAction: 'Will ascend when beneficial',
+            icon: '🌟',
+            details: {
+                'Current Prestige': Math.floor(currentPrestige),
+                'Prestige Gain': Math.floor(prestigeGain),
+                'Days in Run': daysInRun.toFixed(1),
+                'Resets': Game.resets
+            }
+        };
+    }
 }
 
 ;// ./src/modules/DragonManager.ts
@@ -2545,6 +3225,110 @@ class DragonManager {
         }
         return false;
     }
+    /**
+     * Get current dragon manager status
+     */
+    getStatus() {
+        // Check if dragon egg is unlocked
+        if (!Game.Upgrades['A crumbly egg'].unlocked) {
+            return {
+                module: 'Dragon',
+                status: 'disabled',
+                currentAction: 'Not unlocked',
+                reason: 'Need to purchase "A crumbly egg" upgrade',
+                icon: '🐉',
+                details: {
+                    'Dragon': 'Not unlocked'
+                }
+            };
+        }
+        const maxLevel = Game.dragonLevels.length - 1;
+        const currentLevel = Game.dragonLevel;
+        const aura1 = AURA_NAMES[Game.dragonAura] || 'None';
+        const aura2 = AURA_NAMES[Game.dragonAura2] || 'None';
+        // Check if dragon can level up
+        if (currentLevel < maxLevel) {
+            const currentLevelData = Game.dragonLevels[currentLevel];
+            const canLevel = currentLevelData.cost();
+            if (canLevel) {
+                // Determine what will be sacrificed
+                let sacrificeDesc = '';
+                if (currentLevel >= 5 && currentLevel < maxLevel - 3) {
+                    const buildingIndex = currentLevel - 5;
+                    const building = Game.ObjectsById[buildingIndex];
+                    sacrificeDesc = `100 ${building.name}`;
+                }
+                else if (currentLevel >= maxLevel - 3) {
+                    const amount = currentLevel === maxLevel - 3 ? 50 : 200;
+                    sacrificeDesc = `${amount} of all buildings`;
+                }
+                return {
+                    module: 'Dragon',
+                    status: 'active',
+                    currentAction: 'Leveling up dragon',
+                    reason: `Level ${currentLevel} → ${currentLevel + 1}`,
+                    nextAction: sacrificeDesc ? `Sacrifice: ${sacrificeDesc}` : 'Training dragon',
+                    icon: '🐉',
+                    details: {
+                        'Level': currentLevel,
+                        'Max Level': maxLevel,
+                        'Aura 1': aura1,
+                        'Aura 2': currentLevel >= maxLevel ? aura2 : 'Not unlocked'
+                    }
+                };
+            }
+            return {
+                module: 'Dragon',
+                status: 'waiting',
+                currentAction: 'Waiting to level',
+                reason: `Level ${currentLevel}/${maxLevel}`,
+                nextAction: 'Need resources to level up',
+                icon: '🐉',
+                details: {
+                    'Level': currentLevel,
+                    'Aura 1': aura1,
+                    'Aura 2': currentLevel >= maxLevel ? aura2 : 'Not unlocked'
+                }
+            };
+        }
+        // Dragon is max level - check for drops
+        const missingDrops = DRAGON_DROPS.filter(drop => !Game.Has(drop) && !Game.HasUnlocked(drop));
+        if (missingDrops.length > 0) {
+            return {
+                module: 'Dragon',
+                status: 'active',
+                currentAction: 'Petting for drops',
+                reason: `${missingDrops.length} drops remaining`,
+                nextAction: `Next: ${missingDrops[0]}`,
+                icon: '🐉',
+                details: {
+                    'Level': 'Max',
+                    'Aura 1': aura1,
+                    'Aura 2': aura2,
+                    'Drops Remaining': missingDrops.length
+                }
+            };
+        }
+        // Dragon is max level and has all drops - just managing auras
+        const needsLumpAchievement = this.isHuntingLumpAchievement();
+        const usingLumpAura = Game.dragonAura === DragonAura.DragonsCurve;
+        return {
+            module: 'Dragon',
+            status: 'idle',
+            currentAction: 'Managing auras',
+            reason: usingLumpAura
+                ? (needsLumpAchievement ? 'Optimizing for lump achievements' : 'Fast lump ripening')
+                : 'Optimizing for golden cookies',
+            icon: '🐉',
+            details: {
+                'Level': 'Max',
+                'Aura 1': aura1,
+                'Aura 2': aura2,
+                'Sugar Lumps': Game.lumps,
+                'All Drops': 'Collected'
+            }
+        };
+    }
 }
 
 ;// ./src/modules/Dashboard.ts
@@ -2808,20 +3592,24 @@ class Dashboard {
         // Create content area
         const content = document.createElement('div');
         content.id = 'dashboardContent';
-        content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 250px; overflow-y: auto;';
-        // Three columns: Stats & Reserve | Next Actions | Recent Activity
+        content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 300px; overflow-y: auto;';
+        // Four columns: Stats & Reserve | Next Actions | Module Status | Recent Activity
         content.innerHTML = `
-      <div id="dashProgress" style="flex: 1; min-width: 250px;">
+      <div id="dashProgress" style="flex: 1; min-width: 220px;">
         <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Stats & Reserve</div>
         <div id="dashProgressContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div>
       </div>
-      <div id="dashNextActions" style="flex: 1; min-width: 250px;">
+      <div id="dashNextActions" style="flex: 1; min-width: 220px;">
         <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div>
-        <div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 200px; overflow-y: auto;">Loading...</div>
+        <div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 250px; overflow-y: auto;">Loading...</div>
       </div>
-      <div id="dashActivity" style="flex: 1; min-width: 250px;">
+      <div id="dashModuleStatus" style="flex: 1; min-width: 220px;">
+        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Module Status</div>
+        <div id="dashModuleContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 250px; overflow-y: auto;">Loading...</div>
+      </div>
+      <div id="dashActivity" style="flex: 1; min-width: 220px;">
         <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Activity</div>
-        <div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No activity yet...</div>
+        <div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 250px; overflow-y: auto;">No activity yet...</div>
       </div>
     `;
         // Add toggle functionality
@@ -2975,6 +3763,7 @@ class Dashboard {
             }
             this.updateNextActions();
             this.updateProgress();
+            this.updateModuleStatus();
             this.updateActivity();
         }
         catch (e) {
@@ -3403,6 +4192,119 @@ class Dashboard {
         }
         progressHtml += '</div>';
         return progressHtml;
+    }
+    /**
+     * Update module status section
+     */
+    updateModuleStatus() {
+        let statusHtml = '';
+        // Safety check for AutoPlay global
+        if (typeof AutoPlay === 'undefined') {
+            statusHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
+            const moduleContent = document.getElementById('dashModuleContent');
+            if (moduleContent) {
+                moduleContent.innerHTML = statusHtml;
+            }
+            return;
+        }
+        try {
+            // Collect statuses from all managers
+            const statuses = {};
+            // Get statuses from each manager (if they exist and have getStatus method)
+            if (AutoPlay.purchaseManager && typeof AutoPlay.purchaseManager.getStatus === 'function') {
+                statuses.purchases = AutoPlay.purchaseManager.getStatus();
+            }
+            if (AutoPlay.gardenManager && typeof AutoPlay.gardenManager.getStatus === 'function') {
+                statuses.garden = AutoPlay.gardenManager.getStatus();
+            }
+            if (AutoPlay.wrinklerManager && typeof AutoPlay.wrinklerManager.getStatus === 'function') {
+                statuses.wrinklers = AutoPlay.wrinklerManager.getStatus();
+            }
+            if (AutoPlay.goldenCookieHandler && typeof AutoPlay.goldenCookieHandler.getStatus === 'function') {
+                statuses.goldenCookies = AutoPlay.goldenCookieHandler.getStatus();
+            }
+            if (AutoPlay.dragonManager && typeof AutoPlay.dragonManager.getStatus === 'function') {
+                statuses.dragon = AutoPlay.dragonManager.getStatus();
+            }
+            if (AutoPlay.pantheonManager && typeof AutoPlay.pantheonManager.getStatus === 'function') {
+                statuses.pantheon = AutoPlay.pantheonManager.getStatus();
+            }
+            if (AutoPlay.grimoireManager && typeof AutoPlay.grimoireManager.getStatus === 'function') {
+                statuses.grimoire = AutoPlay.grimoireManager.getStatus();
+            }
+            if (AutoPlay.stockMarketManager && typeof AutoPlay.stockMarketManager.getStatus === 'function') {
+                statuses.stockMarket = AutoPlay.stockMarketManager.getStatus();
+            }
+            if (AutoPlay.sugarLumpManager && typeof AutoPlay.sugarLumpManager.getStatus === 'function') {
+                statuses.sugarLumps = AutoPlay.sugarLumpManager.getStatus();
+            }
+            if (AutoPlay.ascensionManager && typeof AutoPlay.ascensionManager.getStatus === 'function') {
+                statuses.ascension = AutoPlay.ascensionManager.getStatus();
+            }
+            if (AutoPlay.seasonHandler && typeof AutoPlay.seasonHandler.getStatus === 'function') {
+                statuses.season = AutoPlay.seasonHandler.getStatus();
+            }
+            // Render module statuses
+            const moduleOrder = [
+                'purchases',
+                'garden',
+                'wrinklers',
+                'goldenCookies',
+                'dragon',
+                'pantheon',
+                'grimoire',
+                'stockMarket',
+                'sugarLumps',
+                'ascension',
+                'season'
+            ];
+            // Map status to colors
+            const statusColors = {
+                'idle': '#888',
+                'active': '#6f6',
+                'waiting': '#fc6',
+                'blocked': '#f66',
+                'disabled': '#666',
+                'error': '#f00'
+            };
+            for (const key of moduleOrder) {
+                const status = statuses[key];
+                if (!status)
+                    continue;
+                const color = statusColors[status.status] || '#ccc';
+                const icon = status.icon || '📦';
+                statusHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + ';">';
+                statusHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+                statusHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
+                statusHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
+                statusHtml += '</div>';
+                statusHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
+                statusHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
+                if (status.nextAction) {
+                    statusHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
+                }
+                // Show details if available
+                if (status.details && Object.keys(status.details).length > 0) {
+                    statusHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
+                    for (const [key, value] of Object.entries(status.details)) {
+                        statusHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
+                    }
+                    statusHtml += '</div>';
+                }
+                statusHtml += '</div>';
+            }
+            if (statusHtml === '') {
+                statusHtml = '<div style="color: #888;">No module statuses available</div>';
+            }
+        }
+        catch (e) {
+            console.error('Module status error:', e);
+            statusHtml = '<div style="color: #f66;">Error loading module statuses</div>';
+        }
+        const moduleContent = document.getElementById('dashModuleContent');
+        if (moduleContent) {
+            moduleContent.innerHTML = statusHtml;
+        }
     }
     /**
      * Update activity section
@@ -3985,6 +4887,73 @@ class PantheonManager {
         this.poppingWrinklers = poppingWrinklers;
         this.cheatLumps = cheatLumps;
     }
+    /**
+     * Get current pantheon manager status
+     */
+    getStatus() {
+        // Check if pantheon is unlocked
+        if (!Game.isMinigameReady(Game.Objects['Temple'])) {
+            return {
+                module: 'Pantheon',
+                status: 'disabled',
+                currentAction: 'Not unlocked',
+                reason: 'Need Temple minigame unlocked (Temple level 1)',
+                icon: '⛪',
+                details: {
+                    'Temple Level': Game.Objects['Temple']?.level || 0,
+                    'Minigame': 'Not ready'
+                }
+            };
+        }
+        const pantheon = Game.Objects['Temple'].minigame;
+        const slot0 = pantheon.slot[0];
+        const slot1 = pantheon.slot[1];
+        const slot2 = pantheon.slot[2];
+        // Get spirit names
+        const getGodName = (id) => {
+            if (id === -1)
+                return 'Empty';
+            for (const godName in pantheon.gods) {
+                if (pantheon.gods[godName].id === id) {
+                    return godName.charAt(0).toUpperCase() + godName.slice(1);
+                }
+            }
+            return 'Unknown';
+        };
+        const spirit0 = getGodName(slot0);
+        const spirit1 = getGodName(slot1);
+        const spirit2 = getGodName(slot2);
+        // Determine reason based on current setup
+        const age = this.now - Game.lumpT;
+        let reason = '';
+        if (this.poppingWrinklers) {
+            reason = 'Scorn for wrinkler bonus';
+        }
+        else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !this.cheatLumps) {
+            reason = 'Order for faster lump ripening';
+        }
+        else {
+            reason = 'Mother for CpS boost (default)';
+        }
+        // Check swap availability
+        const swapsAvailable = pantheon.swaps;
+        const needsSwaps = swapsAvailable < 3;
+        return {
+            module: 'Pantheon',
+            status: needsSwaps ? 'waiting' : 'active',
+            currentAction: needsSwaps ? 'Waiting for swaps' : 'Managing spirits',
+            reason: reason,
+            nextAction: needsSwaps ? `${swapsAvailable}/3 swaps available` : undefined,
+            icon: '⛪',
+            details: {
+                'Diamond': spirit0,
+                'Ruby': spirit1,
+                'Jade': spirit2,
+                'Swaps': swapsAvailable,
+                'Strategy': this.poppingWrinklers ? 'Wrinkler boost' : 'Default'
+            }
+        };
+    }
 }
 
 ;// ./src/modules/GrimoireManager.ts
@@ -4069,6 +5038,98 @@ class GrimoireManager {
     updateState(canUseLumps, cpsMult) {
         this.canUseLumps = canUseLumps;
         this.cpsMult = cpsMult;
+    }
+    /**
+     * Get current grimoire manager status
+     */
+    getStatus() {
+        // Check if grimoire is unlocked
+        if (!Game.isMinigameReady(Game.Objects['Wizard tower'])) {
+            return {
+                module: 'Grimoire',
+                status: 'disabled',
+                currentAction: 'Not unlocked',
+                reason: 'Need Wizard tower minigame unlocked (Wizard tower level 1)',
+                icon: '🔮',
+                details: {
+                    'Wizard Tower Level': Game.Objects['Wizard tower']?.level || 0,
+                    'Minigame': 'Not ready'
+                }
+            };
+        }
+        const grimoire = Game.Objects['Wizard tower'].minigame;
+        const wizardTower = Game.Objects['Wizard tower'];
+        const magicPercent = Math.floor((grimoire.magic / grimoire.magicM) * 100);
+        // Check for Four-leaf cookie achievement attempt
+        if (!Game.Achievements['Four-leaf cookie'].won &&
+            wizardTower.amount > 500 &&
+            Game.Upgrades['Distilled essence of redoubled luck'].bought) {
+            const goldenCount = Game.shimmerTypes['golden']?.n || 0;
+            return {
+                module: 'Grimoire',
+                status: goldenCount >= 2 ? 'active' : 'waiting',
+                currentAction: 'Attempting Four-leaf cookie',
+                reason: `Need 4 golden cookies (currently ${goldenCount})`,
+                nextAction: goldenCount >= 2 ? 'Will cast Hand of Fate' : 'Waiting for more golden cookies',
+                icon: '🔮',
+                details: {
+                    'Magic': `${magicPercent}%`,
+                    'Golden Cookies': goldenCount,
+                    'Target': 4,
+                    'Wizard Towers': wizardTower.amount
+                }
+            };
+        }
+        // Check for backfire lump farming
+        const handOfFate = grimoire.spells['hand of fate'];
+        const hasGoldenCookie = Game.shimmerTypes['golden']?.n > 0;
+        const canCastHand = grimoire.magic >= grimoire.getSpellCost(handOfFate);
+        const highMagic = magicPercent >= 95;
+        if (hasGoldenCookie && canCastHand && highMagic) {
+            return {
+                module: 'Grimoire',
+                status: 'active',
+                currentAction: 'Casting Hand of Fate',
+                reason: 'Farming backfire sugar lumps (95%+ magic)',
+                icon: '🔮',
+                details: {
+                    'Magic': `${magicPercent}%`,
+                    'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+                    'Strategy': 'Backfire farming'
+                }
+            };
+        }
+        // Check for high CpS multiplier (>100x)
+        if (this.cpsMult > 100) {
+            return {
+                module: 'Grimoire',
+                status: canCastHand ? 'active' : 'waiting',
+                currentAction: canCastHand ? 'Casting spells' : 'Waiting for magic',
+                reason: `High CpS multiplier (${this.cpsMult.toFixed(0)}x)`,
+                nextAction: canCastHand ? 'Casting Hand of Fate & Conjure Baked Goods' : 'Recharging magic',
+                icon: '🔮',
+                details: {
+                    'Magic': `${magicPercent}%`,
+                    'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+                    'Can Use Lumps': this.canUseLumps && Game.lumps > 100,
+                    'Sugar Lumps': Game.lumps
+                }
+            };
+        }
+        // Idle - waiting for good conditions
+        return {
+            module: 'Grimoire',
+            status: 'idle',
+            currentAction: 'Waiting for good conditions',
+            reason: 'Need high CpS multiplier (>100x) or backfire opportunity',
+            nextAction: highMagic ? 'Ready for backfire attempt' : 'Recharging magic',
+            icon: '🔮',
+            details: {
+                'Magic': `${magicPercent}%`,
+                'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+                'Threshold': '100x'
+            }
+        };
     }
 }
 
@@ -5161,6 +6222,127 @@ class GardenManager {
     isPlantPending() {
         return this.plantPending;
     }
+    /**
+     * Get current module status for dashboard
+     */
+    getStatus() {
+        // Check if garden is unlocked
+        if (!Game.Objects['Farm'] || !Game.Objects['Farm'].minigames || !Game.Objects['Farm'].minigames[0]) {
+            return {
+                module: 'Garden',
+                status: 'disabled',
+                currentAction: 'Not unlocked',
+                reason: 'Farm minigame not available yet',
+                icon: '🌱',
+                details: {
+                    'Farm Level': Game.Objects['Farm']?.level || 0,
+                    'Minigame': 'Not unlocked'
+                }
+            };
+        }
+        const garden = Game.Objects['Farm'].minigame;
+        // Check if ascending soon
+        if (this.wantAscend) {
+            return {
+                module: 'Garden',
+                status: 'waiting',
+                currentAction: 'Preparing for ascension',
+                reason: 'Not planting before ascend',
+                icon: '⬆️',
+                details: {
+                    'Ascension Pending': true
+                }
+            };
+        }
+        // Check if waiting for plants
+        if (!garden.plants['meddleweed']?.unlocked) {
+            return {
+                module: 'Garden',
+                status: 'waiting',
+                currentAction: 'Waiting for meddleweed',
+                reason: 'First plant spawns randomly',
+                icon: '🌱',
+                details: {
+                    'Soil': 'fertilizer',
+                    'Waiting For': 'meddleweed'
+                }
+            };
+        }
+        // Check if getting starter plants
+        if (!garden.plants['crumbspore']?.unlocked || !garden.plants['brownMold']?.unlocked) {
+            return {
+                module: 'Garden',
+                status: 'active',
+                currentAction: 'Planting meddleweed everywhere',
+                reason: 'Getting crumbspore and brownMold',
+                icon: '🌱',
+                details: {
+                    'Crumbspore': garden.plants['crumbspore']?.unlocked || false,
+                    'BrownMold': garden.plants['brownMold']?.unlocked || false
+                }
+            };
+        }
+        // Check if working on specific plant
+        const activePlants = this.plantList.filter(p => p !== 0);
+        if (activePlants.length > 0) {
+            const plantIndex = activePlants[0];
+            const plantName = PLANT_DEPENDENCIES[plantIndex]?.[0] || 'unknown';
+            return {
+                module: 'Garden',
+                status: 'active',
+                currentAction: `Growing ${plantName}`,
+                reason: this.plantsMissing ? 'Working towards all 34 plants' : 'Optimizing for cookies/lumps',
+                nextAction: activePlants.length > 1 ? `Then ${activePlants.length - 1} more plants` : undefined,
+                icon: '🌱',
+                details: {
+                    'Target Plant': plantName,
+                    'Plants Unlocked': `${garden.plantsUnlockedN}/${garden.plantsN}`,
+                    'Farm Level': Game.Objects['Farm'].level,
+                    'Active Sectors': activePlants.length
+                }
+            };
+        }
+        // Check if ready for sacrifice
+        if (garden.plantsUnlockedN === garden.plantsN && !Game.AchievementsById[382].won) {
+            if (this.harvestPlant) {
+                return {
+                    module: 'Garden',
+                    status: 'waiting',
+                    currentAction: 'Waiting to harvest',
+                    reason: 'Will sacrifice after harvesting cookie plants',
+                    nextAction: 'Sacrifice for "Seedless to nay" achievement',
+                    icon: '🏆',
+                    details: {
+                        'Plants Unlocked': 'All 34',
+                        'Harvest Pending': true
+                    }
+                };
+            }
+            return {
+                module: 'Garden',
+                status: 'active',
+                currentAction: 'Ready to sacrifice',
+                reason: 'All plants unlocked',
+                nextAction: 'Get "Seedless to nay" achievement',
+                icon: '🏆',
+                details: {
+                    'Plants Unlocked': 'All 34'
+                }
+            };
+        }
+        // Idle/harvesting
+        return {
+            module: 'Garden',
+            status: this.harvestPlant ? 'active' : 'idle',
+            currentAction: this.harvestPlant ? 'Harvesting plants' : 'Monitoring garden',
+            reason: this.plantsMissing ? 'All goals complete, waiting' : 'Optimizing production',
+            icon: '🌿',
+            details: {
+                'Plants Unlocked': `${garden.plantsUnlockedN}/${garden.plantsN}`,
+                'Harvest Ready': this.harvestPlant
+            }
+        };
+    }
 }
 
 ;// ./src/modules/StockMarketManager.ts
@@ -5399,6 +6581,125 @@ class StockMarketManager {
      */
     setDoAscendCallback(callback) {
         this.doAscend = callback;
+    }
+    /**
+     * Get current stock market manager status
+     */
+    getStatus() {
+        // Check for cooldown period after reset
+        const cooldownRemaining = Math.floor((this.resetTime + 3600000 - Date.now()) / 1000 / 60);
+        if (cooldownRemaining > 0) {
+            return {
+                module: 'Stock Market',
+                status: 'waiting',
+                currentAction: 'Cooldown after reset',
+                reason: 'Wait 1 hour after reincarnation before trading',
+                nextAction: `Will start in ${cooldownRemaining} minutes`,
+                icon: '📈',
+                details: {
+                    'Cooldown': `${cooldownRemaining}m remaining`
+                }
+            };
+        }
+        // Check if stock market is unlocked
+        if (!Game.isMinigameReady(Game.Objects['Bank'])) {
+            return {
+                module: 'Stock Market',
+                status: 'disabled',
+                currentAction: 'Not unlocked',
+                reason: 'Need Bank minigame unlocked (Cursor level 12)',
+                icon: '📈',
+                details: {
+                    'Cursor Level': Game.Objects['Cursor']?.level || 0,
+                    'Minigame': 'Not ready'
+                }
+            };
+        }
+        // Don't trade before ascending
+        if (this.wantAscend) {
+            return {
+                module: 'Stock Market',
+                status: 'waiting',
+                currentAction: 'Preparing to ascend',
+                reason: 'Avoiding trades before ascension',
+                icon: '📈',
+                details: {
+                    'Status': 'Pre-ascension'
+                }
+            };
+        }
+        const market = Game.Objects['Bank'].minigame;
+        const brokers = market.brokers;
+        const maxBrokers = market.getMaxBrokers();
+        const officeLevel = market.officeLevel;
+        const maxOfficeLevel = market.offices.length - 1;
+        // Count active trading
+        let totalValue = 0;
+        for (const goodKey in market.goods) {
+            const good = market.goods[goodKey];
+            totalValue += good.stock * market.getGoodPrice(good);
+        }
+        // Check for achievement pursuit
+        const lastGood = market.goodsById[market.goodsById.length - 1];
+        const pursuingAchievement = !Game.AchievementsById[459].won &&
+            market.getGoodMaxStock(lastGood) > 1000;
+        if (pursuingAchievement) {
+            return {
+                module: 'Stock Market',
+                status: 'active',
+                currentAction: 'Working on achievement',
+                reason: 'Buying 500 of each stock for "Dude, sweet" achievement',
+                icon: '📈',
+                details: {
+                    'Brokers': `${brokers}/${maxBrokers}`,
+                    'Office Level': `${officeLevel}/${maxOfficeLevel}`,
+                    'Portfolio Value': Math.floor(totalValue)
+                }
+            };
+        }
+        // Check if we need to upgrade infrastructure
+        if (brokers < maxBrokers || officeLevel < maxOfficeLevel) {
+            return {
+                module: 'Stock Market',
+                status: 'active',
+                currentAction: 'Upgrading infrastructure',
+                reason: brokers < maxBrokers ? 'Buying brokers' : 'Upgrading office',
+                nextAction: `Then start trading (${this.goodsList.size} goods tracked)`,
+                icon: '📈',
+                details: {
+                    'Brokers': `${brokers}/${maxBrokers}`,
+                    'Office Level': `${officeLevel}/${maxOfficeLevel}`
+                }
+            };
+        }
+        // Active trading
+        if (this.goodsList.size === 0) {
+            return {
+                module: 'Stock Market',
+                status: 'active',
+                currentAction: 'Initializing trading',
+                reason: 'Setting up price thresholds',
+                icon: '📈',
+                details: {
+                    'Brokers': brokers,
+                    'Office Level': officeLevel
+                }
+            };
+        }
+        return {
+            module: 'Stock Market',
+            status: 'active',
+            currentAction: 'Trading stocks',
+            reason: 'Buying low, selling high',
+            nextAction: `Tracking ${this.goodsList.size} goods`,
+            icon: '📈',
+            details: {
+                'Brokers': brokers,
+                'Portfolio Value': Math.floor(totalValue),
+                'Goods Tracked': this.goodsList.size,
+                'Strategy': 'Momentum-based'
+            }
+        };
     }
 }
 

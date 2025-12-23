@@ -5,6 +5,7 @@
  * - Handle Buildings (line 661)
  * - Handle Upgrades (line 617)
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export interface PurchaseInfo {
     name: string;
     type: 'building' | 'upgrade';
@@ -114,5 +115,9 @@ export declare class PurchaseManager {
      * Original: AutoPlay.handleUpgrades (lines 617-641)
      */
     private handleUpgrades;
+    /**
+     * Get current module status for dashboard
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=PurchaseManager.d.ts.map

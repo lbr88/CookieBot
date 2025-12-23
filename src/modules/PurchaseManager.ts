@@ -6,6 +6,8 @@
  * - Handle Upgrades (line 617)
  */
 
+import type { ModuleStatus } from '../types/moduleStatus';
+
 declare const Game: any;
 declare const Beautify: (num: number) => string;
 declare const CookieMonsterData: any;
@@ -589,6 +591,82 @@ export class PurchaseManager {
         (this.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
       Game.Upgrades["Sugar frenzy"].buy();
     }
+  }
+
+  /**
+   * Get current module status for dashboard
+   */
+  getStatus(): ModuleStatus {
+    // Check if Cookie Monster is available
+    const hasCookieMonster = typeof CookieMonsterData !== 'undefined';
+
+    // Check if waiting for Hardcore achievement
+    if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
+      return {
+        module: 'Purchases',
+        status: 'blocked',
+        currentAction: 'Waiting for first upgrade',
+        reason: 'Protecting Hardcore achievement (1M cookies without upgrades)',
+        nextAction: 'Will auto-buy after you manually buy your first upgrade',
+        icon: '🔒',
+        details: {
+          'Hardcore Won': false,
+          'Upgrades Owned': 0,
+          'Action Required': 'Manually buy any upgrade to start auto-purchasing'
+        }
+      };
+    }
+
+    // Check if in cursed finger mode
+    if (this.cpsMult === 0) {
+      return {
+        module: 'Purchases',
+        status: 'waiting',
+        currentAction: 'Paused during Cursed Finger',
+        reason: 'CPS multiplier is 0',
+        icon: '👆',
+        details: {
+          'CPS Multiplier': 0
+        }
+      };
+    }
+
+    // Active purchasing
+    if (this.state.nextPurchase) {
+      const canAfford = this.state.nextPurchasePrice && this.state.nextPurchasePrice < (Game.cookies - this.savingsGoal);
+
+      return {
+        module: 'Purchases',
+        status: canAfford ? 'active' : 'waiting',
+        currentAction: canAfford ? `Buying ${this.state.nextPurchase}` : `Saving for ${this.state.nextPurchase}`,
+        reason: hasCookieMonster
+          ? `Best payback period: ${this.state.nextPurchasePP?.toFixed(1)}s`
+          : 'Using fallback strategy (no Cookie Monster)',
+        nextAction: this.state.nextPurchase,
+        icon: this.state.nextPurchaseType === 'building' ? '🏢' : '⬆️',
+        details: {
+          'Next Purchase': this.state.nextPurchase,
+          'Type': this.state.nextPurchaseType || 'unknown',
+          'Price': this.state.nextPurchasePrice || 0,
+          'Available Cookies': Game.cookies - this.savingsGoal,
+          'Cookie Monster': hasCookieMonster,
+          'Buy 10 Mode': this.state.buy10
+        }
+      };
+    }
+
+    // Idle/looking for purchases
+    return {
+      module: 'Purchases',
+      status: 'active',
+      currentAction: 'Evaluating purchases',
+      reason: hasCookieMonster ? 'Using Cookie Monster strategy' : 'Using fallback strategy',
+      icon: '💰',
+      details: {
+        'Cookie Monster': hasCookieMonster,
+        'Savings Goal': this.savingsGoal
+      }
+    };
   }
 
 }

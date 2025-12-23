@@ -2,6 +2,7 @@
  * Handles Golden Cookies, Reindeer, and other shimmers
  * Migrated from cookieAutoPlayBeta.js "Handle Cookies and Golden Cookies" section
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export interface GoldenCookieConfig {
     GoldenClickMode?: number;
     CheatGolden?: number;
@@ -54,5 +55,13 @@ export declare class GoldenCookieHandler {
      * Get remaining time for a buff in seconds
      */
     getBuffTimeRemaining(buffName: string): number;
+    /**
+     * Get current golden cookie handler status
+     */
+    getStatus(): ModuleStatus;
+    /**
+     * Get the name of the currently active buff (if any)
+     */
+    private getActiveBuff;
 }
 //# sourceMappingURL=GoldenCookieHandler.d.ts.map

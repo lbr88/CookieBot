@@ -1,6 +1,7 @@
 /**
  * Manages ascension decisions and heavenly upgrades
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 interface AscensionState {
     ascendLimit: number;
     onAscend: boolean;
@@ -111,6 +112,10 @@ export declare class AscensionManager {
      * Get current ascension state (for external access)
      */
     getState(): AscensionState;
+    /**
+     * Get current ascension manager status
+     */
+    getStatus(): ModuleStatus;
 }
 export {};
 //# sourceMappingURL=AscensionManager.d.ts.map

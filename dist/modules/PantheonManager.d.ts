@@ -11,6 +11,7 @@
  * - Slot 1: Decadence (buildings cheaper) during day, Asceticism (buildings/CpS -5%) at night
  * - Slot 2: Labor (buildings +5%) during day, Industry (buildings +10%) at night
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class PantheonManager {
     private now;
     private poppingWrinklers;
@@ -51,5 +52,9 @@ export declare class PantheonManager {
      * Update state from AutoPlay
      */
     updateState(now: number, poppingWrinklers: boolean, cheatLumps: boolean): void;
+    /**
+     * Get current pantheon manager status
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=PantheonManager.d.ts.map

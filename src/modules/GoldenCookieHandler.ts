@@ -3,6 +3,8 @@
  * Migrated from cookieAutoPlayBeta.js "Handle Cookies and Golden Cookies" section
  */
 
+import type { ModuleStatus } from '../types/moduleStatus';
+
 declare const Game: any;
 declare const Beautify: ((value: number, floats?: number) => string) | undefined;
 
@@ -224,5 +226,124 @@ export class GoldenCookieHandler {
       return Math.ceil(Game.buffs[buffName].time / Game.fps);
     }
     return 0;
+  }
+
+  /**
+   * Get current golden cookie handler status
+   */
+  getStatus(): ModuleStatus {
+    // Check if golden cookie clicking is enabled
+    if (!this.config.GoldenClickMode || this.config.GoldenClickMode === 0) {
+      return {
+        module: 'Golden Cookies',
+        status: 'disabled',
+        currentAction: 'Disabled in config',
+        reason: 'GoldenClickMode is set to 0 (off)',
+        icon: '✨',
+        details: {
+          'Mode': 'Off'
+        }
+      };
+    }
+
+    const goldenCount = Game.shimmerTypes['golden']?.n || 0;
+    const activeShimmers = Game.shimmers.length;
+
+    // Check for Four-leaf cookie achievement attempt
+    if (!Game.Achievements['Four-leaf cookie'].won &&
+        Game.Objects['Wizard tower']?.amount > 500 &&
+        Game.Upgrades['Distilled essence of redoubled luck']?.bought) {
+      return {
+        module: 'Golden Cookies',
+        status: 'waiting',
+        currentAction: 'Attempting Four-leaf cookie',
+        reason: `Need 4 golden cookies on screen (currently ${goldenCount})`,
+        nextAction: goldenCount >= 2 ? 'Will cast Hand of Fate' : 'Waiting for more golden cookies',
+        icon: '✨',
+        details: {
+          'Golden Cookies': goldenCount,
+          'Target': 4,
+          'Wizard Towers': Game.Objects['Wizard tower']?.amount || 0
+        }
+      };
+    }
+
+    // Check for active buffs
+    const activeFrenzy = this.hasFrenzyBuff();
+    const activeBuff = this.getActiveBuff();
+
+    // Check for cheating mode
+    if (this.config.CheatGolden && this.config.CheatGolden > 0) {
+      const level = this.config.CheatGolden === 1 ? 'Auto' : this.config.CheatGolden;
+      return {
+        module: 'Golden Cookies',
+        status: 'active',
+        currentAction: 'Clicking golden cookies',
+        reason: `Cheating enabled (level ${level})`,
+        nextAction: activeFrenzy ? `Active: ${activeBuff}` : 'Waiting for golden cookies',
+        icon: '✨',
+        details: {
+          'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+          'Cheat Level': level,
+          'Active Shimmers': activeShimmers,
+          'Golden Cookies': goldenCount,
+          'Active Buff': activeBuff || 'None'
+        }
+      };
+    }
+
+    // Normal mode
+    if (activeShimmers > 0) {
+      return {
+        module: 'Golden Cookies',
+        status: 'active',
+        currentAction: 'Clicking shimmers',
+        reason: this.config.GoldenClickMode === 2 ? 'Aggressive mode (includes storm drops)' : 'Normal mode',
+        nextAction: activeFrenzy ? `Active buff: ${activeBuff}` : undefined,
+        icon: '✨',
+        details: {
+          'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+          'Active Shimmers': activeShimmers,
+          'Golden Cookies': goldenCount,
+          'Active Buff': activeBuff || 'None',
+          'HyperActive': this.hyperActive
+        }
+      };
+    }
+
+    return {
+      module: 'Golden Cookies',
+      status: 'idle',
+      currentAction: 'Waiting for golden cookies',
+      reason: this.config.GoldenClickMode === 2 ? 'Aggressive mode' : 'Normal mode',
+      icon: '✨',
+      details: {
+        'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+        'Golden Cookies': goldenCount,
+        'Active Buff': activeBuff || 'None'
+      }
+    };
+  }
+
+  /**
+   * Get the name of the currently active buff (if any)
+   */
+  private getActiveBuff(): string | null {
+    const buffOrder = [
+      'Elder frenzy',
+      'Click frenzy',
+      'Dragonflight',
+      'Dragon Harvest',
+      'Frenzy',
+      'Cursed finger',
+      'Building special'
+    ];
+
+    for (const buff of buffOrder) {
+      if (buff in Game.buffs) {
+        return buff;
+      }
+    }
+    return null;
   }
 }

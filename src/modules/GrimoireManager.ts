@@ -15,6 +15,8 @@
 
 declare const Game: any;
 
+import type { ModuleStatus } from '../types/moduleStatus';
+
 export class GrimoireManager {
   // State tracking
   private canUseLumps: boolean = false;
@@ -90,5 +92,105 @@ export class GrimoireManager {
   updateState(canUseLumps: boolean, cpsMult: number): void {
     this.canUseLumps = canUseLumps;
     this.cpsMult = cpsMult;
+  }
+
+  /**
+   * Get current grimoire manager status
+   */
+  getStatus(): ModuleStatus {
+    // Check if grimoire is unlocked
+    if (!Game.isMinigameReady(Game.Objects['Wizard tower'])) {
+      return {
+        module: 'Grimoire',
+        status: 'disabled',
+        currentAction: 'Not unlocked',
+        reason: 'Need Wizard tower minigame unlocked (Wizard tower level 1)',
+        icon: '🔮',
+        details: {
+          'Wizard Tower Level': Game.Objects['Wizard tower']?.level || 0,
+          'Minigame': 'Not ready'
+        }
+      };
+    }
+
+    const grimoire = Game.Objects['Wizard tower'].minigame;
+    const wizardTower = Game.Objects['Wizard tower'];
+    const magicPercent = Math.floor((grimoire.magic / grimoire.magicM) * 100);
+
+    // Check for Four-leaf cookie achievement attempt
+    if (!Game.Achievements['Four-leaf cookie'].won &&
+        wizardTower.amount > 500 &&
+        Game.Upgrades['Distilled essence of redoubled luck'].bought) {
+      const goldenCount = Game.shimmerTypes['golden']?.n || 0;
+
+      return {
+        module: 'Grimoire',
+        status: goldenCount >= 2 ? 'active' : 'waiting',
+        currentAction: 'Attempting Four-leaf cookie',
+        reason: `Need 4 golden cookies (currently ${goldenCount})`,
+        nextAction: goldenCount >= 2 ? 'Will cast Hand of Fate' : 'Waiting for more golden cookies',
+        icon: '🔮',
+        details: {
+          'Magic': `${magicPercent}%`,
+          'Golden Cookies': goldenCount,
+          'Target': 4,
+          'Wizard Towers': wizardTower.amount
+        }
+      };
+    }
+
+    // Check for backfire lump farming
+    const handOfFate = grimoire.spells['hand of fate'];
+    const hasGoldenCookie = Game.shimmerTypes['golden']?.n > 0;
+    const canCastHand = grimoire.magic >= grimoire.getSpellCost(handOfFate);
+    const highMagic = magicPercent >= 95;
+
+    if (hasGoldenCookie && canCastHand && highMagic) {
+      return {
+        module: 'Grimoire',
+        status: 'active',
+        currentAction: 'Casting Hand of Fate',
+        reason: 'Farming backfire sugar lumps (95%+ magic)',
+        icon: '🔮',
+        details: {
+          'Magic': `${magicPercent}%`,
+          'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+          'Strategy': 'Backfire farming'
+        }
+      };
+    }
+
+    // Check for high CpS multiplier (>100x)
+    if (this.cpsMult > 100) {
+      return {
+        module: 'Grimoire',
+        status: canCastHand ? 'active' : 'waiting',
+        currentAction: canCastHand ? 'Casting spells' : 'Waiting for magic',
+        reason: `High CpS multiplier (${this.cpsMult.toFixed(0)}x)`,
+        nextAction: canCastHand ? 'Casting Hand of Fate & Conjure Baked Goods' : 'Recharging magic',
+        icon: '🔮',
+        details: {
+          'Magic': `${magicPercent}%`,
+          'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+          'Can Use Lumps': this.canUseLumps && Game.lumps > 100,
+          'Sugar Lumps': Game.lumps
+        }
+      };
+    }
+
+    // Idle - waiting for good conditions
+    return {
+      module: 'Grimoire',
+      status: 'idle',
+      currentAction: 'Waiting for good conditions',
+      reason: 'Need high CpS multiplier (>100x) or backfire opportunity',
+      nextAction: highMagic ? 'Ready for backfire attempt' : 'Recharging magic',
+      icon: '🔮',
+      details: {
+        'Magic': `${magicPercent}%`,
+        'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+        'Threshold': '100x'
+      }
+    };
   }
 }

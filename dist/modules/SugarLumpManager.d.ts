@@ -7,6 +7,7 @@
  * - Lump type manipulation for achievements (when cheating enabled)
  */
 import type { AutoPlayState } from '../types/autoplay';
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class SugarLumpManager {
     private minLumpsOK;
     private cheatLumps;
@@ -63,5 +64,9 @@ export declare class SugarLumpManager {
      * Get whether we're currently cheating lumps
      */
     isCheatLumps(): boolean;
+    /**
+     * Get current sugar lump manager status
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=SugarLumpManager.d.ts.map

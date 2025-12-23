@@ -2,6 +2,7 @@
  * Handles seasonal events and upgrades
  */
 
+import type { ModuleStatus } from '../types/moduleStatus';
 import { Logger } from '../utils/Logger';
 
 /**
@@ -192,5 +193,148 @@ export class SeasonHandler {
       clearTimeout(this.elfClickTimeout);
       this.elfClickTimeout = null;
     }
+  }
+
+  /**
+   * Get current season handler status
+   */
+  getStatus(): ModuleStatus {
+    const currentSeason = Game.season || 'none';
+
+    // Check if season switcher is unlocked
+    if (!Game.Upgrades["Season switcher"].bought) {
+      return {
+        module: 'Season',
+        status: 'disabled',
+        currentAction: 'Season switcher not unlocked',
+        reason: 'Need to unlock Season switcher upgrade',
+        icon: '🎄',
+        details: {
+          'Current Season': currentSeason === '' ? 'None' : currentSeason,
+          'Season Switcher': 'Not unlocked'
+        }
+      };
+    }
+
+    // Check Born Again mode
+    if (Game.ascensionMode === 1) {
+      return {
+        module: 'Season',
+        status: 'disabled',
+        currentAction: 'Born Again mode',
+        reason: 'Season cycling disabled in Born Again',
+        icon: '🎄',
+        details: {
+          'Mode': 'Born Again',
+          'Current Season': currentSeason === '' ? 'None' : currentSeason
+        }
+      };
+    }
+
+    // Check for too many switches
+    if (Game.seasonUses > 20) {
+      return {
+        module: 'Season',
+        status: 'idle',
+        currentAction: 'Season switching limit reached',
+        reason: 'Already switched 20+ times',
+        nextAction: 'Staying in current season',
+        icon: '🎄',
+        details: {
+          'Current Season': currentSeason === '' ? 'None' : currentSeason,
+          'Switches': Game.seasonUses
+        }
+      };
+    }
+
+    // Check for Santa development
+    if (Game.Upgrades["A festive hat"].bought &&
+        !Game.Upgrades["Santa's dominion"].unlocked) {
+      return {
+        module: 'Season',
+        status: 'active',
+        currentAction: 'Developing Santa',
+        reason: 'Upgrading Santa for dominion',
+        nextAction: 'Will cycle seasons after',
+        icon: '🎄',
+        details: {
+          'Current Season': currentSeason === '' ? 'None' : currentSeason,
+          'Santa': 'Upgrading'
+        }
+      };
+    }
+
+    // Check for Christmas elf achievement
+    if (currentSeason === 'christmas' &&
+        !Game.Achievements["Baby it's old outside"].won &&
+        Game.Objects["Grandma"].amount > 0) {
+      const elfGrandmas = Game.Objects["Grandma"].pics.filter(
+        (p: any) => p.pic === "elfGrandma.png"
+      );
+
+      if (elfGrandmas.length > 0) {
+        return {
+          module: 'Season',
+          status: 'active',
+          currentAction: 'Hunting Christmas elf',
+          reason: 'Working on "Baby it\'s old outside" achievement',
+          icon: '🎄',
+          details: {
+            'Current Season': 'Christmas',
+            'Elf Detected': true
+          }
+        };
+      }
+    }
+
+    // Check if current season is finished
+    const seasonDone = this.seasonFinished(currentSeason);
+    const allSeasonUpgradesUnlocked = this.allUnlocked(this.allSeasonUpgrades);
+
+    if (!seasonDone) {
+      // Still collecting upgrades in current season
+      const seasonUpgrades = currentSeason === 'valentines' ? this.valentineUpgrades
+        : currentSeason === 'christmas' ? this.christmasUpgrades
+        : currentSeason === 'easter' ? this.easterUpgrades
+        : currentSeason === 'halloween' ? this.halloweenUpgrades
+        : [];
+
+      const unlockedCount = seasonUpgrades.filter(id => Game.UpgradesById[id].unlocked).length;
+      const totalCount = seasonUpgrades.length;
+
+      return {
+        module: 'Season',
+        status: 'waiting',
+        currentAction: `Collecting ${currentSeason} upgrades`,
+        reason: `${unlockedCount}/${totalCount} upgrades collected`,
+        nextAction: seasonDone ? 'Will switch to next season' : 'Waiting for more drops',
+        icon: '🎄',
+        details: {
+          'Current Season': currentSeason === '' ? 'None' : currentSeason,
+          'Upgrades': `${unlockedCount}/${totalCount}`,
+          'Finished': seasonDone
+        }
+      };
+    }
+
+    // Season is finished - ready to switch
+    const nextSeason = currentSeason === 'christmas' ? 'valentines'
+      : currentSeason === 'valentines' ? 'easter'
+      : currentSeason === 'easter' ? 'halloween'
+      : 'christmas';
+
+    return {
+      module: 'Season',
+      status: 'active',
+      currentAction: 'Switching seasons',
+      reason: `${currentSeason} completed`,
+      nextAction: `Switching to ${nextSeason}`,
+      icon: '🎄',
+      details: {
+        'Current Season': currentSeason === '' ? 'None' : currentSeason,
+        'Next Season': nextSeason,
+        'All Upgrades': allSeasonUpgradesUnlocked ? 'Yes' : 'No'
+      }
+    };
   }
 }

@@ -14,6 +14,8 @@
 
 declare const Game: any;
 
+import type { ModuleStatus } from '../types/moduleStatus';
+
 export class PantheonManager {
   // Injected dependencies
   private now: number = Date.now();
@@ -134,5 +136,77 @@ export class PantheonManager {
     this.now = now;
     this.poppingWrinklers = poppingWrinklers;
     this.cheatLumps = cheatLumps;
+  }
+
+  /**
+   * Get current pantheon manager status
+   */
+  getStatus(): ModuleStatus {
+    // Check if pantheon is unlocked
+    if (!Game.isMinigameReady(Game.Objects['Temple'])) {
+      return {
+        module: 'Pantheon',
+        status: 'disabled',
+        currentAction: 'Not unlocked',
+        reason: 'Need Temple minigame unlocked (Temple level 1)',
+        icon: '⛪',
+        details: {
+          'Temple Level': Game.Objects['Temple']?.level || 0,
+          'Minigame': 'Not ready'
+        }
+      };
+    }
+
+    const pantheon = Game.Objects['Temple'].minigame;
+    const slot0 = pantheon.slot[0];
+    const slot1 = pantheon.slot[1];
+    const slot2 = pantheon.slot[2];
+
+    // Get spirit names
+    const getGodName = (id: number): string => {
+      if (id === -1) return 'Empty';
+      for (const godName in pantheon.gods) {
+        if (pantheon.gods[godName].id === id) {
+          return godName.charAt(0).toUpperCase() + godName.slice(1);
+        }
+      }
+      return 'Unknown';
+    };
+
+    const spirit0 = getGodName(slot0);
+    const spirit1 = getGodName(slot1);
+    const spirit2 = getGodName(slot2);
+
+    // Determine reason based on current setup
+    const age = this.now - Game.lumpT;
+    let reason = '';
+
+    if (this.poppingWrinklers) {
+      reason = 'Scorn for wrinkler bonus';
+    } else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !this.cheatLumps) {
+      reason = 'Order for faster lump ripening';
+    } else {
+      reason = 'Mother for CpS boost (default)';
+    }
+
+    // Check swap availability
+    const swapsAvailable = pantheon.swaps;
+    const needsSwaps = swapsAvailable < 3;
+
+    return {
+      module: 'Pantheon',
+      status: needsSwaps ? 'waiting' : 'active',
+      currentAction: needsSwaps ? 'Waiting for swaps' : 'Managing spirits',
+      reason: reason,
+      nextAction: needsSwaps ? `${swapsAvailable}/3 swaps available` : undefined,
+      icon: '⛪',
+      details: {
+        'Diamond': spirit0,
+        'Ruby': spirit1,
+        'Jade': spirit2,
+        'Swaps': swapsAvailable,
+        'Strategy': this.poppingWrinklers ? 'Wrinkler boost' : 'Default'
+      }
+    };
   }
 }

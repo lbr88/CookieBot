@@ -8,6 +8,7 @@
  */
 
 import type { AutoPlayState } from '../types/autoplay';
+import type { ModuleStatus } from '../types/moduleStatus';
 
 declare const Game: any;
 declare const AutoPlay: any;
@@ -282,5 +283,142 @@ export class SugarLumpManager {
    */
   isCheatLumps(): boolean {
     return this.cheatLumps;
+  }
+
+  /**
+   * Get current sugar lump manager status
+   */
+  getStatus(): ModuleStatus {
+    const game = Game as any;
+
+    // Check if lumps are unlocked
+    if (!game.canLumps()) {
+      return {
+        module: 'Sugar Lumps',
+        status: 'disabled',
+        currentAction: 'Not unlocked',
+        reason: 'Need to bake 1 billion cookies first',
+        icon: '🍬',
+        details: {
+          'Cookies Baked': Math.floor(Game.cookiesEarned)
+        }
+      };
+    }
+
+    // Check for Born Again mode
+    if (Game.ascensionMode === 1) {
+      return {
+        module: 'Sugar Lumps',
+        status: 'disabled',
+        currentAction: 'Born Again mode',
+        reason: 'Sugar lumps disabled in Born Again',
+        icon: '🍬',
+        details: {
+          'Mode': 'Born Again'
+        }
+      };
+    }
+
+    const now = this.state.now;
+    const age = now - game.lumpT;
+    const matureAge = game.lumpMatureAge;
+    const ripeAge = game.lumpRipeAge;
+    const timeUntilRipe = Math.max(0, ripeAge - age);
+    const minutesUntilRipe = Math.floor(timeUntilRipe / 1000 / 60);
+    const hoursUntilRipe = Math.floor(minutesUntilRipe / 60);
+    const lumpType = ['Normal', 'Bifurcated', 'Golden', 'Meaty', 'Caramelized'][game.lumpCurrentType] || 'Unknown';
+
+    // Check if cheating lumps
+    if (this.cheatLumps) {
+      const speedup = this.cheatLumpsLevel === 1 ? '25x or 625x'
+        : this.cheatLumpsLevel === 2 ? '25x'
+        : this.cheatLumpsLevel === 3 ? '625x'
+        : '15625x';
+
+      return {
+        module: 'Sugar Lumps',
+        status: 'active',
+        currentAction: 'Cheating lumps',
+        reason: `${speedup} speedup + type manipulation`,
+        nextAction: `Harvesting in ${minutesUntilRipe}m`,
+        icon: '🍬',
+        details: {
+          'Lumps': Game.lumps,
+          'Type': lumpType,
+          'Cheat Level': this.cheatLumpsLevel,
+          'Time': `${minutesUntilRipe}m`
+        }
+      };
+    }
+
+    // Check if waiting for mature (Hand-picked achievement)
+    if (age >= matureAge && game.lumpCurrentType === 0 &&
+        this.minLumpsOK && !Game.Achievements["Hand-picked"].won) {
+      return {
+        module: 'Sugar Lumps',
+        status: 'active',
+        currentAction: 'Harvesting mature lump',
+        reason: 'Working on Hand-picked achievement',
+        nextAction: 'Will harvest normal lumps when mature',
+        icon: '🍬',
+        details: {
+          'Lumps': Game.lumps,
+          'Type': lumpType,
+          'Age': 'Mature',
+          'Achievement': 'Hand-picked'
+        }
+      };
+    }
+
+    // Check if ready to harvest
+    if (age >= ripeAge) {
+      return {
+        module: 'Sugar Lumps',
+        status: 'active',
+        currentAction: 'Harvesting lump',
+        reason: 'Lump is ripe',
+        icon: '🍬',
+        details: {
+          'Lumps': Game.lumps,
+          'Type': lumpType,
+          'Age': 'Ripe'
+        }
+      };
+    }
+
+    // Check auto-spending status
+    const farm = Game.Objects["Farm"];
+    const cursor = Game.Objects["Cursor"];
+    let spendingStatus = '';
+
+    if (!farm || farm.level < 9) {
+      spendingStatus = `Upgrading Farm to level 9 (current: ${farm?.level || 0})`;
+    } else if (!this.minLumpsOK) {
+      spendingStatus = 'Garden at level 9';
+    } else if (cursor.level < 12) {
+      spendingStatus = `Upgrading Cursor to level 12 (current: ${cursor.level})`;
+    } else if (!this.canUseLumps) {
+      spendingStatus = 'Upgrading all buildings to level 10';
+    } else if (cursor.level < 20) {
+      spendingStatus = 'Upgrading Cursor to level 20 (Luminous gloves)';
+    } else {
+      spendingStatus = 'All priority upgrades done';
+    }
+
+    // Growing
+    return {
+      module: 'Sugar Lumps',
+      status: 'waiting',
+      currentAction: 'Growing lump',
+      reason: hoursUntilRipe > 0 ? `${hoursUntilRipe}h ${minutesUntilRipe % 60}m until ripe` : `${minutesUntilRipe}m until ripe`,
+      nextAction: spendingStatus,
+      icon: '🍬',
+      details: {
+        'Lumps': Game.lumps,
+        'Type': lumpType,
+        'Time': `${hoursUntilRipe}h ${minutesUntilRipe % 60}m`,
+        'Auto-Spending': spendingStatus
+      }
+    };
   }
 }

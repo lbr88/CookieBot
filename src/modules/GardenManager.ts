@@ -18,6 +18,7 @@
 declare const Game: any;
 
 import { HARVESTABLE_PLANTS, GARDEN_UPGRADE_IDS, PLANT_DEPENDENCIES } from '../constants/gameIds';
+import type { ModuleStatus } from '../types/moduleStatus';
 
 // Convert readonly arrays to regular arrays for runtime use
 const HARVESTABLE_PLANTS_ARRAY = [...HARVESTABLE_PLANTS];
@@ -818,5 +819,136 @@ export class GardenManager {
    */
   isPlantPending(): boolean {
     return this.plantPending;
+  }
+
+  /**
+   * Get current module status for dashboard
+   */
+  getStatus(): ModuleStatus {
+    // Check if garden is unlocked
+    if (!Game.Objects['Farm'] || !Game.Objects['Farm'].minigames || !Game.Objects['Farm'].minigames[0]) {
+      return {
+        module: 'Garden',
+        status: 'disabled',
+        currentAction: 'Not unlocked',
+        reason: 'Farm minigame not available yet',
+        icon: '🌱',
+        details: {
+          'Farm Level': Game.Objects['Farm']?.level || 0,
+          'Minigame': 'Not unlocked'
+        }
+      };
+    }
+
+    const garden = Game.Objects['Farm'].minigame;
+
+    // Check if ascending soon
+    if (this.wantAscend) {
+      return {
+        module: 'Garden',
+        status: 'waiting',
+        currentAction: 'Preparing for ascension',
+        reason: 'Not planting before ascend',
+        icon: '⬆️',
+        details: {
+          'Ascension Pending': true
+        }
+      };
+    }
+
+    // Check if waiting for plants
+    if (!garden.plants['meddleweed']?.unlocked) {
+      return {
+        module: 'Garden',
+        status: 'waiting',
+        currentAction: 'Waiting for meddleweed',
+        reason: 'First plant spawns randomly',
+        icon: '🌱',
+        details: {
+          'Soil': 'fertilizer',
+          'Waiting For': 'meddleweed'
+        }
+      };
+    }
+
+    // Check if getting starter plants
+    if (!garden.plants['crumbspore']?.unlocked || !garden.plants['brownMold']?.unlocked) {
+      return {
+        module: 'Garden',
+        status: 'active',
+        currentAction: 'Planting meddleweed everywhere',
+        reason: 'Getting crumbspore and brownMold',
+        icon: '🌱',
+        details: {
+          'Crumbspore': garden.plants['crumbspore']?.unlocked || false,
+          'BrownMold': garden.plants['brownMold']?.unlocked || false
+        }
+      };
+    }
+
+    // Check if working on specific plant
+    const activePlants = this.plantList.filter(p => p !== 0);
+    if (activePlants.length > 0) {
+      const plantIndex = activePlants[0];
+      const plantName = PLANT_DEPENDENCIES[plantIndex]?.[0] || 'unknown';
+
+      return {
+        module: 'Garden',
+        status: 'active',
+        currentAction: `Growing ${plantName}`,
+        reason: this.plantsMissing ? 'Working towards all 34 plants' : 'Optimizing for cookies/lumps',
+        nextAction: activePlants.length > 1 ? `Then ${activePlants.length - 1} more plants` : undefined,
+        icon: '🌱',
+        details: {
+          'Target Plant': plantName,
+          'Plants Unlocked': `${garden.plantsUnlockedN}/${garden.plantsN}`,
+          'Farm Level': Game.Objects['Farm'].level,
+          'Active Sectors': activePlants.length
+        }
+      };
+    }
+
+    // Check if ready for sacrifice
+    if (garden.plantsUnlockedN === garden.plantsN && !Game.AchievementsById[382].won) {
+      if (this.harvestPlant) {
+        return {
+          module: 'Garden',
+          status: 'waiting',
+          currentAction: 'Waiting to harvest',
+          reason: 'Will sacrifice after harvesting cookie plants',
+          nextAction: 'Sacrifice for "Seedless to nay" achievement',
+          icon: '🏆',
+          details: {
+            'Plants Unlocked': 'All 34',
+            'Harvest Pending': true
+          }
+        };
+      }
+
+      return {
+        module: 'Garden',
+        status: 'active',
+        currentAction: 'Ready to sacrifice',
+        reason: 'All plants unlocked',
+        nextAction: 'Get "Seedless to nay" achievement',
+        icon: '🏆',
+        details: {
+          'Plants Unlocked': 'All 34'
+        }
+      };
+    }
+
+    // Idle/harvesting
+    return {
+      module: 'Garden',
+      status: this.harvestPlant ? 'active' : 'idle',
+      currentAction: this.harvestPlant ? 'Harvesting plants' : 'Monitoring garden',
+      reason: this.plantsMissing ? 'All goals complete, waiting' : 'Optimizing production',
+      icon: '🌿',
+      details: {
+        'Plants Unlocked': `${garden.plantsUnlockedN}/${garden.plantsN}`,
+        'Harvest Ready': this.harvestPlant
+      }
+    };
   }
 }

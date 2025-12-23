@@ -5,6 +5,7 @@
  * Dragon levels unlock through various sacrifices and achievements.
  * Dragons provide powerful auras that boost game performance.
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class DragonManager {
     /**
      * Main handler for all dragon-related activities
@@ -54,5 +55,9 @@ export declare class DragonManager {
      * @returns true if hunting lump-related achievements
      */
     private isHuntingLumpAchievement;
+    /**
+     * Get current dragon manager status
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=DragonManager.d.ts.map

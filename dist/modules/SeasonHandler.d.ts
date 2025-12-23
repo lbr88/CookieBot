@@ -1,6 +1,7 @@
 /**
  * Handles seasonal events and upgrades
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class SeasonHandler {
     private readonly valentineUpgrades;
     private readonly christmasUpgrades;
@@ -43,5 +44,9 @@ export declare class SeasonHandler {
      * Cleanup method to clear any pending timeouts
      */
     cleanup(): void;
+    /**
+     * Get current season handler status
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=SeasonHandler.d.ts.map

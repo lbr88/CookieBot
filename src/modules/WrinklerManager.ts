@@ -11,6 +11,7 @@
 
 import type { AutoPlayState } from '../types/autoplay';
 import type { SeasonHandler } from './SeasonHandler';
+import type { ModuleStatus } from '../types/moduleStatus';
 import { Logger } from '../utils/Logger';
 
 export class WrinklerManager {
@@ -239,6 +240,101 @@ export class WrinklerManager {
    */
   private isEndPhase(): boolean {
     return this.wantedAchievements.indexOf(this.nextAchievement) < 0;
+  }
+
+  /**
+   * Get current wrinkler manager status
+   */
+  getStatus(): ModuleStatus {
+    // Check if wrinklers are unlocked
+    if (!Game.Upgrades["One mind"].bought) {
+      return {
+        module: 'Wrinklers',
+        status: 'disabled',
+        currentAction: 'Not unlocked',
+        reason: 'Need to purchase "One mind" upgrade',
+        icon: '🐛',
+        details: {
+          'Grandmapocalypse': 'Not started'
+        }
+      };
+    }
+
+    const attachedCount = this.getAttachedWrinklerCount();
+    const shinyCount = this.getShinyWrinklerCount();
+    const totalValue = this.getTotalWrinklerValue();
+    const maxWrinklers = Game.getWrinklersMax();
+
+    // Check if popping all wrinklers
+    if (this.state.poppingWrinklers) {
+      return {
+        module: 'Wrinklers',
+        status: 'active',
+        currentAction: 'Popping all wrinklers',
+        reason: Game.season === 'easter' || Game.season === 'halloween'
+          ? 'Season drops'
+          : Game.Upgrades["Unholy bait"].bought && !Game.Achievements["Moistburster"].won
+            ? 'Moistburster achievement'
+            : 'Last Chance to See achievement',
+        icon: '🐛',
+        details: {
+          'Attached': attachedCount,
+          'Shiny': shinyCount,
+          'Total Value': Math.floor(totalValue)
+        }
+      };
+    }
+
+    // Check for Wrinkler poker achievement
+    if (!Game.Achievements['Wrinkler poker'].won && Game.wrinklers[3].close === 1) {
+      return {
+        module: 'Wrinklers',
+        status: 'active',
+        currentAction: 'Popping wrinkler #3',
+        reason: 'Working on Wrinkler poker achievement',
+        nextAction: 'Then rotate popping every 2 hours',
+        icon: '🐛',
+        details: {
+          'Attached': attachedCount,
+          'Max Wrinklers': maxWrinklers
+        }
+      };
+    }
+
+    // Regular rotation mode
+    const minutesSinceLastPop = Math.floor((this.state.now - this.state.wrinklerTime) / 1000 / 60);
+    const minutesUntilNext = 120 - minutesSinceLastPop;
+
+    if (this.state.nextWrinkler === -1) {
+      return {
+        module: 'Wrinklers',
+        status: 'waiting',
+        currentAction: 'Waiting for spots to fill',
+        reason: `${attachedCount}/${maxWrinklers} wrinklers attached`,
+        nextAction: 'Will pop one every 2 hours when full',
+        icon: '🐛',
+        details: {
+          'Attached': attachedCount,
+          'Max Wrinklers': maxWrinklers,
+          'Shiny': shinyCount
+        }
+      };
+    }
+
+    return {
+      module: 'Wrinklers',
+      status: minutesUntilNext <= 0 ? 'active' : 'waiting',
+      currentAction: minutesUntilNext <= 0 ? 'Popping oldest wrinkler' : 'Rotating wrinklers',
+      reason: `Pop one every 2 hours (last ${minutesSinceLastPop}m ago)`,
+      nextAction: minutesUntilNext > 0 ? `Next pop in ${minutesUntilNext} minutes` : undefined,
+      icon: '🐛',
+      details: {
+        'Attached': attachedCount,
+        'Shiny': shinyCount,
+        'Total Value': Math.floor(totalValue),
+        'Next Pop': minutesUntilNext > 0 ? `${minutesUntilNext}m` : 'Now'
+      }
+    };
   }
 
 }

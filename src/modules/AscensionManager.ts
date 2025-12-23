@@ -6,6 +6,8 @@ declare const Game: any;
 declare const Beautify: (num: number) => string;
 declare const AutoPlay: any;
 
+import type { ModuleStatus } from '../types/moduleStatus';
+
 interface AscensionState {
   ascendLimit: number;
   onAscend: boolean;
@@ -590,5 +592,165 @@ export class AscensionManager {
    */
   getState(): AscensionState {
     return { ...this.state };
+  }
+
+  /**
+   * Get current ascension manager status
+   */
+  getStatus(): ModuleStatus {
+    // Check if on ascension screen
+    if (Game.OnAscend) {
+      return {
+        module: 'Ascension',
+        status: 'active',
+        currentAction: 'Buying heavenly upgrades',
+        reason: 'On ascension screen',
+        nextAction: 'Will reincarnate',
+        icon: '🌟',
+        details: {
+          'Heavenly Chips': Math.floor(Game.heavenlyChips),
+          'Prestige': Math.floor(Game.prestige),
+          'On Ascend Screen': true
+        }
+      };
+    }
+
+    // Check if ascending
+    if (this.state.onAscend) {
+      return {
+        module: 'Ascension',
+        status: 'active',
+        currentAction: 'Ascending',
+        reason: 'Ascension in progress',
+        nextAction: 'Wait for ascension screen',
+        icon: '🌟',
+        details: {
+          'Prestige Gain': Math.floor(Game.ascendMeterLevel),
+          'New Prestige': Math.floor(Game.prestige + Game.ascendMeterLevel)
+        }
+      };
+    }
+
+    const currentPrestige = Game.prestige;
+    const prestigeGain = Game.ascendMeterLevel;
+    const targetAchievement = Game.AchievementsById[this.context.nextAchievement];
+    const daysInRun = (this.context.now - Game.startDate) / 1000 / 60 / 60 / 24;
+
+    // Check for special achievement attempts
+    if (this.context.workingOnSpecialAchievement) {
+      let achievementName = '';
+      if (Game.cookieClicks === 0 && !Game.Achievements["True Neverclick"].won) {
+        achievementName = 'True Neverclick (0 clicks)';
+      } else if (Game.cookieClicks <= 15 && !Game.Achievements["Neverclick"].won) {
+        achievementName = 'Neverclick (≤15 clicks)';
+      } else if (Game.UpgradesOwned === 0 && !Game.Achievements["Hardcore"].won) {
+        achievementName = 'Hardcore (0 upgrades)';
+      } else {
+        achievementName = 'Speed baking';
+      }
+
+      return {
+        module: 'Ascension',
+        status: 'active',
+        currentAction: `Working on ${achievementName}`,
+        reason: 'Special achievement run',
+        nextAction: 'Will ascend when complete',
+        icon: '🌟',
+        details: {
+          'Achievement': achievementName,
+          'Cookie Clicks': Game.cookieClicks,
+          'Upgrades Owned': Game.UpgradesOwned,
+          'Days in Run': daysInRun.toFixed(1)
+        }
+      };
+    }
+
+    // Check for endless cycle (1000 ascends)
+    if (this.context.endPhase() && !Game.Achievements["Endless cycle"].won &&
+        !Game.ascensionMode && Game.Upgrades["Sucralosia Inutilis"].bought) {
+      return {
+        module: 'Ascension',
+        status: 'active',
+        currentAction: 'Going for 1000 ascends',
+        reason: 'Endless cycle achievement',
+        nextAction: 'Rapid ascension mode',
+        icon: '🌟',
+        details: {
+          'Resets': Game.resets,
+          'Target': 1000,
+          'Remaining': 1000 - Game.resets
+        }
+      };
+    }
+
+    // Check for reincarnation (100 ascends)
+    if (Game.Upgrades["Permanent upgrade slot V"].bought &&
+        !Game.Achievements["Reincarnation"].won && !Game.ascensionMode) {
+      return {
+        module: 'Ascension',
+        status: 'active',
+        currentAction: 'Going for 100 ascends',
+        reason: 'Reincarnation achievement',
+        nextAction: 'Rapid ascension mode',
+        icon: '🌟',
+        details: {
+          'Resets': Game.resets,
+          'Target': 100,
+          'Remaining': 100 - Game.resets
+        }
+      };
+    }
+
+    // Check for lucky upgrades
+    if (!Game.Upgrades["Lucky payout"].bought && Game.heavenlyChips > 77777777) {
+      const sevenCount = ((Game.prestige + prestigeGain) + '').split('7').length - 1;
+      return {
+        module: 'Ascension',
+        status: 'active',
+        currentAction: 'Going for Lucky payout',
+        reason: `Need six 7s in prestige (currently ${sevenCount})`,
+        nextAction: sevenCount >= 4 ? 'Close! Will ascend soon' : 'Grinding prestige',
+        icon: '🌟',
+        details: {
+          'Sevens': sevenCount,
+          'Target': 6,
+          'Prestige': Math.floor(Game.prestige + prestigeGain)
+        }
+      };
+    }
+
+    // Normal mode - waiting for target achievement
+    if (targetAchievement && !targetAchievement.won) {
+      return {
+        module: 'Ascension',
+        status: 'waiting',
+        currentAction: `Working on ${targetAchievement.name}`,
+        reason: targetAchievement.ddesc.replace(/<q>.*?<\/q>/ig, ''),
+        nextAction: `Will ascend when achieved`,
+        icon: '🌟',
+        details: {
+          'Current Prestige': Math.floor(currentPrestige),
+          'Prestige Gain': Math.floor(prestigeGain),
+          'Days in Run': daysInRun.toFixed(1),
+          'Target Achievement': targetAchievement.name
+        }
+      };
+    }
+
+    // Idle - no specific ascension plan
+    return {
+      module: 'Ascension',
+      status: 'idle',
+      currentAction: 'Playing normally',
+      reason: 'No immediate ascension planned',
+      nextAction: 'Will ascend when beneficial',
+      icon: '🌟',
+      details: {
+        'Current Prestige': Math.floor(currentPrestige),
+        'Prestige Gain': Math.floor(prestigeGain),
+        'Days in Run': daysInRun.toFixed(1),
+        'Resets': Game.resets
+      }
+    };
   }
 }

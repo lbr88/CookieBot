@@ -1,0 +1,40 @@
+/**
+ * Standardized module status reporting interface
+ * All managers should implement getStatus() returning this structure
+ */
+export type ModuleStatusType = 'idle' | 'active' | 'waiting' | 'blocked' | 'disabled' | 'error';
+export interface ModuleStatus {
+    /** Module name (e.g., "Garden", "Purchases", "Wrinklers") */
+    module: string;
+    /** Current operational status */
+    status: ModuleStatusType;
+    /** What the module is currently doing */
+    currentAction: string;
+    /** Why the module is in this state */
+    reason: string;
+    /** What the module plans to do next (if applicable) */
+    nextAction?: string;
+    /** Icon for dashboard display */
+    icon?: string;
+    /** Additional details (e.g., progress, timers, counts) */
+    details?: {
+        [key: string]: string | number | boolean;
+    };
+}
+/**
+ * Collection of all module statuses
+ */
+export interface ModuleStatuses {
+    purchases?: ModuleStatus;
+    garden?: ModuleStatus;
+    wrinklers?: ModuleStatus;
+    goldenCookies?: ModuleStatus;
+    dragon?: ModuleStatus;
+    pantheon?: ModuleStatus;
+    grimoire?: ModuleStatus;
+    stockMarket?: ModuleStatus;
+    sugarLumps?: ModuleStatus;
+    ascension?: ModuleStatus;
+    season?: ModuleStatus;
+}
+//# sourceMappingURL=moduleStatus.d.ts.map

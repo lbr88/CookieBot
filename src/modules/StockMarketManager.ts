@@ -17,6 +17,8 @@
 
 declare const Game: any;
 
+import type { ModuleStatus } from '../types/moduleStatus';
+
 interface GoodData {
   min: number;        // Minimum price seen
   max: number;        // Maximum price seen
@@ -270,5 +272,138 @@ export class StockMarketManager {
    */
   setDoAscendCallback(callback: (reason: string) => void): void {
     this.doAscend = callback;
+  }
+
+  /**
+   * Get current stock market manager status
+   */
+  getStatus(): ModuleStatus {
+    // Check for cooldown period after reset
+    const cooldownRemaining = Math.floor((this.resetTime + 3600000 - Date.now()) / 1000 / 60);
+    if (cooldownRemaining > 0) {
+      return {
+        module: 'Stock Market',
+        status: 'waiting',
+        currentAction: 'Cooldown after reset',
+        reason: 'Wait 1 hour after reincarnation before trading',
+        nextAction: `Will start in ${cooldownRemaining} minutes`,
+        icon: '📈',
+        details: {
+          'Cooldown': `${cooldownRemaining}m remaining`
+        }
+      };
+    }
+
+    // Check if stock market is unlocked
+    if (!Game.isMinigameReady(Game.Objects['Bank'])) {
+      return {
+        module: 'Stock Market',
+        status: 'disabled',
+        currentAction: 'Not unlocked',
+        reason: 'Need Bank minigame unlocked (Cursor level 12)',
+        icon: '📈',
+        details: {
+          'Cursor Level': Game.Objects['Cursor']?.level || 0,
+          'Minigame': 'Not ready'
+        }
+      };
+    }
+
+    // Don't trade before ascending
+    if (this.wantAscend) {
+      return {
+        module: 'Stock Market',
+        status: 'waiting',
+        currentAction: 'Preparing to ascend',
+        reason: 'Avoiding trades before ascension',
+        icon: '📈',
+        details: {
+          'Status': 'Pre-ascension'
+        }
+      };
+    }
+
+    const market = Game.Objects['Bank'].minigame;
+    const brokers = market.brokers;
+    const maxBrokers = market.getMaxBrokers();
+    const officeLevel = market.officeLevel;
+    const maxOfficeLevel = market.offices.length - 1;
+
+    // Count active trading
+    let goodsWithStock = 0;
+    let totalValue = 0;
+
+    for (const goodKey in market.goods) {
+      const good = market.goods[goodKey];
+      totalValue += good.stock * market.getGoodPrice(good);
+      if (good.stock > 0) goodsWithStock++;
+    }
+
+    // Check for achievement pursuit
+    const lastGood = market.goodsById[market.goodsById.length - 1];
+    const pursuingAchievement = !Game.AchievementsById[459].won &&
+                                market.getGoodMaxStock(lastGood) > 1000;
+
+    if (pursuingAchievement) {
+      return {
+        module: 'Stock Market',
+        status: 'active',
+        currentAction: 'Working on achievement',
+        reason: 'Buying 500 of each stock for "Dude, sweet" achievement',
+        icon: '📈',
+        details: {
+          'Brokers': `${brokers}/${maxBrokers}`,
+          'Office Level': `${officeLevel}/${maxOfficeLevel}`,
+          'Portfolio Value': Math.floor(totalValue)
+        }
+      };
+    }
+
+    // Check if we need to upgrade infrastructure
+    if (brokers < maxBrokers || officeLevel < maxOfficeLevel) {
+      return {
+        module: 'Stock Market',
+        status: 'active',
+        currentAction: 'Upgrading infrastructure',
+        reason: brokers < maxBrokers ? 'Buying brokers' : 'Upgrading office',
+        nextAction: `Then start trading (${this.goodsList.size} goods tracked)`,
+        icon: '📈',
+        details: {
+          'Brokers': `${brokers}/${maxBrokers}`,
+          'Office Level': `${officeLevel}/${maxOfficeLevel}`
+        }
+      };
+    }
+
+    // Active trading
+    if (this.goodsList.size === 0) {
+      return {
+        module: 'Stock Market',
+        status: 'active',
+        currentAction: 'Initializing trading',
+        reason: 'Setting up price thresholds',
+        icon: '📈',
+        details: {
+          'Brokers': brokers,
+          'Office Level': officeLevel
+        }
+      };
+    }
+
+    return {
+      module: 'Stock Market',
+      status: 'active',
+      currentAction: 'Trading stocks',
+      reason: 'Buying low, selling high',
+      nextAction: `Tracking ${this.goodsList.size} goods`,
+      icon: '📈',
+      details: {
+        'Brokers': brokers,
+        'Portfolio Value': Math.floor(totalValue),
+        'Goods Owned': goodsWithStock,
+        'Goods Tracked': this.goodsList.size,
+        'Strategy': 'Momentum-based'
+      }
+    };
   }
 }

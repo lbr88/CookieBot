@@ -12,6 +12,7 @@
  * - Cast spells during high CpS multiplier (>100x) to maximize value
  * - Use lump refill when we have 100+ lumps and canUseLumps
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class GrimoireManager {
     private canUseLumps;
     private cpsMult;
@@ -24,5 +25,9 @@ export declare class GrimoireManager {
      * Update state from AutoPlay
      */
     updateState(canUseLumps: boolean, cpsMult: number): void;
+    /**
+     * Get current grimoire manager status
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=GrimoireManager.d.ts.map

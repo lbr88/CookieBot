@@ -14,6 +14,7 @@
  *
  * Original implementation: lines 1010-1499 in cookieAutoPlayBeta.js
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class GardenManager {
     private plantList;
     private plantPending;
@@ -165,5 +166,9 @@ export declare class GardenManager {
      * Get plant pending status (for AutoPlay.plantPending)
      */
     isPlantPending(): boolean;
+    /**
+     * Get current module status for dashboard
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=GardenManager.d.ts.map

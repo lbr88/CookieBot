@@ -10,6 +10,7 @@ import type {
   StatusHistoryEntry,
   ActivityEntry
 } from '../types/autoplay';
+import type { ModuleStatuses } from '../types/moduleStatus';
 
 declare const Game: any;
 declare const AutoPlay: any;
@@ -290,21 +291,25 @@ export class Dashboard {
     // Create content area
     const content = document.createElement('div');
     content.id = 'dashboardContent';
-    content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 250px; overflow-y: auto;';
+    content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 300px; overflow-y: auto;';
 
-    // Three columns: Stats & Reserve | Next Actions | Recent Activity
+    // Four columns: Stats & Reserve | Next Actions | Module Status | Recent Activity
     content.innerHTML = `
-      <div id="dashProgress" style="flex: 1; min-width: 250px;">
+      <div id="dashProgress" style="flex: 1; min-width: 220px;">
         <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Stats & Reserve</div>
         <div id="dashProgressContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div>
       </div>
-      <div id="dashNextActions" style="flex: 1; min-width: 250px;">
+      <div id="dashNextActions" style="flex: 1; min-width: 220px;">
         <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div>
-        <div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 200px; overflow-y: auto;">Loading...</div>
+        <div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 250px; overflow-y: auto;">Loading...</div>
       </div>
-      <div id="dashActivity" style="flex: 1; min-width: 250px;">
+      <div id="dashModuleStatus" style="flex: 1; min-width: 220px;">
+        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Module Status</div>
+        <div id="dashModuleContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 250px; overflow-y: auto;">Loading...</div>
+      </div>
+      <div id="dashActivity" style="flex: 1; min-width: 220px;">
         <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Activity</div>
-        <div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 200px; overflow-y: auto;">No activity yet...</div>
+        <div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 250px; overflow-y: auto;">No activity yet...</div>
       </div>
     `;
 
@@ -475,6 +480,7 @@ export class Dashboard {
 
       this.updateNextActions();
       this.updateProgress();
+      this.updateModuleStatus();
       this.updateActivity();
     } catch (e) {
       console.error('Dashboard update error:', e);
@@ -921,6 +927,131 @@ export class Dashboard {
 
     progressHtml += '</div>';
     return progressHtml;
+  }
+
+  /**
+   * Update module status section
+   */
+  private updateModuleStatus(): void {
+    let statusHtml = '';
+
+    // Safety check for AutoPlay global
+    if (typeof AutoPlay === 'undefined') {
+      statusHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
+      const moduleContent = document.getElementById('dashModuleContent');
+      if (moduleContent) {
+        moduleContent.innerHTML = statusHtml;
+      }
+      return;
+    }
+
+    try {
+      // Collect statuses from all managers
+      const statuses: ModuleStatuses = {};
+
+      // Get statuses from each manager (if they exist and have getStatus method)
+      if (AutoPlay.purchaseManager && typeof AutoPlay.purchaseManager.getStatus === 'function') {
+        statuses.purchases = AutoPlay.purchaseManager.getStatus();
+      }
+      if (AutoPlay.gardenManager && typeof AutoPlay.gardenManager.getStatus === 'function') {
+        statuses.garden = AutoPlay.gardenManager.getStatus();
+      }
+      if (AutoPlay.wrinklerManager && typeof AutoPlay.wrinklerManager.getStatus === 'function') {
+        statuses.wrinklers = AutoPlay.wrinklerManager.getStatus();
+      }
+      if (AutoPlay.goldenCookieHandler && typeof AutoPlay.goldenCookieHandler.getStatus === 'function') {
+        statuses.goldenCookies = AutoPlay.goldenCookieHandler.getStatus();
+      }
+      if (AutoPlay.dragonManager && typeof AutoPlay.dragonManager.getStatus === 'function') {
+        statuses.dragon = AutoPlay.dragonManager.getStatus();
+      }
+      if (AutoPlay.pantheonManager && typeof AutoPlay.pantheonManager.getStatus === 'function') {
+        statuses.pantheon = AutoPlay.pantheonManager.getStatus();
+      }
+      if (AutoPlay.grimoireManager && typeof AutoPlay.grimoireManager.getStatus === 'function') {
+        statuses.grimoire = AutoPlay.grimoireManager.getStatus();
+      }
+      if (AutoPlay.stockMarketManager && typeof AutoPlay.stockMarketManager.getStatus === 'function') {
+        statuses.stockMarket = AutoPlay.stockMarketManager.getStatus();
+      }
+      if (AutoPlay.sugarLumpManager && typeof AutoPlay.sugarLumpManager.getStatus === 'function') {
+        statuses.sugarLumps = AutoPlay.sugarLumpManager.getStatus();
+      }
+      if (AutoPlay.ascensionManager && typeof AutoPlay.ascensionManager.getStatus === 'function') {
+        statuses.ascension = AutoPlay.ascensionManager.getStatus();
+      }
+      if (AutoPlay.seasonHandler && typeof AutoPlay.seasonHandler.getStatus === 'function') {
+        statuses.season = AutoPlay.seasonHandler.getStatus();
+      }
+
+      // Render module statuses
+      const moduleOrder: (keyof ModuleStatuses)[] = [
+        'purchases',
+        'garden',
+        'wrinklers',
+        'goldenCookies',
+        'dragon',
+        'pantheon',
+        'grimoire',
+        'stockMarket',
+        'sugarLumps',
+        'ascension',
+        'season'
+      ];
+
+      // Map status to colors
+      const statusColors = {
+        'idle': '#888',
+        'active': '#6f6',
+        'waiting': '#fc6',
+        'blocked': '#f66',
+        'disabled': '#666',
+        'error': '#f00'
+      };
+
+      for (const key of moduleOrder) {
+        const status = statuses[key];
+        if (!status) continue;
+
+        const color = statusColors[status.status] || '#ccc';
+        const icon = status.icon || '📦';
+
+        statusHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + ';">';
+        statusHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+        statusHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
+        statusHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
+        statusHtml += '</div>';
+        statusHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
+        statusHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
+
+        if (status.nextAction) {
+          statusHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
+        }
+
+        // Show details if available
+        if (status.details && Object.keys(status.details).length > 0) {
+          statusHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
+          for (const [key, value] of Object.entries(status.details)) {
+            statusHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
+          }
+          statusHtml += '</div>';
+        }
+
+        statusHtml += '</div>';
+      }
+
+      if (statusHtml === '') {
+        statusHtml = '<div style="color: #888;">No module statuses available</div>';
+      }
+    } catch (e) {
+      console.error('Module status error:', e);
+      statusHtml = '<div style="color: #f66;">Error loading module statuses</div>';
+    }
+
+    const moduleContent = document.getElementById('dashModuleContent');
+    if (moduleContent) {
+      moduleContent.innerHTML = statusHtml;
+    }
   }
 
   /**
