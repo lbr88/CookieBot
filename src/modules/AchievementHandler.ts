@@ -368,18 +368,32 @@ export class AchievementHandler {
     let timeRemaining: number | undefined;
     let progressColor: string | undefined;
 
-    // List of "bake X cookies" achievement IDs (from original dashboard code line 2794)
-    const bakingAchievements = [225, 227, 229, 279, 280, 372, 373, 374, 375, 390, 391, 429, 451, 452, 453, 470, 471, 472, 534, 535, 536, 578, 579, 586, 587, 592, 593];
+    // Check for "bake X cookies in one ascension" achievements by pattern matching
+    const bakeCookiesMatch = achievement.ddesc.match(/bake <b>([\d,\.]+(?:\s+\w+)?)\s+cookies?<\/b>\s+in one ascension/i);
+    if (bakeCookiesMatch) {
+      // Parse the cookie threshold (handles numbers like "1 million", "1.5 billion", etc.)
+      let cookieThreshold = 0;
+      const valueStr = bakeCookiesMatch[1].trim();
 
-    // Check if this is a trackable achievement
-    if (bakingAchievements.indexOf(achievement.id) !== -1) {
-      // Extract cookie threshold from achievement description
-      const thresholdMatch = achievement.ddesc.match(/bake <b>([\d,]+) cookies?<\/b>/i);
-      if (thresholdMatch) {
-        const thresholdStr = thresholdMatch[1].replace(/,/g, '');
-        const cookieThreshold = parseFloat(thresholdStr);
+      // Try to extract from Game.AchievementsById threshold if available
+      if (achievement.threshold) {
+        cookieThreshold = achievement.threshold;
+      } else {
+        // Fallback: parse the text (simple numbers like "1,000" or "100")
+        const numMatch = valueStr.match(/^([\d,\.]+)/);
+        if (numMatch) {
+          cookieThreshold = parseFloat(numMatch[1].replace(/,/g, ''));
+          // Check for multipliers (million, billion, etc.)
+          if (valueStr.toLowerCase().includes('million')) cookieThreshold *= 1000000;
+          else if (valueStr.toLowerCase().includes('billion')) cookieThreshold *= 1000000000;
+          else if (valueStr.toLowerCase().includes('trillion')) cookieThreshold *= 1000000000000;
+          else if (valueStr.toLowerCase().includes('quadrillion')) cookieThreshold *= 1000000000000000;
+          else if (valueStr.toLowerCase().includes('quintillion')) cookieThreshold *= 1000000000000000000;
+        }
+      }
+
+      if (cookieThreshold > 0) {
         const currentCookies = Game.cookiesEarned;
-
         const progressPercent = Math.min(100, (currentCookies / cookieThreshold) * 100);
         progressColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
 
@@ -394,6 +408,54 @@ export class AchievementHandler {
         if (currentCookies < cookieThreshold && Game.cookiesPs > 0) {
           const remaining = cookieThreshold - currentCookies;
           timeRemaining = (remaining / Game.cookiesPs) * 1000; // Convert to milliseconds
+        }
+      }
+    }
+    // Check for "own X [building]" achievements
+    else if (achievement.ddesc.match(/own <b>\d+<\/b>/i)) {
+      const ownMatch = achievement.ddesc.match(/own <b>(\d+)<\/b>\s+(\w+)/i);
+      if (ownMatch) {
+        const targetCount = parseInt(ownMatch[1]);
+        const buildingName = ownMatch[2];
+
+        // Find the building in Game.Objects
+        let currentCount = 0;
+        for (const objName in Game.Objects) {
+          if (objName.toLowerCase() === buildingName.toLowerCase() ||
+              objName.toLowerCase().includes(buildingName.toLowerCase()) ||
+              buildingName.toLowerCase().includes(objName.toLowerCase())) {
+            currentCount = Game.Objects[objName].amount;
+            break;
+          }
+        }
+
+        const progressPercent = Math.min(100, (currentCount / targetCount) * 100);
+        progressColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
+
+        progress = {
+          current: currentCount,
+          target: targetCount,
+          percent: progressPercent,
+          label: `${buildingName} owned`
+        };
+
+        // Calculate time remaining based on CPS and building cost
+        if (currentCount < targetCount && Game.cookiesPs > 0) {
+          // Rough estimate: calculate cost of remaining buildings
+          const building = Object.values(Game.Objects).find((obj: any) =>
+            obj.name.toLowerCase().includes(buildingName.toLowerCase())
+          ) as any;
+
+          if (building) {
+            let totalCost = 0;
+            for (let i = currentCount; i < targetCount; i++) {
+              totalCost += building.basePrice * Math.pow(building.priceIncrease || 1.15, i);
+            }
+            const cookiesNeeded = Math.max(0, totalCost - Game.cookies);
+            if (cookiesNeeded > 0) {
+              timeRemaining = (cookiesNeeded / Game.cookiesPs) * 1000;
+            }
+          }
         }
       }
     }
