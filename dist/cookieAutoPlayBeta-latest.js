@@ -5409,6 +5409,29 @@ class AutoPlay_AutoPlay {
     set mainActivity(value) { this.state.mainActivity = value; }
     get activities() { return this.state.activities; }
     set activities(value) { this.state.activities = value; }
+    // Additional accessors for Dashboard
+    get nextPurchase() { return this.state.nextPurchase; }
+    set nextPurchase(value) { this.state.nextPurchase = value; }
+    get nextPurchaseType() { return this.state.nextPurchaseType; }
+    set nextPurchaseType(value) { this.state.nextPurchaseType = value; }
+    get nextPurchasePrice() { return this.state.nextPurchasePrice; }
+    set nextPurchasePrice(value) { this.state.nextPurchasePrice = value; }
+    get nextPurchasePP() { return this.state.nextPurchasePP; }
+    set nextPurchasePP(value) { this.state.nextPurchasePP = value; }
+    get deadline() { return this.state.deadline; }
+    set deadline(value) { this.state.deadline = value; }
+    get now() { return this.state.now; }
+    set now(value) { this.state.now = value; }
+    get savingsGoal() { return this.config.savingsGoal; }
+    set savingsGoal(value) { this.config.savingsGoal = value; }
+    get hyperActive() { return this.state.hyperActive; }
+    set hyperActive(value) { this.state.hyperActive = value; }
+    get savingsStart() { return this.state.savingsStart; }
+    set savingsStart(value) { this.state.savingsStart = value; }
+    get statusInfo() { return this.state.statusInfo; }
+    set statusInfo(value) { this.state.statusInfo = value; }
+    get workingOnSpecialAchievement() { return this.state.workingOnSpecialAchievement; }
+    set workingOnSpecialAchievement(value) { this.state.workingOnSpecialAchievement = value; }
     // Public methods expected by modules
     info(message) {
         console.log(`[CookieBot] ${message}`);
@@ -5448,20 +5471,16 @@ class AutoPlay_AutoPlay {
         // Initialize public achievement arrays
         this.wantedAchievements = [...WANTED_ACHIEVEMENTS];
         this.lateAchievements = [...gameIds_LUMP_RELATED_ACHIEVEMENTS];
-        // Helper methods for logging and activities
+        // Create dashboard FIRST so logging callbacks can use it
+        this.dashboard = new Dashboard();
+        // Helper methods for logging and activities (now dashboard exists)
         const logAction = (action, details) => {
-            // Note: No console.log in original - only in error handlers
             // Dashboard handles all action history tracking
-            if (this.dashboard) {
-                this.dashboard.logAction(action, details);
-            }
+            this.dashboard.logAction(action, details);
         };
         const logStatus = (type, message, details) => {
-            // Note: No console.log in original - only in error handlers
             // Dashboard handles all status history tracking
-            if (this.dashboard) {
-                this.dashboard.logStatus(type, message, details);
-            }
+            this.dashboard.logStatus(type, message, details);
         };
         const addActivity = (activity) => {
             // Original uses string concatenation with HTML, not array
@@ -5472,7 +5491,7 @@ class AutoPlay_AutoPlay {
             }
             return false;
         };
-        // Initialize centralized logger
+        // Initialize centralized logger AFTER dashboard created
         Logger.initialize({
             logAction,
             logStatus,
@@ -5541,7 +5560,7 @@ class AutoPlay_AutoPlay {
         };
         this.ascensionManager = new AscensionManager(ascensionContext);
         this.dragonManager = new DragonManager();
-        this.dashboard = new Dashboard();
+        // Dashboard already created at top of constructor
         this.nightMode = new NightMode(this.config);
         this.pantheonManager = new PantheonManager();
         this.grimoireManager = new GrimoireManager();
