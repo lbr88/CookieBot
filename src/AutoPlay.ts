@@ -422,6 +422,9 @@ export default class AutoPlay {
         Logger.addActivity('Funding the grandma research facility');
       }
     }
+
+    // Schedule next periodic run to keep the loop going
+    this.scheduleNextRun();
   }
 
   /**
