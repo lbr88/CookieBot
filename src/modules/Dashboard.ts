@@ -664,8 +664,8 @@ export class Dashboard {
       if (!isSavingActive) {
         // Check if in startup period
         const startTime = 30 * 60 * 1000;
-        if (AutoPlay.savingsStart !== undefined && AutoPlay.now) {
-          const elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
+        if (AutoPlay.savingsStart !== undefined) {
+          const elapsedTime = Date.now() - AutoPlay.savingsStart - startTime;
           if (elapsedTime < 0) {
             const minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
             progressHtml += '<div style="font-size: 10px; color: #fc6; font-weight: bold; margin-bottom: 4px; padding: 4px; background: rgba(255,200,100,0.1); border-left: 3px solid #fc6;">⏱ Reserve Disabled: Startup Period</div>';
@@ -685,10 +685,10 @@ export class Dashboard {
 
       // Calculate actual target with time scaling
       let scaling = 1;
-      if (isSavingActive && AutoPlay.savingsStart !== undefined && AutoPlay.now && Game.startDate) {
+      if (isSavingActive && AutoPlay.savingsStart !== undefined && Game.startDate) {
         const startTime = 30 * 60 * 1000;
         const targetTime = 400 * 60 * 1000;
-        const elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
+        const elapsedTime = Date.now() - AutoPlay.savingsStart - startTime;
         scaling = Math.max(0, Math.min(elapsedTime / targetTime, 1));
 
         if (scaling < 1) {
@@ -736,14 +736,15 @@ export class Dashboard {
     progressHtml += this.getAchievementProgress();
 
     // Time in run
-    if (AutoPlay.now && Game.startDate && typeof Game.sayTime !== 'undefined') {
-      const timeInRun = AutoPlay.now - Game.startDate;
+    if (Game.startDate && typeof Game.sayTime !== 'undefined') {
+      const timeInRun = Date.now() - Game.startDate;
       progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Total time elapsed since the start of this game run">Time in run: ${Game.sayTime(timeInRun / 1000 * Game.fps, -1)}</div>`;
     }
 
     // CPS
     if (typeof Beautify !== 'undefined' && Game.cookiesPs !== undefined) {
-      progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Current cookies per second production rate. The multiplier includes buffs from golden cookies, frenzies, etc.">CPS: ${Beautify(Game.cookiesPs)} (${AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0'}x multiplier)</div>`;
+      const cpsMult = Game.unbuffedCps > 0 ? Game.cookiesPs / Game.unbuffedCps : 1;
+      progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Current cookies per second production rate. The multiplier includes buffs from golden cookies, frenzies, etc.">CPS: ${Beautify(Game.cookiesPs)} (${cpsMult.toFixed(1)}x multiplier)</div>`;
     }
 
     // Buildings and Upgrades
