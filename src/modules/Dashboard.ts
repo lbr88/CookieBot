@@ -615,6 +615,12 @@ export class Dashboard {
       if (AutoPlay.achievementHandler && typeof AutoPlay.achievementHandler.getStatus === 'function') {
         statuses.achievements = AutoPlay.achievementHandler.getStatus();
       }
+      if (AutoPlay.savingsManager && typeof AutoPlay.savingsManager.getStatus === 'function') {
+        statuses.savings = AutoPlay.savingsManager.getStatus();
+      }
+      if (AutoPlay.nightMode && typeof AutoPlay.nightMode.getStatus === 'function') {
+        statuses.nightMode = AutoPlay.nightMode.getStatus();
+      }
 
       // Render module statuses
       const moduleOrder: (keyof ModuleStatuses)[] = [
@@ -629,8 +635,10 @@ export class Dashboard {
         'grimoire',
         'stockMarket',
         'sugarLumps',
+        'savings',
         'ascension',
         'season',
+        'nightMode',
         'achievements'
       ];
 

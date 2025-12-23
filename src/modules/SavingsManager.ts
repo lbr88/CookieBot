@@ -7,6 +7,9 @@
  * - LUCKY (2): Save for Lucky golden cookie (100 minutes of CPS)
  * - LUCKY_FRENZY (3): Save for Lucky Frenzy (700 minutes of CPS)
  */
+
+declare const Beautify: (num: number) => string;
+
 export class SavingsManager {
   private savingsGoal: number = 0;
   private savingsStart: number = 0;
@@ -165,5 +168,83 @@ export class SavingsManager {
    */
   canAfford(price: number): boolean {
     return price < Game.cookies - this.savingsGoal;
+  }
+
+  /**
+   * Get status for dashboard display
+   */
+  getStatus(): any {
+    const strategy = this.config?.SavingStrategy ?? 1;
+    const isActive = this.savingsGoal > 0;
+
+    // Calculate thresholds
+    const baseLucky = Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER;
+    const baseLuckyFrenzy = baseLucky * this.FRENZY_MULTIPLIER;
+    const hasGetLucky = Game.UpgradesById[86] && Game.UpgradesById[86].bought;
+
+    // Check why reserve might be disabled
+    let disabledReason = '';
+    const elapsedTime = this.now - this.savingsStart - this.START_TIME;
+
+    if (Game.ascensionMode === 1) {
+      disabledReason = 'Hardcore Mode';
+    } else if (elapsedTime < 0) {
+      const minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
+      disabledReason = `Startup Period (${minutesRemaining}m remaining)`;
+    } else if (!Game.UpgradesById[52]?.bought || !Game.UpgradesById[53]?.bought) {
+      const missing = [];
+      if (!Game.UpgradesById[52]?.bought) missing.push('Lucky day');
+      if (!Game.UpgradesById[53]?.bought) missing.push('Serendipity');
+      disabledReason = `Missing upgrades: ${missing.join(', ')}`;
+    }
+
+    // Calculate scaling for AUTO mode
+    let scaling = 1;
+    if (strategy === 1 && elapsedTime >= 0) {
+      scaling = Math.max(0, Math.min(elapsedTime / this.TARGET_TIME, 1));
+    }
+
+    const targetLucky = baseLucky * scaling;
+    const targetLuckyFrenzy = baseLuckyFrenzy * scaling;
+
+    // Build status object
+    const status: any = {
+      module: 'Savings',
+      status: isActive ? 'active' : 'waiting',
+      currentAction: isActive ? 'Reserve Active' : 'Reserve Disabled',
+      reason: disabledReason || 'Saving for golden cookies',
+      icon: '🍪',
+      details: {
+        'Strategy': ['NONE', 'AUTO', 'LUCKY', 'LUCKY FRENZY'][strategy] || 'UNKNOWN',
+        'Reserve': typeof Beautify !== 'undefined' ? Beautify(this.savingsGoal) : this.savingsGoal.toString()
+      }
+    };
+
+    // Add progress for Lucky threshold
+    if (isActive || Game.unbuffedCps > 0) {
+      const luckyPercent = Math.min(100, (Game.cookies / targetLucky) * 100);
+
+      status.progress = {
+        current: Game.cookies,
+        target: targetLucky,
+        percent: luckyPercent,
+        label: 'Lucky Reserve'
+      };
+
+      status.progressColor = Game.cookies >= targetLucky ? '#6f6' : '#fc6';
+
+      // Add Lucky Frenzy info to details if Get Lucky is unlocked
+      if (hasGetLucky) {
+        const frenzyPercent = Math.min(100, (Game.cookies / targetLuckyFrenzy) * 100);
+        status.details['Lucky Frenzy'] = `${frenzyPercent.toFixed(1)}% (${typeof Beautify !== 'undefined' ? Beautify(targetLuckyFrenzy) : targetLuckyFrenzy.toString()})`;
+      }
+
+      // Show scaling progress for AUTO mode
+      if (strategy === 1 && scaling < 1) {
+        status.details['Ramp Progress'] = `${(scaling * 100).toFixed(1)}% (full at 400 min)`;
+      }
+    }
+
+    return status;
   }
 }

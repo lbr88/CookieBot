@@ -51,5 +51,9 @@ export declare class SavingsManager {
      * Check if we have enough cookies for a purchase (accounting for savings)
      */
     canAfford(price: number): boolean;
+    /**
+     * Get status for dashboard display
+     */
+    getStatus(): any;
 }
 //# sourceMappingURL=SavingsManager.d.ts.map

@@ -59,7 +59,9 @@ export interface ModuleStatuses {
   grimoire?: ModuleStatus;
   stockMarket?: ModuleStatus;
   sugarLumps?: ModuleStatus;
+  savings?: ModuleStatus;
   ascension?: ModuleStatus;
   season?: ModuleStatus;
+  nightMode?: ModuleStatus;
   achievements?: ModuleStatus;
 }

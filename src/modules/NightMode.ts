@@ -279,4 +279,66 @@ export class NightMode {
   toggle(): void {
     this.config.nightMode = !this.config.nightMode;
   }
+
+  /**
+   * Get status for dashboard display
+   */
+  getStatus(): any {
+    const isEnabled = typeof this.config.nightMode === 'number' ? this.config.nightMode > 0 : this.config.nightMode;
+    const isActive = this.isNight;
+
+    if (!isEnabled) {
+      return {
+        module: 'Night Mode',
+        status: 'disabled',
+        currentAction: 'Disabled',
+        reason: 'Night mode is turned off in settings',
+        icon: '🌙',
+        details: {
+          'Mode': 'OFF'
+        }
+      };
+    }
+
+    // Calculate night time range
+    const nightStart = 1;  // 1 AM
+    const nightEnd = 7;    // 7 AM
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    let timeUntilChange = 0;
+    if (isActive) {
+      // Currently night - calculate time until morning (7 AM)
+      if (currentHour < nightEnd) {
+        timeUntilChange = (nightEnd - currentHour) * 3600 * 1000;
+      } else {
+        // Past morning, so next morning
+        timeUntilChange = (24 - currentHour + nightEnd) * 3600 * 1000;
+      }
+    } else {
+      // Currently day - calculate time until night (1 AM)
+      if (currentHour < nightStart) {
+        timeUntilChange = (nightStart - currentHour) * 3600 * 1000;
+      } else {
+        // Past night start, so next night
+        timeUntilChange = (24 - currentHour + nightStart) * 3600 * 1000;
+      }
+    }
+
+    const status: any = {
+      module: 'Night Mode',
+      status: isActive ? 'active' : 'waiting',
+      currentAction: isActive ? 'Sleeping' : 'Active',
+      reason: isActive ? 'Resting during night hours (1 AM - 7 AM)' : 'Working during day hours',
+      icon: isActive ? '😴' : '🌙',
+      details: {
+        'Mode': 'ON',
+        'Status': isActive ? 'NIGHT' : 'DAY',
+        'Hours': `${nightStart}:00 AM - ${nightEnd}:00 AM`
+      },
+      timeRemaining: timeUntilChange
+    };
+
+    return status;
+  }
 }

@@ -93,5 +93,9 @@ export declare class NightMode {
      * Toggle night mode
      */
     toggle(): void;
+    /**
+     * Get status for dashboard display
+     */
+    getStatus(): any;
 }
 //# sourceMappingURL=NightMode.d.ts.map
