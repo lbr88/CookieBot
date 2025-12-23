@@ -71,8 +71,6 @@ export class AscensionManager {
       neverclickWarn: true,
       resetTime: Date.now()
     };
-    // Initialize global AutoPlay.onAscend flag
-    AutoPlay.onAscend = false;
   }
 
   /**
@@ -90,7 +88,10 @@ export class AscensionManager {
       this.context.setDeadline(0); // reactivate all activities
       this.context.now = Date.now();
       this.state.onAscend = false;
-      AutoPlay.onAscend = false; // Sync with global AutoPlay object
+      // Sync with global AutoPlay object
+      if (typeof AutoPlay !== 'undefined') {
+        AutoPlay.onAscend = false;
+      }
       this.state.loggedAchievements = {}; // Reset achievement tracking for new run
       return;
     }
@@ -490,7 +491,10 @@ export class AscensionManager {
       }
       Game.Ascend(true);
       this.state.onAscend = true;
-      AutoPlay.onAscend = true; // Sync with global AutoPlay object
+      // Sync with global AutoPlay object
+      if (typeof AutoPlay !== 'undefined') {
+        AutoPlay.onAscend = true;
+      }
     }
   }
 

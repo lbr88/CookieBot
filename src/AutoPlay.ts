@@ -75,6 +75,7 @@ export default class AutoPlay {
   robotName: string = 'Automated ';
   backupHeight: number = 0;
   giftCode: number | string = 0;
+  onAscend: boolean = false; // Flag to prevent duplicate ascension calls
 
   // Public accessors for state properties (proxies to this.state)
   get nextAchievement(): number { return this.state.nextAchievement; }

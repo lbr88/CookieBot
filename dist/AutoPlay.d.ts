@@ -39,6 +39,7 @@ export default class AutoPlay {
     robotName: string;
     backupHeight: number;
     giftCode: number | string;
+    onAscend: boolean;
     get nextAchievement(): number;
     set nextAchievement(value: number);
     get finished(): boolean;
