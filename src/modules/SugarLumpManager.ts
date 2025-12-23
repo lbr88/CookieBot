@@ -12,6 +12,7 @@ import type { ModuleStatus } from '../types/moduleStatus';
 
 declare const Game: any;
 declare const AutoPlay: any;
+declare const Beautify: (num: number) => string;
 
 // Sugar lump types
 enum LumpType {
@@ -300,7 +301,7 @@ export class SugarLumpManager {
         reason: 'Need to bake 1 billion cookies first',
         icon: '🍬',
         details: {
-          'Cookies Baked': Math.floor(Game.cookiesEarned)
+          'Cookies Baked': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.cookiesEarned)) : Math.floor(Game.cookiesEarned)
         }
       };
     }

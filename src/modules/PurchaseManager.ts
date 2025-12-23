@@ -612,6 +612,7 @@ export class PurchaseManager {
         details: {
           'Hardcore Won': false,
           'Upgrades Owned': 0,
+          'Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies) : Game.cookies,
           'Action Required': 'Manually buy any upgrade to start auto-purchasing'
         }
       };
@@ -647,8 +648,8 @@ export class PurchaseManager {
         details: {
           'Next Purchase': this.state.nextPurchase,
           'Type': this.state.nextPurchaseType || 'unknown',
-          'Price': this.state.nextPurchasePrice || 0,
-          'Available Cookies': Game.cookies - this.savingsGoal,
+          'Price': typeof Beautify !== 'undefined' ? Beautify(this.state.nextPurchasePrice || 0) : (this.state.nextPurchasePrice || 0),
+          'Available Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies - this.savingsGoal) : (Game.cookies - this.savingsGoal),
           'Cookie Monster': hasCookieMonster,
           'Buy 10 Mode': this.state.buy10
         }
@@ -664,7 +665,7 @@ export class PurchaseManager {
       icon: '💰',
       details: {
         'Cookie Monster': hasCookieMonster,
-        'Savings Goal': this.savingsGoal
+        'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.savingsGoal) : this.savingsGoal
       }
     };
   }

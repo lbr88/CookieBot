@@ -971,6 +971,7 @@ class PurchaseManager {
                 details: {
                     'Hardcore Won': false,
                     'Upgrades Owned': 0,
+                    'Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies) : Game.cookies,
                     'Action Required': 'Manually buy any upgrade to start auto-purchasing'
                 }
             };
@@ -1003,8 +1004,8 @@ class PurchaseManager {
                 details: {
                     'Next Purchase': this.state.nextPurchase,
                     'Type': this.state.nextPurchaseType || 'unknown',
-                    'Price': this.state.nextPurchasePrice || 0,
-                    'Available Cookies': Game.cookies - this.savingsGoal,
+                    'Price': typeof Beautify !== 'undefined' ? Beautify(this.state.nextPurchasePrice || 0) : (this.state.nextPurchasePrice || 0),
+                    'Available Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies - this.savingsGoal) : (Game.cookies - this.savingsGoal),
                     'Cookie Monster': hasCookieMonster,
                     'Buy 10 Mode': this.state.buy10
                 }
@@ -1019,7 +1020,7 @@ class PurchaseManager {
             icon: '💰',
             details: {
                 'Cookie Monster': hasCookieMonster,
-                'Savings Goal': this.savingsGoal
+                'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.savingsGoal) : this.savingsGoal
             }
         };
     }
@@ -1659,7 +1660,7 @@ class SugarLumpManager {
                 reason: 'Need to bake 1 billion cookies first',
                 icon: '🍬',
                 details: {
-                    'Cookies Baked': Math.floor(Game.cookiesEarned)
+                    'Cookies Baked': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.cookiesEarned)) : Math.floor(Game.cookiesEarned)
                 }
             };
         }
@@ -1950,13 +1951,13 @@ class WrinklerManager {
      * Count attached wrinklers
      */
     getAttachedWrinklerCount() {
-        return Game.wrinklers.filter(w => w.close === 1).length;
+        return Game.wrinklers.filter((w) => w.close === 1).length;
     }
     /**
      * Count shiny wrinklers
      */
     getShinyWrinklerCount() {
-        return Game.wrinklers.filter(w => w.close === 1 && this.isShinyWrinkler(w)).length;
+        return Game.wrinklers.filter((w) => w.close === 1 && this.isShinyWrinkler(w)).length;
     }
     // ============ Helper methods ============
     /**
@@ -2014,7 +2015,7 @@ class WrinklerManager {
                 details: {
                     'Attached': attachedCount,
                     'Shiny': shinyCount,
-                    'Total Value': Math.floor(totalValue)
+                    'Total Value': typeof Beautify !== 'undefined' ? Beautify(Math.floor(totalValue)) : Math.floor(totalValue)
                 }
             };
         }
@@ -2061,7 +2062,7 @@ class WrinklerManager {
             details: {
                 'Attached': attachedCount,
                 'Shiny': shinyCount,
-                'Total Value': Math.floor(totalValue),
+                'Total Value': typeof Beautify !== 'undefined' ? Beautify(Math.floor(totalValue)) : Math.floor(totalValue),
                 'Next Pop': minutesUntilNext > 0 ? `${minutesUntilNext}m` : 'Now'
             }
         };
@@ -2817,8 +2818,8 @@ class AscensionManager {
                 nextAction: 'Will reincarnate',
                 icon: '🌟',
                 details: {
-                    'Heavenly Chips': Math.floor(Game.heavenlyChips),
-                    'Prestige': Math.floor(Game.prestige),
+                    'Heavenly Chips': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.heavenlyChips)) : Math.floor(Game.heavenlyChips),
+                    'Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.prestige)) : Math.floor(Game.prestige),
                     'On Ascend Screen': true
                 }
             };
@@ -2833,8 +2834,8 @@ class AscensionManager {
                 nextAction: 'Wait for ascension screen',
                 icon: '🌟',
                 details: {
-                    'Prestige Gain': Math.floor(Game.ascendMeterLevel),
-                    'New Prestige': Math.floor(Game.prestige + Game.ascendMeterLevel)
+                    'Prestige Gain': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.ascendMeterLevel)) : Math.floor(Game.ascendMeterLevel),
+                    'New Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.prestige + Game.ascendMeterLevel)) : Math.floor(Game.prestige + Game.ascendMeterLevel)
                 }
             };
         }
@@ -2919,7 +2920,7 @@ class AscensionManager {
                 details: {
                     'Sevens': sevenCount,
                     'Target': 6,
-                    'Prestige': Math.floor(Game.prestige + prestigeGain)
+                    'Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.prestige + prestigeGain)) : Math.floor(Game.prestige + prestigeGain)
                 }
             };
         }
@@ -2933,8 +2934,8 @@ class AscensionManager {
                 nextAction: `Will ascend when achieved`,
                 icon: '🌟',
                 details: {
-                    'Current Prestige': Math.floor(currentPrestige),
-                    'Prestige Gain': Math.floor(prestigeGain),
+                    'Current Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(currentPrestige)) : Math.floor(currentPrestige),
+                    'Prestige Gain': typeof Beautify !== 'undefined' ? Beautify(Math.floor(prestigeGain)) : Math.floor(prestigeGain),
                     'Days in Run': daysInRun.toFixed(1),
                     'Target Achievement': targetAchievement.name
                 }
@@ -2949,8 +2950,8 @@ class AscensionManager {
             nextAction: 'Will ascend when beneficial',
             icon: '🌟',
             details: {
-                'Current Prestige': Math.floor(currentPrestige),
-                'Prestige Gain': Math.floor(prestigeGain),
+                'Current Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(currentPrestige)) : Math.floor(currentPrestige),
+                'Prestige Gain': typeof Beautify !== 'undefined' ? Beautify(Math.floor(prestigeGain)) : Math.floor(prestigeGain),
                 'Days in Run': daysInRun.toFixed(1),
                 'Resets': Game.resets
             }
@@ -6657,7 +6658,7 @@ class StockMarketManager {
                 details: {
                     'Brokers': `${brokers}/${maxBrokers}`,
                     'Office Level': `${officeLevel}/${maxOfficeLevel}`,
-                    'Portfolio Value': Math.floor(totalValue)
+                    'Portfolio Value': typeof Beautify !== 'undefined' ? Beautify(Math.floor(totalValue)) : Math.floor(totalValue)
                 }
             };
         }
@@ -6699,7 +6700,7 @@ class StockMarketManager {
             icon: '📈',
             details: {
                 'Brokers': brokers,
-                'Portfolio Value': Math.floor(totalValue),
+                'Portfolio Value': typeof Beautify !== 'undefined' ? Beautify(Math.floor(totalValue)) : Math.floor(totalValue),
                 'Goods Owned': goodsWithStock,
                 'Goods Tracked': this.goodsList.size,
                 'Strategy': 'Momentum-based'

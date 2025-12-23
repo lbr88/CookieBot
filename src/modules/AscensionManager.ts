@@ -608,8 +608,8 @@ export class AscensionManager {
         nextAction: 'Will reincarnate',
         icon: '🌟',
         details: {
-          'Heavenly Chips': Math.floor(Game.heavenlyChips),
-          'Prestige': Math.floor(Game.prestige),
+          'Heavenly Chips': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.heavenlyChips)) : Math.floor(Game.heavenlyChips),
+          'Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.prestige)) : Math.floor(Game.prestige),
           'On Ascend Screen': true
         }
       };
@@ -625,8 +625,8 @@ export class AscensionManager {
         nextAction: 'Wait for ascension screen',
         icon: '🌟',
         details: {
-          'Prestige Gain': Math.floor(Game.ascendMeterLevel),
-          'New Prestige': Math.floor(Game.prestige + Game.ascendMeterLevel)
+          'Prestige Gain': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.ascendMeterLevel)) : Math.floor(Game.ascendMeterLevel),
+          'New Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.prestige + Game.ascendMeterLevel)) : Math.floor(Game.prestige + Game.ascendMeterLevel)
         }
       };
     }
@@ -714,7 +714,7 @@ export class AscensionManager {
         details: {
           'Sevens': sevenCount,
           'Target': 6,
-          'Prestige': Math.floor(Game.prestige + prestigeGain)
+          'Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(Game.prestige + prestigeGain)) : Math.floor(Game.prestige + prestigeGain)
         }
       };
     }
@@ -729,8 +729,8 @@ export class AscensionManager {
         nextAction: `Will ascend when achieved`,
         icon: '🌟',
         details: {
-          'Current Prestige': Math.floor(currentPrestige),
-          'Prestige Gain': Math.floor(prestigeGain),
+          'Current Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(currentPrestige)) : Math.floor(currentPrestige),
+          'Prestige Gain': typeof Beautify !== 'undefined' ? Beautify(Math.floor(prestigeGain)) : Math.floor(prestigeGain),
           'Days in Run': daysInRun.toFixed(1),
           'Target Achievement': targetAchievement.name
         }
@@ -746,8 +746,8 @@ export class AscensionManager {
       nextAction: 'Will ascend when beneficial',
       icon: '🌟',
       details: {
-        'Current Prestige': Math.floor(currentPrestige),
-        'Prestige Gain': Math.floor(prestigeGain),
+        'Current Prestige': typeof Beautify !== 'undefined' ? Beautify(Math.floor(currentPrestige)) : Math.floor(currentPrestige),
+        'Prestige Gain': typeof Beautify !== 'undefined' ? Beautify(Math.floor(prestigeGain)) : Math.floor(prestigeGain),
         'Days in Run': daysInRun.toFixed(1),
         'Resets': Game.resets
       }

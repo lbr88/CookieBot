@@ -14,6 +14,9 @@ import type { SeasonHandler } from './SeasonHandler';
 import type { ModuleStatus } from '../types/moduleStatus';
 import { Logger } from '../utils/Logger';
 
+declare const Game: any;
+declare const Beautify: (num: number) => string;
+
 export class WrinklerManager {
   private state: AutoPlayState;
   private seasonHandler?: SeasonHandler;
@@ -200,7 +203,7 @@ export class WrinklerManager {
    * Get total value stored in all wrinklers
    */
   getTotalWrinklerValue(): number {
-    return Game.wrinklers.reduce((total, w) => {
+    return Game.wrinklers.reduce((total: number, w: any) => {
       return total + this.getWrinklerValue(w);
     }, 0);
   }
@@ -209,14 +212,14 @@ export class WrinklerManager {
    * Count attached wrinklers
    */
   getAttachedWrinklerCount(): number {
-    return Game.wrinklers.filter(w => w.close === 1).length;
+    return Game.wrinklers.filter((w: any) => w.close === 1).length;
   }
 
   /**
    * Count shiny wrinklers
    */
   getShinyWrinklerCount(): number {
-    return Game.wrinklers.filter(w => w.close === 1 && this.isShinyWrinkler(w)).length;
+    return Game.wrinklers.filter((w: any) => w.close === 1 && this.isShinyWrinkler(w)).length;
   }
 
   // ============ Helper methods ============
@@ -280,7 +283,7 @@ export class WrinklerManager {
         details: {
           'Attached': attachedCount,
           'Shiny': shinyCount,
-          'Total Value': Math.floor(totalValue)
+          'Total Value': typeof Beautify !== 'undefined' ? Beautify(Math.floor(totalValue)) : Math.floor(totalValue)
         }
       };
     }
@@ -331,7 +334,7 @@ export class WrinklerManager {
       details: {
         'Attached': attachedCount,
         'Shiny': shinyCount,
-        'Total Value': Math.floor(totalValue),
+        'Total Value': typeof Beautify !== 'undefined' ? Beautify(Math.floor(totalValue)) : Math.floor(totalValue),
         'Next Pop': minutesUntilNext > 0 ? `${minutesUntilNext}m` : 'Now'
       }
     };

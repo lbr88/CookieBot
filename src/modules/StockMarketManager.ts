@@ -16,6 +16,7 @@
  */
 
 declare const Game: any;
+declare const Beautify: (num: number) => string;
 
 import type { ModuleStatus } from '../types/moduleStatus';
 
@@ -354,7 +355,7 @@ export class StockMarketManager {
         details: {
           'Brokers': `${brokers}/${maxBrokers}`,
           'Office Level': `${officeLevel}/${maxOfficeLevel}`,
-          'Portfolio Value': Math.floor(totalValue)
+          'Portfolio Value': typeof Beautify !== 'undefined' ? Beautify(Math.floor(totalValue)) : Math.floor(totalValue)
         }
       };
     }
@@ -399,7 +400,7 @@ export class StockMarketManager {
       icon: '📈',
       details: {
         'Brokers': brokers,
-        'Portfolio Value': Math.floor(totalValue),
+        'Portfolio Value': typeof Beautify !== 'undefined' ? Beautify(Math.floor(totalValue)) : Math.floor(totalValue),
         'Goods Owned': goodsWithStock,
         'Goods Tracked': this.goodsList.size,
         'Strategy': 'Momentum-based'
