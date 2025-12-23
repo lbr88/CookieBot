@@ -291,25 +291,21 @@ export class Dashboard {
     // Create content area
     const content = document.createElement('div');
     content.id = 'dashboardContent';
-    content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 300px; overflow-y: auto;';
+    content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 350px; overflow-y: auto;';
 
-    // Four columns: Stats & Reserve | Next Actions | Module Status | Recent Activity
+    // Three columns: Active Modules | Waiting/Idle Modules | Recent Activity
     content.innerHTML = `
-      <div id="dashProgress" style="flex: 1; min-width: 220px;">
-        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Stats & Reserve</div>
-        <div id="dashProgressContent" style="color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div>
+      <div id="dashActiveModules" style="flex: 1; min-width: 280px;">
+        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">⚡ Active Modules</div>
+        <div id="dashActiveContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 300px; overflow-y: auto;">Loading...</div>
       </div>
-      <div id="dashNextActions" style="flex: 1; min-width: 220px;">
-        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Next Actions</div>
-        <div id="dashNextContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 250px; overflow-y: auto;">Loading...</div>
+      <div id="dashWaitingModules" style="flex: 1; min-width: 280px;">
+        <div style="color: #fc6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">⏳ Waiting / Idle Modules</div>
+        <div id="dashWaitingContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 300px; overflow-y: auto;">Loading...</div>
       </div>
-      <div id="dashModuleStatus" style="flex: 1; min-width: 220px;">
-        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Module Status</div>
-        <div id="dashModuleContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 250px; overflow-y: auto;">Loading...</div>
-      </div>
-      <div id="dashActivity" style="flex: 1; min-width: 220px;">
-        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">Recent Activity</div>
-        <div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 250px; overflow-y: auto;">No activity yet...</div>
+      <div id="dashActivity" style="flex: 1; min-width: 240px;">
+        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">📋 Recent Activity</div>
+        <div id="dashActivityContent" style="color: #fff; font-size: 11px; line-height: 1.4; max-height: 300px; overflow-y: auto;">No activity yet...</div>
       </div>
     `;
 
@@ -478,470 +474,49 @@ export class Dashboard {
         return;
       }
 
-      this.updateNextActions();
-      this.updateProgress();
-      this.updateModuleStatus();
+      this.updateModuleColumns();
       this.updateActivity();
     } catch (e) {
       console.error('Dashboard update error:', e);
     }
   }
 
+
   /**
-   * Update next actions section
+   * Helper to create a progress bar HTML
    */
-  private updateNextActions(): void {
-    let nextHtml = '';
-
-    // Safety check for AutoPlay global
-    if (typeof AutoPlay === 'undefined') {
-      nextHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
-      const nextContent = document.getElementById('dashNextContent');
-      if (nextContent) {
-        nextContent.innerHTML = nextHtml;
-      }
-      return;
-    }
-
-    // Show next purchase
-    if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
-      const purchaseColor = AutoPlay.nextPurchaseType === 'building' ? '#6f6' : '#fc6';
-      nextHtml += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,200,0,0.08); border: 2px solid ${purchaseColor}; border-radius: 4px;" title="The next item the bot plans to purchase based on efficiency calculations">`;
-      nextHtml += `<div style="color: ${purchaseColor}; font-weight: bold; font-size: 13px; margin-bottom: 6px;">`;
-      nextHtml += `${AutoPlay.nextPurchaseType === 'building' ? '🏢 ' : '⬆️ '}${AutoPlay.nextPurchase}`;
-      nextHtml += '</div>';
-      nextHtml += `<div style="color: #ccc; font-size: 11px; margin-bottom: 4px;">Cost: ${Beautify(AutoPlay.nextPurchasePrice)}</div>`;
-
-      // Calculate available cookies (total - savings reserve)
-      const availableCookies = Game.cookies - (AutoPlay.savingsGoal || 0);
-      const needsForPurchase = AutoPlay.nextPurchasePrice - availableCookies;
-
-      if (needsForPurchase > 0) {
-        // Not enough cookies after reserves
-        const timeToAfford = needsForPurchase / Game.cookiesPs;
-        const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
-        const timeStr = this.formatTimeShort(timeToAfford);
-        nextHtml += `<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ${timeStr}</div>`;
-        nextHtml += `<div style="color: #888; font-size: 10px;">Need ${Beautify(needsForPurchase)} more cookies`;
-        if (AutoPlay.savingsGoal > 0) {
-          nextHtml += ` <span title="The bot keeps a reserve of cookies for Lucky and Lucky Frenzy golden cookie bonuses. This amount is not available for purchases.">(after ${Beautify(AutoPlay.savingsGoal)} reserve)</span>`;
-        }
-        nextHtml += '</div>';
-        // Show when bot will check
-        if (timeUntilCheck < timeToAfford) {
-          nextHtml += `<div style="color: #6f6; font-size: 9px; margin-top: 2px;">⚡ Auto-check in ${timeUntilCheck.toFixed(1)}s</div>`;
-        }
-      } else if (AutoPlay.nextPurchasePrice > Game.cookies) {
-        // Can't afford at all (even without reserves)
-        const timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
-        const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
-        const timeStr = this.formatTimeShort(timeToAfford);
-        nextHtml += `<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ${timeStr}</div>`;
-        nextHtml += `<div style="color: #888; font-size: 10px;">Need ${Beautify(AutoPlay.nextPurchasePrice - Game.cookies)} more cookies</div>`;
-        // Show when bot will check
-        if (timeUntilCheck < timeToAfford) {
-          nextHtml += `<div style="color: #6f6; font-size: 9px; margin-top: 2px;">⚡ Auto-check in ${timeUntilCheck.toFixed(1)}s</div>`;
-        }
-      } else {
-        // Can afford now!
-        nextHtml += '<div style="color: #6f6; font-size: 11px; margin-top: 4px; font-weight: bold;">✓ Ready to buy!</div>';
-        if (AutoPlay.hyperActive) {
-          nextHtml += '<div style="color: #6f6; font-size: 10px;">🚀 High activity mode - buying immediately</div>';
-        } else {
-          const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
-          if (timeUntilCheck < 1) {
-            nextHtml += '<div style="color: #6f6; font-size: 10px;">⚡ Buying in < 1s</div>';
-          } else {
-            nextHtml += `<div style="color: #888; font-size: 10px;">Next check in ${timeUntilCheck.toFixed(1)}s</div>`;
-          }
-        }
-      }
-
-      if (AutoPlay.nextPurchasePP !== undefined && AutoPlay.nextPurchasePP !== null && AutoPlay.nextPurchasePP < Infinity) {
-        const ppStr = this.formatTimeShort(AutoPlay.nextPurchasePP);
-        nextHtml += `<div style="color: #888; font-size: 9px; margin-top: 4px;" title="How long it will take for this purchase to pay for itself through increased CPS (shorter is better)">Payback: ${ppStr}</div>`;
-      }
-
-      // Show if using fallback logic (no Cookie Monster)
-      if (typeof CookieMonsterData === 'undefined') {
-        nextHtml += '<div style="color: #888; font-size: 9px; margin-top: 4px; font-style: italic;" title="Cookie Monster mod provides better purchase calculations. Without it, the bot uses simpler logic that may not always be optimal.">Using simple buying logic (Cookie Monster not installed)</div>';
-      }
-      nextHtml += '</div>';
-    } else {
-      nextHtml += '<div style="color: #888; font-size: 11px; margin-bottom: 12px;">No purchase planned yet...</div>';
-    }
-
-    // Show main activity/goal in styled box
-    if (AutoPlay.mainActivity) {
-      let goalColor = '#9cf';
-      let goalIcon = '🎯';
-
-      // Determine icon based on activity type
-      if (AutoPlay.mainActivity.toLowerCase().indexOf('achievement') !== -1) {
-        goalIcon = '🏆';
-        goalColor = '#fc6';
-      } else if (AutoPlay.mainActivity.toLowerCase().indexOf('ascend') !== -1) {
-        goalIcon = '⬆️';
-        goalColor = '#f9f';
-      }
-
-      nextHtml += `<div style="margin-bottom: 12px; padding: 8px; background: rgba(0,200,200,0.08); border: 2px solid ${goalColor}; border-radius: 4px;" title="Current bot objective">`;
-      nextHtml += `<div style="color: ${goalColor}; font-weight: bold; font-size: 11px; margin-bottom: 4px;">`;
-      nextHtml += `${goalIcon} Current Goal`;
-      nextHtml += '</div>';
-      nextHtml += `<div style="color: #ccc; font-size: 10px; line-height: 1.3;">${AutoPlay.mainActivity}</div>`;
-      nextHtml += '</div>';
-    }
-
-    // Show additional activities in styled box if present (filter out status info)
-    if (AutoPlay.activities && AutoPlay.activities !== AutoPlay.mainActivity) {
-      let extraActivities = AutoPlay.activities.replace(AutoPlay.mainActivity, '').replace(/<div class="line"><\/div>/g, '');
-      // Filter out "Missing X achievements" text - it's now in Stats & Reserve
-      if (extraActivities.indexOf('Missing') !== -1 && extraActivities.indexOf('achievements') !== -1) {
-        extraActivities = '';
-      }
-      if (extraActivities.trim()) {
-        nextHtml += '<div style="margin-bottom: 12px; padding: 10px; background: rgba(100,100,100,0.08); border: 2px solid #888; border-radius: 4px;" title="Additional bot activities">';
-        nextHtml += '<div style="color: #888; font-weight: bold; font-size: 11px; margin-bottom: 4px;">';
-        nextHtml += 'ℹ️ Additional Info';
-        nextHtml += '</div>';
-        nextHtml += `<div style="color: #aaa; font-size: 10px; line-height: 1.4;">${extraActivities}</div>`;
-        nextHtml += '</div>';
-      }
-    }
-
-    const nextContent = document.getElementById('dashNextContent');
-    if (nextContent) {
-      nextContent.innerHTML = nextHtml || 'Initializing...';
-    }
+  private createProgressBar(percent: number, color: string = '#6f6'): string {
+    const clampedPercent = Math.min(100, Math.max(0, percent));
+    return `<div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 4px;">
+      <div style="width: ${clampedPercent}%; height: 100%; background: ${color}; transition: width 0.3s;"></div>
+    </div>`;
   }
 
   /**
-   * Update progress section
+   * Helper to format time remaining
    */
-  private updateProgress(): void {
-    let progressHtml = '';
-
-    // Safety check for AutoPlay global
-    if (typeof AutoPlay === 'undefined') {
-      progressHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
-      const progressContent = document.getElementById('dashProgressContent');
-      if (progressContent) {
-        progressContent.innerHTML = progressHtml;
-      }
-      return;
-    }
-
-    // Savings progress bar (golden cookie reserve)
-    if (typeof Beautify !== 'undefined' && typeof Game !== 'undefined' && Game.unbuffedCps > 0) {
-      // Calculate base thresholds (without time scaling)
-      const baseLucky = Game.unbuffedCps * 60 * 100; // 6000 seconds of CPS
-      const baseLuckyFrenzy = baseLucky * 7; // 42000 seconds of CPS
-      const hasGetLucky = Game.UpgradesById[86] && Game.UpgradesById[86].bought;
-
-      // Check if we're actively saving or just showing info
-      const isSavingActive = AutoPlay.savingsGoal > 0;
-      const reserveStatus = isSavingActive ? '🍪 Golden Cookie Reserve' : '🍪 Golden Cookie Info (Reserve Disabled)';
-      const reserveTooltip = isSavingActive
-        ? 'The bot keeps a reserve of cookies to maximize Lucky and Lucky Frenzy golden cookie bonuses. This amount is unavailable for purchases.'
-        : 'Golden cookie thresholds shown for reference. Reserve is disabled during special achievements like Hardcore.';
-
-      progressHtml += '<div style="margin-bottom: 8px;">';
-      progressHtml += `<div style="color: #fc6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="${reserveTooltip}">${reserveStatus}</div>`;
-
-      // Show why reserve is not active (if applicable)
-      if (!isSavingActive) {
-        // Check if in startup period
-        const startTime = 30 * 60 * 1000;
-        if (AutoPlay.savingsStart !== undefined) {
-          const elapsedTime = Date.now() - AutoPlay.savingsStart - startTime;
-          if (elapsedTime < 0) {
-            const minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
-            progressHtml += '<div style="font-size: 10px; color: #fc6; font-weight: bold; margin-bottom: 4px; padding: 4px; background: rgba(255,200,100,0.1); border-left: 3px solid #fc6;">⏱ Reserve Disabled: Startup Period</div>';
-            progressHtml += `<div style="font-size: 9px; color: #ccc; margin-bottom: 4px; margin-left: 4px;">Reserve will activate in ${minutesRemaining} minute${minutesRemaining !== 1 ? 's' : ''} (30-minute startup delay)</div>`;
-          } else if (Game.ascensionMode === 1) {
-            progressHtml += '<div style="font-size: 10px; color: #9cf; font-weight: bold; margin-bottom: 4px; padding: 4px; background: rgba(150,200,255,0.1); border-left: 3px solid #9cf;">🏆 Reserve Disabled: Hardcore Mode</div>';
-            progressHtml += '<div style="font-size: 9px; color: #ccc; margin-bottom: 4px; margin-left: 4px;">All cookies are available for purchases during Hardcore achievement</div>';
-          } else if (!Game.UpgradesById[52].bought || !Game.UpgradesById[53].bought) {
-            const missingUpgrades: string[] = [];
-            if (!Game.UpgradesById[52].bought) missingUpgrades.push('Lucky day');
-            if (!Game.UpgradesById[53].bought) missingUpgrades.push('Serendipity');
-            progressHtml += '<div style="font-size: 10px; color: #fc6; font-weight: bold; margin-bottom: 4px; padding: 4px; background: rgba(255,200,100,0.1); border-left: 3px solid #fc6;">⏳ Reserve Disabled: Missing Upgrades</div>';
-            progressHtml += `<div style="font-size: 9px; color: #ccc; margin-bottom: 4px; margin-left: 4px;">Need golden cookie upgrades: ${missingUpgrades.join(', ')}</div>`;
-          }
-        }
-      }
-
-      // Calculate actual target with time scaling
-      let scaling = 1;
-      if (isSavingActive && AutoPlay.savingsStart !== undefined && Game.startDate) {
-        const startTime = 30 * 60 * 1000;
-        const targetTime = 400 * 60 * 1000;
-        const elapsedTime = Date.now() - AutoPlay.savingsStart - startTime;
-        scaling = Math.max(0, Math.min(elapsedTime / targetTime, 1));
-
-        if (scaling < 1) {
-          progressHtml += `<div style="font-size: 9px; color: #888; margin-bottom: 4px;" title="The reserve target gradually increases over 400 minutes after a 30-minute startup period. This prevents the bot from over-saving early in the run.">⏱ Target ramping up: ${(scaling * 100).toFixed(1)}% (full at ${(targetTime / 60000).toFixed(0)} min)</div>`;
-        }
-      }
-
-      const targetLucky = baseLucky * scaling;
-      const targetLuckyFrenzy = baseLuckyFrenzy * scaling;
-
-      // Lucky progress
-      const luckyPercent = Math.min(100, (Game.cookies / targetLucky) * 100);
-      const luckyColor = Game.cookies >= targetLucky ? '#6f6' : '#fc6';
-      progressHtml += '<div style="margin-bottom: 6px;">';
-      progressHtml += `<div style="font-size: 10px; color: ${luckyColor};" title="Reserve for Lucky golden cookie bonus (7x your cookies). Requires ${Beautify(targetLucky)} cookies.">`;
-      progressHtml += `${Game.cookies >= targetLucky ? '✓ ' : '○ '}Lucky: ${Beautify(targetLucky)}`;
-      progressHtml += '</div>';
-      if (Game.cookies < targetLucky) {
-        progressHtml += `<div style="background: #333; height: 8px; border: 1px solid #666; margin-top: 2px;"><div style="background: linear-gradient(to right, #fc6, #f90); height: 100%; width: ${luckyPercent}%;"></div></div>`;
-        progressHtml += `<div style="font-size: 9px; color: #888; margin-top: 1px;">${Beautify(Game.cookies)} / ${Beautify(targetLucky)} (${luckyPercent.toFixed(1)}%)</div>`;
-      }
-      progressHtml += '</div>';
-
-      // Lucky Frenzy progress (only if Get Lucky upgrade is bought)
-      if (hasGetLucky) {
-        const luckyFrenzyPercent = Math.min(100, (Game.cookies / targetLuckyFrenzy) * 100);
-        const luckyFrenzyColor = Game.cookies >= targetLuckyFrenzy ? '#6f6' : '#fc6';
-        progressHtml += '<div style="margin-bottom: 6px;">';
-        progressHtml += `<div style="font-size: 10px; color: ${luckyFrenzyColor};" title="Reserve for Lucky Frenzy golden cookie bonus (777x your cookies). Requires Get Lucky upgrade and ${Beautify(targetLuckyFrenzy)} cookies.">`;
-        progressHtml += `${Game.cookies >= targetLuckyFrenzy ? '✓ ' : '○ '}Lucky Frenzy: ${Beautify(targetLuckyFrenzy)}`;
-        progressHtml += '</div>';
-        if (Game.cookies < targetLuckyFrenzy) {
-          progressHtml += `<div style="background: #333; height: 8px; border: 1px solid #666; margin-top: 2px;"><div style="background: linear-gradient(to right, #f96, #f66); height: 100%; width: ${luckyFrenzyPercent}%;"></div></div>`;
-          progressHtml += `<div style="font-size: 9px; color: #888; margin-top: 1px;">${Beautify(Game.cookies)} / ${Beautify(targetLuckyFrenzy)} (${luckyFrenzyPercent.toFixed(1)}%)</div>`;
-        }
-        progressHtml += '</div>';
-      } else {
-        progressHtml += '<div style="font-size: 9px; color: #666; font-style: italic; margin-bottom: 6px;" title="Purchase the Get Lucky upgrade to unlock Lucky Frenzy bonuses (777x cookies).">○ Lucky Frenzy: Locked (need Get Lucky upgrade)</div>';
-      }
-
-      progressHtml += '</div>';
-    }
-
-    // Achievement progress
-    progressHtml += this.getAchievementProgress();
-
-    // Time in run
-    if (Game.startDate && typeof Game.sayTime !== 'undefined') {
-      const timeInRun = Date.now() - Game.startDate;
-      progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Total time elapsed since the start of this game run">Time in run: ${Game.sayTime(timeInRun / 1000 * Game.fps, -1)}</div>`;
-    }
-
-    // CPS
-    if (typeof Beautify !== 'undefined' && Game.cookiesPs !== undefined) {
-      const cpsMult = Game.unbuffedCps > 0 ? Game.cookiesPs / Game.unbuffedCps : 1;
-      progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Current cookies per second production rate. The multiplier includes buffs from golden cookies, frenzies, etc.">CPS: ${Beautify(Game.cookiesPs)} (${cpsMult.toFixed(1)}x multiplier)</div>`;
-    }
-
-    // Buildings and Upgrades
-    if (Game.BuildingsOwned !== undefined && Game.UpgradesOwned !== undefined) {
-      progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Total number of buildings and upgrades you currently own">Buildings: ${Game.BuildingsOwned} | Upgrades: ${Game.UpgradesOwned}</div>`;
-    }
-
-    // Prestige
-    if (Game.prestige !== undefined && typeof Beautify !== 'undefined') {
-      const nextPrestige = Game.HowMuchPrestige(Game.cookiesReset + Game.cookiesEarned);
-      const prestigeGain = Math.floor(nextPrestige - Game.prestige);
-      if (prestigeGain > 0) {
-        progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Current prestige level. Ascending now would give you additional prestige levels, which permanently increase your CPS.">Prestige: ${Beautify(Game.prestige)} (+${Beautify(prestigeGain)} on ascend)</div>`;
-      } else {
-        progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Current prestige level. Prestige permanently increases your CPS.">Prestige: ${Beautify(Game.prestige)}</div>`;
-      }
-    }
-
-    // Active buffs
-    if (Game.buffs) {
-      const activeBuffs: string[] = [];
-      for (const buff in Game.buffs) {
-        if (Game.buffs[buff].time > 0) {
-          const buffName = Game.buffs[buff].type.name;
-          const timeLeft = Math.ceil(Game.buffs[buff].time / Game.fps);
-          activeBuffs.push(`${buffName} (${timeLeft}s)`);
-        }
-      }
-      if (activeBuffs.length > 0) {
-        progressHtml += `<div style="font-size: 10px; color: #fc6; margin-top: 4px;" title="Currently active temporary buffs from golden cookies, frenzies, and other bonuses">✨ ${activeBuffs.join(', ')}</div>`;
-      }
-    }
-
-    // Completion status
-    if (AutoPlay.statusInfo) {
-      progressHtml += '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444;">';
-      progressHtml += '<div style="font-size: 10px; color: #888; font-weight: bold; margin-bottom: 2px;">Progress to Completion</div>';
-      if (AutoPlay.statusInfo.achievements > 0) {
-        progressHtml += `<div style="font-size: 9px; color: #aaa;">🏆 ${AutoPlay.statusInfo.achievements} achievements remaining`;
-        if (AutoPlay.statusInfo.shadowAchievements > 0) {
-          progressHtml += ` (${AutoPlay.statusInfo.shadowAchievements} shadow)`;
-        }
-        progressHtml += '</div>';
-      }
-      if (AutoPlay.statusInfo.upgrades > 0) {
-        progressHtml += `<div style="font-size: 9px; color: #aaa;">⬆️ ${AutoPlay.statusInfo.upgrades} upgrades remaining</div>`;
-      }
-      if (AutoPlay.statusInfo.lumps > 0) {
-        progressHtml += `<div style="font-size: 9px; color: #aaa;">🍬 ${AutoPlay.statusInfo.lumps} sugar lumps needed</div>`;
-      }
-      if (AutoPlay.statusInfo.achievements === 0 && AutoPlay.statusInfo.upgrades === 0 && AutoPlay.statusInfo.lumps === 0) {
-        progressHtml += '<div style="font-size: 9px; color: #6f6;">✓ All content completed!</div>';
-      }
-      progressHtml += '</div>';
-    }
-
-    const progressContent = document.getElementById('dashProgressContent');
-    if (progressContent) {
-      progressContent.innerHTML = progressHtml || 'No active goals';
-    }
+  private formatTimeRemaining(ms: number): string {
+    if (ms < 0) return 'Ready';
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ${minutes % 60}m`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
   }
 
   /**
-   * Get achievement progress HTML
+   * Update both module columns (active and waiting/idle)
    */
-  private getAchievementProgress(): string {
-    if (typeof AutoPlay === 'undefined' || typeof Game === 'undefined') {
-      return '';
-    }
-    if (!AutoPlay.nextAchievement || typeof Beautify === 'undefined' || !Game.AchievementsById) {
-      return '';
-    }
-
-    const achiev = Game.AchievementsById[AutoPlay.nextAchievement];
-    // List of all "bake X cookies" achievement IDs
-    const bakingAchievements = [225, 227, 229, 279, 280, 372, 373, 374, 375, 390, 391, 429, 451, 452, 453, 470, 471, 472, 534, 535, 536, 578, 579, 586, 587, 592, 593];
-
-    // Check for special achievements
-    let isHardcore = false;
-    let isNeverclick = false;
-    let isTrueNeverclick = false;
-
-    if (achiev) {
-      const achievDesc = (achiev.ddesc || '').toLowerCase();
-      const achievName = (achiev.name || '').toLowerCase();
-
-      if (achievName.indexOf('hardcore') !== -1 || achievDesc.indexOf('1 billion') !== -1) {
-        isHardcore = true;
-      } else if (achievName.indexOf('true neverclick') !== -1) {
-        isTrueNeverclick = true;
-      } else if (achievName.indexOf('neverclick') !== -1) {
-        isNeverclick = true;
-      }
-
-      // Also check by ID if we can
-      if (Game.Achievements["Hardcore"] && achiev.id === Game.Achievements["Hardcore"].id) isHardcore = true;
-      if (Game.Achievements["Neverclick"] && achiev.id === Game.Achievements["Neverclick"].id) isNeverclick = true;
-      if (Game.Achievements["True Neverclick"] && achiev.id === Game.Achievements["True Neverclick"].id) isTrueNeverclick = true;
-    }
-
-    let isSpecialAchievement = isHardcore || isNeverclick || isTrueNeverclick;
-
-    // Also check if we're working on a special achievement
-    if (!isSpecialAchievement && AutoPlay.workingOnSpecialAchievement && achiev) {
-      // Fallback check based on activity text
-      const activityText = (AutoPlay.mainActivity || '').toLowerCase();
-      if (activityText.indexOf('hardcore') !== -1) isHardcore = true;
-      if (activityText.indexOf('true neverclick') !== -1) isTrueNeverclick = true;
-      if (activityText.indexOf('neverclick') !== -1 && activityText.indexOf('true') === -1) isNeverclick = true;
-      isSpecialAchievement = isHardcore || isNeverclick || isTrueNeverclick;
-    }
-
-    if (!achiev || (bakingAchievements.indexOf(achiev.id) === -1 && !isSpecialAchievement)) {
-      return '';
-    }
-
-    // This is a trackable achievement - show progress
-    let cookieThreshold: number;
-    const currentCookies = Game.cookiesEarned;
-
-    // Set thresholds for special achievements
-    if (isHardcore) {
-      cookieThreshold = 1000000000; // 1 billion
-    } else if (isNeverclick || isTrueNeverclick) {
-      cookieThreshold = 1000000; // 1 million
-    } else {
-      cookieThreshold = achiev.threshold;
-    }
-
-    if (!cookieThreshold || cookieThreshold <= 0) {
-      return '';
-    }
-
-    const progressPercent = Math.min(100, (currentCookies / cookieThreshold) * 100);
-    const remaining = Math.max(0, cookieThreshold - currentCookies);
-
-    let progressHtml = '<div style="margin-bottom: 8px; margin-top: 8px;">';
-    progressHtml += '<div style="color: #6f6; font-size: 11px; font-weight: bold; margin-bottom: 6px;" title="Progress toward next achievement">🎯 Achievement Progress</div>';
-    progressHtml += `<div style="font-size: 10px; color: #ccc; margin-bottom: 4px;">${achiev.name}</div>`;
-
-    // Show special requirements for Hardcore/Neverclick achievements
-    if (isSpecialAchievement) {
-      if (isHardcore) {
-        const upgradesStatus = Game.UpgradesOwned === 0 ? '✓' : '✗';
-        const upgradesColor = Game.UpgradesOwned === 0 ? '#6f6' : '#f66';
-        progressHtml += `<div style="font-size: 9px; color: ${upgradesColor}; margin-bottom: 2px;">${upgradesStatus} No upgrades purchased (${Game.UpgradesOwned} owned)</div>`;
-      } else if (isTrueNeverclick) {
-        const clicksStatus = Game.cookieClicks === 0 ? '✓' : '✗';
-        const clicksColor = Game.cookieClicks === 0 ? '#6f6' : '#f66';
-        progressHtml += `<div style="font-size: 9px; color: ${clicksColor}; margin-bottom: 2px;">${clicksStatus} No cookie clicks (${Game.cookieClicks} clicks)</div>`;
-      } else if (isNeverclick) {
-        const clicksStatus = Game.cookieClicks <= 15 ? '✓' : '✗';
-        const clicksColor = Game.cookieClicks <= 15 ? '#6f6' : '#f66';
-        progressHtml += `<div style="font-size: 9px; color: ${clicksColor}; margin-bottom: 2px;">${clicksStatus} Max 15 cookie clicks (${Game.cookieClicks}/15 used)</div>`;
-      }
-    }
-
-    // Progress bar
-    const barColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
-    const barColor2 = progressPercent < 50 ? '#f90' : (progressPercent < 80 ? '#6f6' : '#0f0');
-    progressHtml += `<div style="background: #333; height: 12px; border: 1px solid #666; margin-top: 4px; margin-bottom: 2px;"><div style="background: linear-gradient(to right, ${barColor}, ${barColor2}); height: 100%; width: ${progressPercent}%;"></div></div>`;
-    progressHtml += `<div style="font-size: 9px; color: #aaa;">${Beautify(currentCookies)} / ${Beautify(cookieThreshold)} (${progressPercent.toFixed(1)}%)</div>`;
-
-    // Time estimate
-    if (remaining > 0 && Game.cookiesPs > 0) {
-      const timeRemaining = remaining / Game.cookiesPs;
-      let timeStr = '';
-      if (timeRemaining < 60) {
-        timeStr = `${timeRemaining.toFixed(0)} seconds`;
-      } else if (timeRemaining < 3600) {
-        timeStr = `${(timeRemaining / 60).toFixed(1)} minutes`;
-      } else if (timeRemaining < 86400) {
-        timeStr = `${(timeRemaining / 3600).toFixed(1)} hours`;
-      } else {
-        timeStr = `${(timeRemaining / 86400).toFixed(1)} days`;
-      }
-      progressHtml += `<div style="font-size: 9px; color: #fc6; margin-top: 2px;" title="Estimated time to reach this achievement based on current CPS">⏱ Est. time: ${timeStr}</div>`;
-    } else if (remaining === 0) {
-      // Check if special requirements are met
-      let requirementsMet = true;
-      if (isHardcore && Game.UpgradesOwned !== 0) requirementsMet = false;
-      if (isTrueNeverclick && Game.cookieClicks !== 0) requirementsMet = false;
-      if (isNeverclick && Game.cookieClicks > 15) requirementsMet = false;
-
-      if (requirementsMet) {
-        progressHtml += '<div style="font-size: 9px; color: #6f6; margin-top: 2px; font-weight: bold;">✓ Ready to unlock!</div>';
-      } else {
-        progressHtml += '<div style="font-size: 9px; color: #f66; margin-top: 2px; font-weight: bold;">✗ Requirements not met</div>';
-      }
-    }
-
-    progressHtml += '</div>';
-    return progressHtml;
-  }
-
-  /**
-   * Update module status section
-   */
-  private updateModuleStatus(): void {
-    let statusHtml = '';
-
+  private updateModuleColumns(): void {
     // Safety check for AutoPlay global
     if (typeof AutoPlay === 'undefined') {
-      statusHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
-      const moduleContent = document.getElementById('dashModuleContent');
-      if (moduleContent) {
-        moduleContent.innerHTML = statusHtml;
-      }
+      const activeContent = document.getElementById('dashActiveContent');
+      const waitingContent = document.getElementById('dashWaitingContent');
+      if (activeContent) activeContent.innerHTML = '<div style="color: #f66;">AutoPlay not initialized...</div>';
+      if (waitingContent) waitingContent.innerHTML = '<div style="color: #f66;">AutoPlay not initialized...</div>';
       return;
     }
 
@@ -1019,48 +594,158 @@ export class Dashboard {
         'error': '#f00'
       };
 
+      // Group modules by activity level
+      const activeModules: Array<{ key: keyof ModuleStatuses; status: any }> = [];
+      const waitingModules: Array<{ key: keyof ModuleStatuses; status: any }> = [];
+
       for (const key of moduleOrder) {
         const status = statuses[key];
         if (!status) continue;
 
-        const color = statusColors[status.status] || '#ccc';
-        const icon = status.icon || '📦';
-
-        statusHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + ';">';
-        statusHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-        statusHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
-        statusHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
-        statusHtml += '</div>';
-        statusHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
-        statusHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
-
-        if (status.nextAction) {
-          statusHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
+        if (status.status === 'active' || status.status === 'blocked') {
+          activeModules.push({ key, status });
+        } else {
+          waitingModules.push({ key, status });
         }
-
-        // Show details if available
-        if (status.details && Object.keys(status.details).length > 0) {
-          statusHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
-          for (const [key, value] of Object.entries(status.details)) {
-            statusHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
-          }
-          statusHtml += '</div>';
-        }
-
-        statusHtml += '</div>';
       }
 
-      if (statusHtml === '') {
-        statusHtml = '<div style="color: #888;">No module statuses available</div>';
+      // Render active modules
+      let activeHtml = '';
+      for (const { status } of activeModules) {
+        const color = statusColors[status.status as keyof typeof statusColors] || '#ccc';
+        const icon = status.icon || '📦';
+
+        activeHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + ';">';
+        activeHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+        activeHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
+        activeHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
+        activeHtml += '</div>';
+        activeHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
+        activeHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
+
+        if (status.nextAction) {
+          activeHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
+        }
+
+        // Add progress bars and time calculations where applicable
+        if (status.details && Object.keys(status.details).length > 0) {
+          activeHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
+
+          // Special handling for buildings/upgrades with price and affordability
+          if ((status.module === 'Buildings' || status.module === 'Upgrades') && status.details['Price'] && status.details['Available']) {
+            const priceStr = String(status.details['Price']);
+            const availableStr = String(status.details['Available']);
+            // Try to parse numbers (strip commas/formatting)
+            const price = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+            const available = parseFloat(availableStr.replace(/[^0-9.]/g, '')) || 0;
+
+            if (price > 0) {
+              const percent = Math.min(100, (available / price) * 100);
+              const color = percent >= 100 ? '#6f6' : '#fc6';
+              activeHtml += '<div style="color: #aaa; margin-top: 2px;">Affordability: ' + percent.toFixed(1) + '%</div>';
+              activeHtml += this.createProgressBar(percent, color);
+
+              // Show time remaining if not affordable
+              if (percent < 100 && Game.cookiesPs > 0) {
+                const needed = price - available;
+                const timeMs = (needed / Game.cookiesPs) * 1000;
+                activeHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(timeMs) + '</div>';
+              }
+            }
+          }
+
+          // Show other details
+          for (const [key, value] of Object.entries(status.details)) {
+            if (key !== 'Price' && key !== 'Available') {
+              activeHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
+            }
+          }
+          activeHtml += '</div>';
+        }
+
+        activeHtml += '</div>';
+      }
+
+      if (activeHtml === '') {
+        activeHtml = '<div style="color: #888;">No active modules</div>';
+      }
+
+      // Render waiting/idle modules
+      let waitingHtml = '';
+      for (const { status } of waitingModules) {
+        const color = statusColors[status.status as keyof typeof statusColors] || '#ccc';
+        const icon = status.icon || '📦';
+
+        waitingHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + ';">';
+        waitingHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+        waitingHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
+        waitingHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
+        waitingHtml += '</div>';
+        waitingHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
+        waitingHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
+
+        if (status.nextAction) {
+          waitingHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
+        }
+
+        // Add time calculations where applicable
+        if (status.details && Object.keys(status.details).length > 0) {
+          waitingHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
+
+          // Special handling for wrinklers with time until pop
+          if (status.module === 'Wrinklers' && typeof Game !== 'undefined' && Game.wrinklers) {
+            const maxWrinklers = 12;
+            const currentCount = Game.wrinklers.filter((w: any) => w.phase > 0).length;
+            if (currentCount < maxWrinklers) {
+              // Show progress for wrinkler spawning (they take time to spawn)
+              const percent = (currentCount / maxWrinklers) * 100;
+              waitingHtml += '<div style="color: #aaa; margin-top: 2px;">Wrinklers: ' + currentCount + '/' + maxWrinklers + '</div>';
+              waitingHtml += this.createProgressBar(percent, '#a8a');
+            }
+          }
+
+          // Special handling for sugar lumps with time until harvest
+          if (status.module === 'Sugar Lumps' && typeof Game !== 'undefined' && Game.lumpT) {
+            const timeUntilRipe = Game.lumpT - Date.now();
+            if (timeUntilRipe > 0) {
+              const totalTime = 20 * 60 * 60 * 1000; // 20 hours
+              const elapsed = totalTime - timeUntilRipe;
+              const percent = (elapsed / totalTime) * 100;
+              waitingHtml += '<div style="color: #aaa; margin-top: 2px;">Time until ripe:</div>';
+              waitingHtml += this.createProgressBar(percent, '#fc6');
+              waitingHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(timeUntilRipe) + '</div>';
+            }
+          }
+
+          // Show other details
+          for (const [key, value] of Object.entries(status.details)) {
+            waitingHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
+          }
+          waitingHtml += '</div>';
+        }
+
+        waitingHtml += '</div>';
+      }
+
+      if (waitingHtml === '') {
+        waitingHtml = '<div style="color: #888;">No waiting/idle modules</div>';
+      }
+
+      // Update both columns
+      const activeContent = document.getElementById('dashActiveContent');
+      const waitingContent = document.getElementById('dashWaitingContent');
+      if (activeContent) {
+        activeContent.innerHTML = activeHtml;
+      }
+      if (waitingContent) {
+        waitingContent.innerHTML = waitingHtml;
       }
     } catch (e) {
       console.error('Module status error:', e);
-      statusHtml = '<div style="color: #f66;">Error loading module statuses</div>';
-    }
-
-    const moduleContent = document.getElementById('dashModuleContent');
-    if (moduleContent) {
-      moduleContent.innerHTML = statusHtml;
+      const activeContent = document.getElementById('dashActiveContent');
+      const waitingContent = document.getElementById('dashWaitingContent');
+      if (activeContent) activeContent.innerHTML = '<div style="color: #f66;">Error loading module statuses</div>';
+      if (waitingContent) waitingContent.innerHTML = '<div style="color: #f66;">Error loading module statuses</div>';
     }
   }
 
@@ -1256,18 +941,6 @@ export class Dashboard {
     }
   }
 
-  /**
-   * Format time in short form (s/m/h)
-   */
-  private formatTimeShort(seconds: number): string {
-    if (seconds < 60) {
-      return `${seconds.toFixed(1)}s`;
-    } else if (seconds < 3600) {
-      return `${(seconds / 60).toFixed(1)}m`;
-    } else {
-      return `${(seconds / 3600).toFixed(1)}h`;
-    }
-  }
 
   /**
    * Render/update the dashboard

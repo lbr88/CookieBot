@@ -79,21 +79,17 @@ export declare class Dashboard {
      */
     updateDashboard(): void;
     /**
-     * Update next actions section
+     * Helper to create a progress bar HTML
      */
-    private updateNextActions;
+    private createProgressBar;
     /**
-     * Update progress section
+     * Helper to format time remaining
      */
-    private updateProgress;
+    private formatTimeRemaining;
     /**
-     * Get achievement progress HTML
+     * Update both module columns (active and waiting/idle)
      */
-    private getAchievementProgress;
-    /**
-     * Update module status section
-     */
-    private updateModuleStatus;
+    private updateModuleColumns;
     /**
      * Update activity section
      */
@@ -114,10 +110,6 @@ export declare class Dashboard {
      * Show the log
      */
     private showLog;
-    /**
-     * Format time in short form (s/m/h)
-     */
-    private formatTimeShort;
     /**
      * Render/update the dashboard
      */
