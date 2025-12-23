@@ -1,6 +1,6 @@
 {
   "name": "cookiebot",
-  "version": "2.052-31",
+  "version": "2.052-32",
   "description": "Automated bot for Cookie Clicker game",
   "main": "dist/cookieAutoPlayBeta.js",
   "scripts": {

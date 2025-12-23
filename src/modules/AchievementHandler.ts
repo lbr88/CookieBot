@@ -478,6 +478,104 @@ export class AchievementHandler {
         }
       }
     }
+    // Check for "make X cookies from clicking" achievements
+    // Format: "Make <b>1,000 cookies</b> from clicking."
+    else if (achievement.ddesc.match(/make <b>[\d,\.]+(?:\s+\w+)?\s+cookies?<\/b>\s+from clicking\./i)) {
+      const clickMatch = achievement.ddesc.match(/make <b>([\d,\.]+(?:\s+\w+)?)\s+cookies?<\/b>\s+from clicking\./i);
+      if (clickMatch) {
+        let cookieThreshold = 0;
+        const valueStr = clickMatch[1].trim();
+
+        // Try to extract from achievement threshold if available
+        if (achievement.threshold) {
+          cookieThreshold = achievement.threshold;
+        } else {
+          // Parse the text
+          const numMatch = valueStr.match(/^([\d,\.]+)/);
+          if (numMatch) {
+            cookieThreshold = parseFloat(numMatch[1].replace(/,/g, ''));
+            const lowerValue = valueStr.toLowerCase();
+            if (lowerValue.includes('thousand')) cookieThreshold *= 1e3;
+            else if (lowerValue.includes('million')) cookieThreshold *= 1e6;
+            else if (lowerValue.includes('billion')) cookieThreshold *= 1e9;
+            else if (lowerValue.includes('trillion')) cookieThreshold *= 1e12;
+          }
+        }
+
+        if (cookieThreshold > 0) {
+          // Game.handmadeCookies tracks cookies made from clicking
+          const currentClicks = Game.handmadeCookies || 0;
+          const progressPercent = Math.min(100, (currentClicks / cookieThreshold) * 100);
+          progressColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
+
+          progress = {
+            current: currentClicks,
+            target: cookieThreshold,
+            percent: progressPercent,
+            label: 'Cookies from clicking'
+          };
+
+          // Calculate time remaining (rough estimate based on current click rate)
+          if (currentClicks < cookieThreshold) {
+            // Estimate: if bot is clicking, use cookiesPerClick * clicksPerSecond
+            const cookiesPerClick = Game.computedMouseCps || 1;
+            const clicksPerSecond = 10; // Rough estimate for bot clicking
+            const clickCps = cookiesPerClick * clicksPerSecond;
+            if (clickCps > 0) {
+              const remaining = cookieThreshold - currentClicks;
+              timeRemaining = (remaining / clickCps) * 1000;
+            }
+          }
+        }
+      }
+    }
+    // Check for "bake X cookies per second" achievements
+    // Format: "Bake <b>1</b> cookie per second." or "Bake <b>1,000</b> cookies per second."
+    else if (achievement.ddesc.match(/bake <b>[\d,\.]+(?:\s+\w+)?\s*<\/b>\s+cookies?\s+per second\./i)) {
+      const cpsMatch = achievement.ddesc.match(/bake <b>([\d,\.]+(?:\s+\w+)?)\s*<\/b>\s+cookies?\s+per second\./i);
+      if (cpsMatch) {
+        let cpsThreshold = 0;
+        const valueStr = cpsMatch[1].trim();
+
+        // Try to extract from achievement threshold if available
+        if (achievement.threshold) {
+          cpsThreshold = achievement.threshold;
+        } else {
+          // Parse the text
+          const numMatch = valueStr.match(/^([\d,\.]+)/);
+          if (numMatch) {
+            cpsThreshold = parseFloat(numMatch[1].replace(/,/g, ''));
+            const lowerValue = valueStr.toLowerCase();
+            if (lowerValue.includes('thousand')) cpsThreshold *= 1e3;
+            else if (lowerValue.includes('million')) cpsThreshold *= 1e6;
+            else if (lowerValue.includes('billion')) cpsThreshold *= 1e9;
+            else if (lowerValue.includes('trillion')) cpsThreshold *= 1e12;
+            else if (lowerValue.includes('quadrillion')) cpsThreshold *= 1e15;
+            else if (lowerValue.includes('quintillion')) cpsThreshold *= 1e18;
+            else if (lowerValue.includes('sextillion')) cpsThreshold *= 1e21;
+            else if (lowerValue.includes('septillion')) cpsThreshold *= 1e24;
+          }
+        }
+
+        if (cpsThreshold > 0) {
+          const currentCps = Game.cookiesPs;
+          const progressPercent = Math.min(100, (currentCps / cpsThreshold) * 100);
+          progressColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
+
+          progress = {
+            current: currentCps,
+            target: cpsThreshold,
+            percent: progressPercent,
+            label: 'Cookies per second'
+          };
+
+          // Time remaining: CPS increases over time with purchases
+          // For now, we can't easily predict when we'll hit the target CPS
+          // So we'll show progress but no time estimate
+          timeRemaining = undefined;
+        }
+      }
+    }
     // Special achievements (Hardcore, Neverclick, True Neverclick)
     else if (achievement.id === 38 || achievement.id === 39 || achievement.id === 203) {
       // Hardcore (38), Neverclick (39), True Neverclick (203)
