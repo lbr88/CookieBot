@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052.20';
+  static readonly version = '2.052-1';
 
   // State
   private config: AutoPlayConfig;
@@ -70,20 +70,17 @@ export default class AutoPlay {
   set wantAscend(value: boolean) { this.state.wantAscend = value; }
 
   get mainActivity(): string {
-    console.log('AutoPlay.mainActivity getter called, value:', this.state?.mainActivity);
     return this.state.mainActivity;
   }
   set mainActivity(value: string) { this.state.mainActivity = value; }
 
   get activities(): string {
-    console.log('AutoPlay.activities getter called, value:', this.state?.activities);
     return this.state.activities;
   }
   set activities(value: string) { this.state.activities = value; }
 
   // Additional accessors for Dashboard
   get nextPurchase(): string | null {
-    console.log('AutoPlay.nextPurchase getter called, this.state:', this.state, 'value:', this.state?.nextPurchase);
     return this.state.nextPurchase;
   }
   set nextPurchase(value: string | null) { this.state.nextPurchase = value; }
@@ -321,7 +318,6 @@ export default class AutoPlay {
     this.setupMenuHook();
 
     // Do an initial bestBuy check to populate purchase info for dashboard
-    console.log('CookieBot: Running initial bestBuy() to populate purchase info');
     const Game = (globalThis as any).Game;
     const cpsMult = Game.cookiesPs / Game.unbuffedCps;
     this.purchaseManager.setState(
@@ -432,9 +428,7 @@ export default class AutoPlay {
     }
 
     // ===== Phase 5: High-activity phase =====
-    console.log('Phase 5 check: hyperActive=', this.state.hyperActive, 'now=', this.state.now, 'deadline=', this.state.deadline, 'check result=', (this.state.hyperActive || (this.state.now >= this.state.deadline)));
     if (this.state.hyperActive || (this.state.now >= this.state.deadline)) {
-      console.log('Phase 5: Entering high-activity phase, calling bestBuy()');
       this.state.hyperActive = false; // Reset flag, can be overwritten
 
       // Unified bestBuy logic (compares buildings and upgrades by PP)
@@ -469,14 +463,11 @@ export default class AutoPlay {
     }
 
     // ===== Phase 7: Deadline check (end of high-activity) =====
-    console.log('Phase 7 check: now=', this.state.now, 'deadline=', this.state.deadline, 'check result=', (this.state.now < this.state.deadline));
     if (this.state.now < this.state.deadline) {
-      console.log('Phase 7: Deadline not reached, returning early (Phase 8 skipped)');
       return;
     }
 
     // ===== Phase 8: Periodic actions (every 15 seconds) =====
-    console.log('Phase 8: Deadline reached! Running periodic actions and setting new deadline');
 
     // Set robot name in bakery
     const bakeryName = (Game as any).bakeryNameL.textContent;
@@ -530,11 +521,8 @@ export default class AutoPlay {
       }
     }
 
-    console.log('Phase 8: Setting new deadline. dynamicDeadline=', dynamicDeadline, 'ms (', (dynamicDeadline/1000).toFixed(1), 's)');
     this.state.deadline = this.state.now + dynamicDeadline;
-    console.log('Phase 8: New deadline set to', this.state.deadline, '(now + ', dynamicDeadline, ')');
     this.setDeadline(this.state.now + (this.state.now - Game.startDate) / 10); // Quick start
-    console.log('Phase 8: After setDeadline, final deadline=', this.state.deadline);
 
     // Skip dashboard update if user has a menu open
     if (!Game.onMenu || Game.onMenu === '') {
@@ -687,15 +675,12 @@ export default class AutoPlay {
 
     // Sync purchase info from BuildingManager to AutoPlay state
     const purchaseInfo = this.purchaseManager.getPurchaseInfo();
-    console.log('AutoPlay.bestBuy: purchaseInfo from manager:', purchaseInfo);
     if (purchaseInfo) {
       this.state.nextPurchase = purchaseInfo.name;
       this.state.nextPurchaseType = purchaseInfo.type;
       this.state.nextPurchasePP = purchaseInfo.pp;
       this.state.nextPurchasePrice = purchaseInfo.price;
-      console.log('AutoPlay.bestBuy: Synced to state:', this.state.nextPurchase, this.state.nextPurchaseType, this.state.nextPurchasePrice);
     } else {
-      console.log('AutoPlay.bestBuy: No purchase info, clearing state');
       this.state.nextPurchase = null;
       this.state.nextPurchaseType = null;
       this.state.nextPurchasePP = null;

@@ -375,17 +375,14 @@ class PurchaseManager {
      * Get current purchase info for dashboard
      */
     getPurchaseInfo() {
-        console.log('PurchaseManager.getPurchaseInfo: state.nextPurchase =', this.state.nextPurchase);
         if (!this.state.nextPurchase)
             return null;
-        const info = {
+        return {
             name: this.state.nextPurchase,
             type: this.state.nextPurchaseType || 'building',
             pp: this.state.nextPurchasePP,
             price: this.state.nextPurchasePrice || 0,
         };
-        console.log('PurchaseManager.getPurchaseInfo: returning', info);
-        return info;
     }
     /**
      * Main entry point: Use CookieMonster strategy if available, otherwise fallback
@@ -589,7 +586,6 @@ class PurchaseManager {
         let bestBuilding = null;
         // Early game: if no buildings owned yet, buy the cheapest available
         if (Game.BuildingsOwned === 0) {
-            console.log('PurchaseManager: Early game mode - BuildingsOwned = 0');
             for (let i = 0; i < Game.ObjectsById.length; i++) {
                 const me = Game.ObjectsById[i];
                 if (me.locked)
@@ -600,7 +596,6 @@ class PurchaseManager {
                     this.state.nextPurchaseType = 'building';
                     this.state.nextPurchasePrice = me.getPrice();
                     this.state.nextPurchasePP = null;
-                    console.log('PurchaseManager: Set early game purchase:', this.state.nextPurchase, this.state.nextPurchasePrice);
                 }
                 if (this.buyBuilding(me, checkAmount, buyAmount))
                     return;
@@ -655,7 +650,7 @@ class PurchaseManager {
         const price = building.getSumPrice(checkAmount);
         if (price < Game.cookies - this.savingsGoal) {
             building.buy(buyAmount);
-            this.logAction('Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''), this.beautify(price) + ' cookies');
+            this.logAction('Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''), Beautify(price) + ' cookies');
             return true;
         }
         return false;
@@ -768,7 +763,7 @@ class PurchaseManager {
         if (upgrade.getPrice() < Game.cookies - this.savingsGoal) {
             const price = upgrade.getPrice();
             upgrade.buy(bypass);
-            this.logAction('Upgraded: ' + upgrade.name, this.beautify(price) + ' cookies');
+            this.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
             return true;
         }
         return false;
@@ -837,22 +832,6 @@ class PurchaseManager {
             (this.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
             Game.Upgrades["Sugar frenzy"].buy();
         }
-    }
-    /**
-     * Format large numbers in a readable way
-     * @param num - Number to format
-     * @returns Formatted string
-     */
-    beautify(num) {
-        if (num < 1000)
-            return Math.floor(num).toString();
-        if (num < 1000000)
-            return (num / 1000).toFixed(1) + 'K';
-        if (num < 1000000000)
-            return (num / 1000000).toFixed(1) + 'M';
-        if (num < 1000000000000)
-            return (num / 1000000000).toFixed(1) + 'B';
-        return (num / 1000000000000).toFixed(1) + 'T';
     }
 }
 
@@ -2977,13 +2956,11 @@ class Dashboard {
      */
     updateDashboard() {
         if (!document.getElementById('cookieBotDashboard')) {
-            console.log('Dashboard element not found, skipping update');
             return;
         }
         try {
             // Check if AutoPlay is available
             if (typeof AutoPlay === 'undefined') {
-                console.log('AutoPlay is undefined, dashboard cannot update');
                 return;
             }
             this.updateNextActions();
@@ -3008,14 +2985,6 @@ class Dashboard {
             }
             return;
         }
-        // DEBUG: Log AutoPlay object itself
-        console.log('Dashboard Update - typeof AutoPlay:', typeof AutoPlay);
-        console.log('Dashboard Update - AutoPlay object:', AutoPlay);
-        console.log('Dashboard Update - AutoPlay.state:', AutoPlay.state);
-        // DEBUG: Log what we're seeing
-        console.log('Dashboard Update - nextPurchase:', AutoPlay.nextPurchase, 'type:', AutoPlay.nextPurchaseType, 'price:', AutoPlay.nextPurchasePrice);
-        console.log('Dashboard Update - mainActivity:', AutoPlay.mainActivity);
-        console.log('Dashboard Update - activities:', AutoPlay.activities);
         // Show next purchase
         if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
             const purchaseColor = AutoPlay.nextPurchaseType === 'building' ? '#6f6' : '#fc6';
@@ -3121,14 +3090,8 @@ class Dashboard {
             }
         }
         const nextContent = document.getElementById('dashNextContent');
-        console.log('Dashboard Update - nextContent element:', nextContent);
-        console.log('Dashboard Update - generated HTML length:', nextHtml.length);
         if (nextContent) {
             nextContent.innerHTML = nextHtml || 'Initializing...';
-            console.log('Dashboard Update - HTML inserted, new innerHTML length:', nextContent.innerHTML.length);
-        }
-        else {
-            console.error('Dashboard Update - dashNextContent element not found!');
         }
     }
     /**
@@ -5449,18 +5412,15 @@ class AutoPlay_AutoPlay {
     get wantAscend() { return this.state.wantAscend; }
     set wantAscend(value) { this.state.wantAscend = value; }
     get mainActivity() {
-        console.log('AutoPlay.mainActivity getter called, value:', this.state?.mainActivity);
         return this.state.mainActivity;
     }
     set mainActivity(value) { this.state.mainActivity = value; }
     get activities() {
-        console.log('AutoPlay.activities getter called, value:', this.state?.activities);
         return this.state.activities;
     }
     set activities(value) { this.state.activities = value; }
     // Additional accessors for Dashboard
     get nextPurchase() {
-        console.log('AutoPlay.nextPurchase getter called, this.state:', this.state, 'value:', this.state?.nextPurchase);
         return this.state.nextPurchase;
     }
     set nextPurchase(value) { this.state.nextPurchase = value; }
@@ -5656,7 +5616,6 @@ class AutoPlay_AutoPlay {
         // Hook into Game.UpdateMenu to add config options to preferences
         this.setupMenuHook();
         // Do an initial bestBuy check to populate purchase info for dashboard
-        console.log('CookieBot: Running initial bestBuy() to populate purchase info');
         const Game = globalThis.Game;
         const cpsMult = Game.cookiesPs / Game.unbuffedCps;
         this.purchaseManager.setState(this.config.savingsGoal, Date.now(), cpsMult, this.sugarLumpManager.getCanUseLumps(), this.state.nextAchievement);
@@ -5742,9 +5701,7 @@ class AutoPlay_AutoPlay {
             this.sugarLumpManager.handleSugarLumps();
         }
         // ===== Phase 5: High-activity phase =====
-        console.log('Phase 5 check: hyperActive=', this.state.hyperActive, 'now=', this.state.now, 'deadline=', this.state.deadline, 'check result=', (this.state.hyperActive || (this.state.now >= this.state.deadline)));
         if (this.state.hyperActive || (this.state.now >= this.state.deadline)) {
-            console.log('Phase 5: Entering high-activity phase, calling bestBuy()');
             this.state.hyperActive = false; // Reset flag, can be overwritten
             // Unified bestBuy logic (compares buildings and upgrades by PP)
             this.bestBuy();
@@ -5773,13 +5730,10 @@ class AutoPlay_AutoPlay {
             }
         }
         // ===== Phase 7: Deadline check (end of high-activity) =====
-        console.log('Phase 7 check: now=', this.state.now, 'deadline=', this.state.deadline, 'check result=', (this.state.now < this.state.deadline));
         if (this.state.now < this.state.deadline) {
-            console.log('Phase 7: Deadline not reached, returning early (Phase 8 skipped)');
             return;
         }
         // ===== Phase 8: Periodic actions (every 15 seconds) =====
-        console.log('Phase 8: Deadline reached! Running periodic actions and setting new deadline');
         // Set robot name in bakery
         const bakeryName = Game.bakeryNameL.textContent;
         const robotName = 'Automated ';
@@ -5828,11 +5782,8 @@ class AutoPlay_AutoPlay {
                 dynamicDeadline = 100;
             }
         }
-        console.log('Phase 8: Setting new deadline. dynamicDeadline=', dynamicDeadline, 'ms (', (dynamicDeadline / 1000).toFixed(1), 's)');
         this.state.deadline = this.state.now + dynamicDeadline;
-        console.log('Phase 8: New deadline set to', this.state.deadline, '(now + ', dynamicDeadline, ')');
         this.setDeadline(this.state.now + (this.state.now - Game.startDate) / 10); // Quick start
-        console.log('Phase 8: After setDeadline, final deadline=', this.state.deadline);
         // Skip dashboard update if user has a menu open
         if (!Game.onMenu || Game.onMenu === '') {
             this.dashboard.render();
@@ -5955,16 +5906,13 @@ class AutoPlay_AutoPlay {
         this.purchaseManager.bestBuy();
         // Sync purchase info from BuildingManager to AutoPlay state
         const purchaseInfo = this.purchaseManager.getPurchaseInfo();
-        console.log('AutoPlay.bestBuy: purchaseInfo from manager:', purchaseInfo);
         if (purchaseInfo) {
             this.state.nextPurchase = purchaseInfo.name;
             this.state.nextPurchaseType = purchaseInfo.type;
             this.state.nextPurchasePP = purchaseInfo.pp;
             this.state.nextPurchasePrice = purchaseInfo.price;
-            console.log('AutoPlay.bestBuy: Synced to state:', this.state.nextPurchase, this.state.nextPurchaseType, this.state.nextPurchasePrice);
         }
         else {
-            console.log('AutoPlay.bestBuy: No purchase info, clearing state');
             this.state.nextPurchase = null;
             this.state.nextPurchaseType = null;
             this.state.nextPurchasePP = null;
@@ -6445,7 +6393,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052.20';
+AutoPlay_AutoPlay.version = '2.052-1';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts
@@ -6460,9 +6408,6 @@ AutoPlay_AutoPlay.version = '2.052.20';
 if (typeof Game !== 'undefined' && Game.ready) {
     const bot = new src_AutoPlay();
     globalThis.AutoPlay = bot;
-    console.log('CookieBot: Bot instance created and exposed globally:', bot);
-    console.log('CookieBot: Verifying globalThis.AutoPlay:', globalThis.AutoPlay);
-    console.log('CookieBot: Bot state:', bot.state);
     bot.init();
 }
 else {
@@ -6472,9 +6417,6 @@ else {
             clearInterval(checkReady);
             const bot = new src_AutoPlay();
             globalThis.AutoPlay = bot;
-            console.log('CookieBot: Bot instance created and exposed globally:', bot);
-            console.log('CookieBot: Verifying globalThis.AutoPlay:', globalThis.AutoPlay);
-            console.log('CookieBot: Bot state:', bot.state);
             bot.init();
         }
     }, 1000);

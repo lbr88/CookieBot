@@ -110,11 +110,5 @@ export declare class PurchaseManager {
      * Original: AutoPlay.handleUpgrades (lines 617-641)
      */
     private handleUpgrades;
-    /**
-     * Format large numbers in a readable way
-     * @param num - Number to format
-     * @returns Formatted string
-     */
-    private beautify;
 }
 //# sourceMappingURL=PurchaseManager.d.ts.map

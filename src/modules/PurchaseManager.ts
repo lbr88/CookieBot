@@ -6,6 +6,10 @@
  * - Handle Upgrades (line 617)
  */
 
+declare const Game: any;
+declare const Beautify: (num: number) => string;
+declare const CookieMonsterData: any;
+
 export interface PurchaseInfo {
   name: string;
   type: 'building' | 'upgrade';
@@ -63,17 +67,14 @@ export class PurchaseManager {
    * Get current purchase info for dashboard
    */
   getPurchaseInfo(): PurchaseInfo | null {
-    console.log('PurchaseManager.getPurchaseInfo: state.nextPurchase =', this.state.nextPurchase);
     if (!this.state.nextPurchase) return null;
 
-    const info = {
+    return {
       name: this.state.nextPurchase,
       type: this.state.nextPurchaseType || 'building',
       pp: this.state.nextPurchasePP,
       price: this.state.nextPurchasePrice || 0,
     };
-    console.log('PurchaseManager.getPurchaseInfo: returning', info);
-    return info;
   }
 
   /**
@@ -295,7 +296,6 @@ export class PurchaseManager {
 
     // Early game: if no buildings owned yet, buy the cheapest available
     if (Game.BuildingsOwned === 0) {
-      console.log('PurchaseManager: Early game mode - BuildingsOwned = 0');
       for (let i = 0; i < Game.ObjectsById.length; i++) {
         const me = Game.ObjectsById[i];
         if (me.locked) continue;
@@ -305,7 +305,6 @@ export class PurchaseManager {
           this.state.nextPurchaseType = 'building';
           this.state.nextPurchasePrice = me.getPrice();
           this.state.nextPurchasePP = null;
-          console.log('PurchaseManager: Set early game purchase:', this.state.nextPurchase, this.state.nextPurchasePrice);
         }
         if (this.buyBuilding(me, checkAmount, buyAmount)) return;
       }
@@ -360,7 +359,7 @@ export class PurchaseManager {
       building.buy(buyAmount);
       this.logAction(
         'Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''),
-        this.beautify(price) + ' cookies'
+        Beautify(price) + ' cookies'
       );
       return true;
     }
@@ -494,7 +493,7 @@ export class PurchaseManager {
     if (upgrade.getPrice() < Game.cookies - this.savingsGoal) {
       const price = upgrade.getPrice();
       upgrade.buy(bypass);
-      this.logAction('Upgraded: ' + upgrade.name, this.beautify(price) + ' cookies');
+      this.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
       return true;
     }
     return false;
@@ -573,16 +572,4 @@ export class PurchaseManager {
     }
   }
 
-  /**
-   * Format large numbers in a readable way
-   * @param num - Number to format
-   * @returns Formatted string
-   */
-  private beautify(num: number): string {
-    if (num < 1000) return Math.floor(num).toString();
-    if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
-    if (num < 1000000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num < 1000000000000) return (num / 1000000000).toFixed(1) + 'B';
-    return (num / 1000000000000).toFixed(1) + 'T';
-  }
 }

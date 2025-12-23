@@ -464,14 +464,12 @@ export class Dashboard {
    */
   updateDashboard(): void {
     if (!document.getElementById('cookieBotDashboard')) {
-      console.log('Dashboard element not found, skipping update');
       return;
     }
 
     try {
       // Check if AutoPlay is available
       if (typeof AutoPlay === 'undefined') {
-        console.log('AutoPlay is undefined, dashboard cannot update');
         return;
       }
 
@@ -498,16 +496,6 @@ export class Dashboard {
       }
       return;
     }
-
-    // DEBUG: Log AutoPlay object itself
-    console.log('Dashboard Update - typeof AutoPlay:', typeof AutoPlay);
-    console.log('Dashboard Update - AutoPlay object:', AutoPlay);
-    console.log('Dashboard Update - AutoPlay.state:', (AutoPlay as any).state);
-
-    // DEBUG: Log what we're seeing
-    console.log('Dashboard Update - nextPurchase:', AutoPlay.nextPurchase, 'type:', AutoPlay.nextPurchaseType, 'price:', AutoPlay.nextPurchasePrice);
-    console.log('Dashboard Update - mainActivity:', AutoPlay.mainActivity);
-    console.log('Dashboard Update - activities:', AutoPlay.activities);
 
     // Show next purchase
     if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
@@ -617,13 +605,8 @@ export class Dashboard {
     }
 
     const nextContent = document.getElementById('dashNextContent');
-    console.log('Dashboard Update - nextContent element:', nextContent);
-    console.log('Dashboard Update - generated HTML length:', nextHtml.length);
     if (nextContent) {
       nextContent.innerHTML = nextHtml || 'Initializing...';
-      console.log('Dashboard Update - HTML inserted, new innerHTML length:', nextContent.innerHTML.length);
-    } else {
-      console.error('Dashboard Update - dashNextContent element not found!');
     }
   }
 

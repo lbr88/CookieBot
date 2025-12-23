@@ -1,34 +1,7 @@
-var AutoPlay;
 /******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
-/******/ 	// The require scope
-/******/ 	var __webpack_require__ = {};
-/******/ 	
-/************************************************************************/
-/******/ 	/* webpack/runtime/define property getters */
-/******/ 	(() => {
-/******/ 		// define getter functions for harmony exports
-/******/ 		__webpack_require__.d = (exports, definition) => {
-/******/ 			for(var key in definition) {
-/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
-/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 				}
-/******/ 			}
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	(() => {
-/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
-/******/ 	})();
-/******/ 	
-/************************************************************************/
-var __webpack_exports__ = {};
 
-// EXPORTS
-__webpack_require__.d(__webpack_exports__, {
-  "default": () => (/* binding */ src)
-});
+// UNUSED EXPORTS: default
 
 ;// ./src/modules/GoldenCookieHandler.ts
 /**
@@ -417,8 +390,7 @@ class PurchaseManager {
     bestBuy() {
         // If cookie monster isn't installed, use fallback strategy
         if (typeof CookieMonsterData === 'undefined') {
-            // Clear purchase tracking when CookieMonster isn't available
-            this.clearPurchaseTracking();
+            // Fallback methods will set purchase tracking if they find something
             this.handleBuildingsFallback();
             this.handleUpgrades(); // Original line 477
             return false;
@@ -612,21 +584,41 @@ class PurchaseManager {
         }
         // Track best building for dashboard
         let bestBuilding = null;
-        for (let i = Game.ObjectsById.length - 1; i >= 0; i--) {
-            const me = Game.ObjectsById[i];
-            if (me.locked)
-                continue;
-            if (me.storedCps / me.price > cpc / 2 || me.amount % 50 >= 40) {
+        // Early game: if no buildings owned yet, buy the cheapest available
+        if (Game.BuildingsOwned === 0) {
+            for (let i = 0; i < Game.ObjectsById.length; i++) {
+                const me = Game.ObjectsById[i];
+                if (me.locked)
+                    continue;
                 if (!bestBuilding) {
                     bestBuilding = me;
                     this.state.nextPurchase = me.name;
                     this.state.nextPurchaseType = 'building';
                     this.state.nextPurchasePrice = me.getPrice();
-                    this.state.nextPurchasePP = null; // No payback calculation without Cookie Monster
+                    this.state.nextPurchasePP = null;
                 }
-                // This checks price, sets deadline
                 if (this.buyBuilding(me, checkAmount, buyAmount))
                     return;
+            }
+        }
+        else {
+            // Normal game: use efficiency-based buying
+            for (let i = Game.ObjectsById.length - 1; i >= 0; i--) {
+                const me = Game.ObjectsById[i];
+                if (me.locked)
+                    continue;
+                if (me.storedCps / me.price > cpc / 2 || me.amount % 50 >= 40) {
+                    if (!bestBuilding) {
+                        bestBuilding = me;
+                        this.state.nextPurchase = me.name;
+                        this.state.nextPurchaseType = 'building';
+                        this.state.nextPurchasePrice = me.getPrice();
+                        this.state.nextPurchasePP = null; // No payback calculation without Cookie Monster
+                    }
+                    // This checks price, sets deadline
+                    if (this.buyBuilding(me, checkAmount, buyAmount))
+                        return;
+                }
             }
         }
         // Rigidel special case: buy the cheapest building when not at multiple of 10
@@ -658,7 +650,7 @@ class PurchaseManager {
         const price = building.getSumPrice(checkAmount);
         if (price < Game.cookies - this.savingsGoal) {
             building.buy(buyAmount);
-            this.logAction('Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''), this.beautify(price) + ' cookies');
+            this.logAction('Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''), Beautify(price) + ' cookies');
             return true;
         }
         return false;
@@ -771,7 +763,7 @@ class PurchaseManager {
         if (upgrade.getPrice() < Game.cookies - this.savingsGoal) {
             const price = upgrade.getPrice();
             upgrade.buy(bypass);
-            this.logAction('Upgraded: ' + upgrade.name, this.beautify(price) + ' cookies');
+            this.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
             return true;
         }
         return false;
@@ -841,22 +833,6 @@ class PurchaseManager {
             Game.Upgrades["Sugar frenzy"].buy();
         }
     }
-    /**
-     * Format large numbers in a readable way
-     * @param num - Number to format
-     * @returns Formatted string
-     */
-    beautify(num) {
-        if (num < 1000)
-            return Math.floor(num).toString();
-        if (num < 1000000)
-            return (num / 1000).toFixed(1) + 'K';
-        if (num < 1000000000)
-            return (num / 1000000).toFixed(1) + 'M';
-        if (num < 1000000000000)
-            return (num / 1000000000).toFixed(1) + 'B';
-        return (num / 1000000000000).toFixed(1) + 'T';
-    }
 }
 
 ;// ./src/utils/Logger.ts
@@ -903,25 +879,28 @@ class LoggerService {
      * Log a status update
      * @param type - Status type (e.g., 'wrinkler', 'dragon', 'ascend')
      * @param message - Status message
+     * @param details - Optional details
      */
-    logStatus(type, message) {
+    logStatus(type, message, details) {
         if (this.callbacks?.logStatus) {
-            this.callbacks.logStatus(type, message);
+            this.callbacks.logStatus(type, message, details);
         }
         else {
-            console.log(`[${type}] ${message}`);
+            console.log(`[${type}] ${message}${details ? ': ' + details : ''}`);
         }
     }
     /**
      * Add an activity message to the activity log
      * @param activity - Activity description
+     * @returns true if activity was added, false if it already existed
      */
     addActivity(activity) {
         if (this.callbacks?.addActivity) {
-            this.callbacks.addActivity(activity);
+            return this.callbacks.addActivity(activity);
         }
         else {
             console.log(`[Activity] ${activity}`);
+            return true;
         }
     }
     /**
@@ -2976,15 +2955,20 @@ class Dashboard {
      * Update dashboard content
      */
     updateDashboard() {
-        if (!document.getElementById('cookieBotDashboard'))
+        if (!document.getElementById('cookieBotDashboard')) {
             return;
+        }
         try {
+            // Check if AutoPlay is available
+            if (typeof AutoPlay === 'undefined') {
+                return;
+            }
             this.updateNextActions();
             this.updateProgress();
             this.updateActivity();
         }
         catch (e) {
-            console.log('Dashboard update error:', e);
+            console.error('Dashboard update error:', e);
         }
     }
     /**
@@ -2992,6 +2976,15 @@ class Dashboard {
      */
     updateNextActions() {
         let nextHtml = '';
+        // Safety check for AutoPlay global
+        if (typeof AutoPlay === 'undefined') {
+            nextHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
+            const nextContent = document.getElementById('dashNextContent');
+            if (nextContent) {
+                nextContent.innerHTML = nextHtml;
+            }
+            return;
+        }
         // Show next purchase
         if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
             const purchaseColor = AutoPlay.nextPurchaseType === 'building' ? '#6f6' : '#fc6';
@@ -3006,7 +2999,7 @@ class Dashboard {
             if (needsForPurchase > 0) {
                 // Not enough cookies after reserves
                 const timeToAfford = needsForPurchase / Game.cookiesPs;
-                const timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
+                const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
                 const timeStr = this.formatTimeShort(timeToAfford);
                 nextHtml += `<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ${timeStr}</div>`;
                 nextHtml += `<div style="color: #888; font-size: 10px;">Need ${Beautify(needsForPurchase)} more cookies`;
@@ -3022,7 +3015,7 @@ class Dashboard {
             else if (AutoPlay.nextPurchasePrice > Game.cookies) {
                 // Can't afford at all (even without reserves)
                 const timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
-                const timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
+                const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
                 const timeStr = this.formatTimeShort(timeToAfford);
                 nextHtml += `<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ${timeStr}</div>`;
                 nextHtml += `<div style="color: #888; font-size: 10px;">Need ${Beautify(AutoPlay.nextPurchasePrice - Game.cookies)} more cookies</div>`;
@@ -3038,7 +3031,7 @@ class Dashboard {
                     nextHtml += '<div style="color: #6f6; font-size: 10px;">🚀 High activity mode - buying immediately</div>';
                 }
                 else {
-                    const timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
+                    const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
                     if (timeUntilCheck < 1) {
                         nextHtml += '<div style="color: #6f6; font-size: 10px;">⚡ Buying in < 1s</div>';
                     }
@@ -3106,8 +3099,17 @@ class Dashboard {
      */
     updateProgress() {
         let progressHtml = '';
+        // Safety check for AutoPlay global
+        if (typeof AutoPlay === 'undefined') {
+            progressHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
+            const progressContent = document.getElementById('dashProgressContent');
+            if (progressContent) {
+                progressContent.innerHTML = progressHtml;
+            }
+            return;
+        }
         // Savings progress bar (golden cookie reserve)
-        if (typeof Beautify !== 'undefined' && Game.unbuffedCps > 0) {
+        if (typeof Beautify !== 'undefined' && typeof Game !== 'undefined' && Game.unbuffedCps > 0) {
             // Calculate base thresholds (without time scaling)
             const baseLucky = Game.unbuffedCps * 60 * 100; // 6000 seconds of CPS
             const baseLuckyFrenzy = baseLucky * 7; // 42000 seconds of CPS
@@ -3124,8 +3126,8 @@ class Dashboard {
             if (!isSavingActive) {
                 // Check if in startup period
                 const startTime = 30 * 60 * 1000;
-                if (AutoPlay.savingsStart !== undefined && AutoPlay.now) {
-                    const elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
+                if (AutoPlay.savingsStart !== undefined) {
+                    const elapsedTime = Date.now() - AutoPlay.savingsStart - startTime;
                     if (elapsedTime < 0) {
                         const minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
                         progressHtml += '<div style="font-size: 10px; color: #fc6; font-weight: bold; margin-bottom: 4px; padding: 4px; background: rgba(255,200,100,0.1); border-left: 3px solid #fc6;">⏱ Reserve Disabled: Startup Period</div>';
@@ -3148,10 +3150,10 @@ class Dashboard {
             }
             // Calculate actual target with time scaling
             let scaling = 1;
-            if (isSavingActive && AutoPlay.savingsStart !== undefined && AutoPlay.now && Game.startDate) {
+            if (isSavingActive && AutoPlay.savingsStart !== undefined && Game.startDate) {
                 const startTime = 30 * 60 * 1000;
                 const targetTime = 400 * 60 * 1000;
-                const elapsedTime = AutoPlay.now - AutoPlay.savingsStart - startTime;
+                const elapsedTime = Date.now() - AutoPlay.savingsStart - startTime;
                 scaling = Math.max(0, Math.min(elapsedTime / targetTime, 1));
                 if (scaling < 1) {
                     progressHtml += `<div style="font-size: 9px; color: #888; margin-bottom: 4px;" title="The reserve target gradually increases over 400 minutes after a 30-minute startup period. This prevents the bot from over-saving early in the run.">⏱ Target ramping up: ${(scaling * 100).toFixed(1)}% (full at ${(targetTime / 60000).toFixed(0)} min)</div>`;
@@ -3193,13 +3195,14 @@ class Dashboard {
         // Achievement progress
         progressHtml += this.getAchievementProgress();
         // Time in run
-        if (AutoPlay.now && Game.startDate && typeof Game.sayTime !== 'undefined') {
-            const timeInRun = AutoPlay.now - Game.startDate;
+        if (Game.startDate && typeof Game.sayTime !== 'undefined') {
+            const timeInRun = Date.now() - Game.startDate;
             progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Total time elapsed since the start of this game run">Time in run: ${Game.sayTime(timeInRun / 1000 * Game.fps, -1)}</div>`;
         }
         // CPS
         if (typeof Beautify !== 'undefined' && Game.cookiesPs !== undefined) {
-            progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Current cookies per second production rate. The multiplier includes buffs from golden cookies, frenzies, etc.">CPS: ${Beautify(Game.cookiesPs)} (${AutoPlay.cpsMult ? AutoPlay.cpsMult.toFixed(1) : '1.0'}x multiplier)</div>`;
+            const cpsMult = Game.unbuffedCps > 0 ? Game.cookiesPs / Game.unbuffedCps : 1;
+            progressHtml += `<div style="font-size: 10px; color: #aaa;" title="Current cookies per second production rate. The multiplier includes buffs from golden cookies, frenzies, etc.">CPS: ${Beautify(Game.cookiesPs)} (${cpsMult.toFixed(1)}x multiplier)</div>`;
         }
         // Buildings and Upgrades
         if (Game.BuildingsOwned !== undefined && Game.UpgradesOwned !== undefined) {
@@ -3261,6 +3264,9 @@ class Dashboard {
      * Get achievement progress HTML
      */
     getAchievementProgress() {
+        if (typeof AutoPlay === 'undefined' || typeof Game === 'undefined') {
+            return '';
+        }
         if (!AutoPlay.nextAchievement || typeof Beautify === 'undefined' || !Game.AchievementsById) {
             return '';
         }
@@ -5405,12 +5411,18 @@ class AutoPlay_AutoPlay {
     set finished(value) { this.state.finished = value; }
     get wantAscend() { return this.state.wantAscend; }
     set wantAscend(value) { this.state.wantAscend = value; }
-    get mainActivity() { return this.state.mainActivity; }
+    get mainActivity() {
+        return this.state.mainActivity;
+    }
     set mainActivity(value) { this.state.mainActivity = value; }
-    get activities() { return this.state.activities; }
+    get activities() {
+        return this.state.activities;
+    }
     set activities(value) { this.state.activities = value; }
     // Additional accessors for Dashboard
-    get nextPurchase() { return this.state.nextPurchase; }
+    get nextPurchase() {
+        return this.state.nextPurchase;
+    }
     set nextPurchase(value) { this.state.nextPurchase = value; }
     get nextPurchaseType() { return this.state.nextPurchaseType; }
     set nextPurchaseType(value) { this.state.nextPurchaseType = value; }
@@ -5437,7 +5449,11 @@ class AutoPlay_AutoPlay {
         console.log(`[CookieBot] ${message}`);
     }
     setMainActivity(activity) {
-        this.state.mainActivity = activity;
+        // When mainActivity changes, reset activities to the new base
+        if (this.state.mainActivity !== activity) {
+            this.state.mainActivity = activity;
+            this.state.activities = activity;
+        }
     }
     addActivity(activity) {
         if (!this.state.activities.includes(activity)) {
@@ -5599,6 +5615,18 @@ class AutoPlay_AutoPlay {
         }, 1000);
         // Hook into Game.UpdateMenu to add config options to preferences
         this.setupMenuHook();
+        // Do an initial bestBuy check to populate purchase info for dashboard
+        const Game = globalThis.Game;
+        const cpsMult = Game.cookiesPs / Game.unbuffedCps;
+        this.purchaseManager.setState(this.config.savingsGoal, Date.now(), cpsMult, this.sugarLumpManager.getCanUseLumps(), this.state.nextAchievement);
+        this.purchaseManager.bestBuy();
+        const purchaseInfo = this.purchaseManager.getPurchaseInfo();
+        if (purchaseInfo) {
+            this.state.nextPurchase = purchaseInfo.name;
+            this.state.nextPurchaseType = purchaseInfo.type;
+            this.state.nextPurchasePP = purchaseInfo.pp;
+            this.state.nextPurchasePrice = purchaseInfo.price;
+        }
         // Set up periodic execution
         this.scheduleNextRun();
         this.state.isInitialized = true;
@@ -5629,6 +5657,8 @@ class AutoPlay_AutoPlay {
      * Runs every 300ms via setInterval
      */
     periodic() {
+        // Schedule next run FIRST so it always continues regardless of early returns
+        this.scheduleNextRun();
         // Declare Game global
         const Game = globalThis.Game;
         // ===== Phase 0: Early exits for timers =====
@@ -5641,8 +5671,9 @@ class AutoPlay_AutoPlay {
         }
         // ===== Phase 2: Setup =====
         this.state.now = Date.now();
-        // Reset activities to base message each cycle (original line 97)
-        this.state.activities = this.state.mainActivity;
+        // DON'T reset activities every cycle - let them accumulate
+        // Only reset when mainActivity changes (checked in Phase 8)
+        // this.state.activities = this.state.mainActivity;
         // Handle "Just Right" achievement (special case)
         if (this.state.nextAchievement === 397) {
             this.runJustRight();
@@ -5699,8 +5730,9 @@ class AutoPlay_AutoPlay {
             }
         }
         // ===== Phase 7: Deadline check (end of high-activity) =====
-        if (this.state.now < this.state.deadline)
+        if (this.state.now < this.state.deadline) {
             return;
+        }
         // ===== Phase 8: Periodic actions (every 15 seconds) =====
         // Set robot name in bakery
         const bakeryName = Game.bakeryNameL.textContent;
@@ -5800,8 +5832,7 @@ class AutoPlay_AutoPlay {
                 Logger.addActivity('Funding the grandma research facility');
             }
         }
-        // Schedule next periodic run to keep the loop going
-        this.scheduleNextRun();
+        // Note: scheduleNextRun() is called at the START of periodic(), not here
     }
     /**
      * Schedule the next periodic execution
@@ -6362,7 +6393,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052.7';
+AutoPlay_AutoPlay.version = '2.052-1';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts
@@ -6372,7 +6403,7 @@ AutoPlay_AutoPlay.version = '2.052.7';
  */
 
 // Export AutoPlay class as default for webpack
-/* harmony default export */ const src = (src_AutoPlay);
+/* harmony default export */ const src = ((/* unused pure expression or super */ null && (AutoPlay)));
 // Auto-initialize when loaded and expose instance globally
 if (typeof Game !== 'undefined' && Game.ready) {
     const bot = new src_AutoPlay();
@@ -6391,6 +6422,5 @@ else {
     }, 1000);
 }
 
-AutoPlay = __webpack_exports__["default"];
 /******/ })()
 ;
