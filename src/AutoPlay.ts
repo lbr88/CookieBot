@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052.17';
+  static readonly version = '2.052.18';
 
   // State
   private config: AutoPlayConfig;
@@ -466,9 +466,14 @@ export default class AutoPlay {
     }
 
     // ===== Phase 7: Deadline check (end of high-activity) =====
-    if (this.state.now < this.state.deadline) return;
+    console.log('Phase 7 check: now=', this.state.now, 'deadline=', this.state.deadline, 'check result=', (this.state.now < this.state.deadline));
+    if (this.state.now < this.state.deadline) {
+      console.log('Phase 7: Deadline not reached, returning early (Phase 8 skipped)');
+      return;
+    }
 
     // ===== Phase 8: Periodic actions (every 15 seconds) =====
+    console.log('Phase 8: Deadline reached! Running periodic actions and setting new deadline');
 
     // Set robot name in bakery
     const bakeryName = (Game as any).bakeryNameL.textContent;
@@ -522,8 +527,11 @@ export default class AutoPlay {
       }
     }
 
+    console.log('Phase 8: Setting new deadline. dynamicDeadline=', dynamicDeadline, 'ms (', (dynamicDeadline/1000).toFixed(1), 's)');
     this.state.deadline = this.state.now + dynamicDeadline;
+    console.log('Phase 8: New deadline set to', this.state.deadline, '(now + ', dynamicDeadline, ')');
     this.setDeadline(this.state.now + (this.state.now - Game.startDate) / 10); // Quick start
+    console.log('Phase 8: After setDeadline, final deadline=', this.state.deadline);
 
     // Skip dashboard update if user has a menu open
     if (!Game.onMenu || Game.onMenu === '') {
