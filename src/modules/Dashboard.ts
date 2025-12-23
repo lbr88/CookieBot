@@ -525,7 +525,7 @@ export class Dashboard {
       if (needsForPurchase > 0) {
         // Not enough cookies after reserves
         const timeToAfford = needsForPurchase / Game.cookiesPs;
-        const timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
+        const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
         const timeStr = this.formatTimeShort(timeToAfford);
         nextHtml += `<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ${timeStr}</div>`;
         nextHtml += `<div style="color: #888; font-size: 10px;">Need ${Beautify(needsForPurchase)} more cookies`;
@@ -540,7 +540,7 @@ export class Dashboard {
       } else if (AutoPlay.nextPurchasePrice > Game.cookies) {
         // Can't afford at all (even without reserves)
         const timeToAfford = (AutoPlay.nextPurchasePrice - Game.cookies) / Game.cookiesPs;
-        const timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
+        const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
         const timeStr = this.formatTimeShort(timeToAfford);
         nextHtml += `<div style="color: #f96; font-size: 11px; margin-top: 4px; font-weight: bold;" title="Time until you can afford this purchase (calculated by dividing cookies needed by your CPS)">⏳ Time left: ${timeStr}</div>`;
         nextHtml += `<div style="color: #888; font-size: 10px;">Need ${Beautify(AutoPlay.nextPurchasePrice - Game.cookies)} more cookies</div>`;
@@ -554,7 +554,7 @@ export class Dashboard {
         if (AutoPlay.hyperActive) {
           nextHtml += '<div style="color: #6f6; font-size: 10px;">🚀 High activity mode - buying immediately</div>';
         } else {
-          const timeUntilCheck = Math.max(0, (AutoPlay.deadline - AutoPlay.now) / 1000);
+          const timeUntilCheck = Math.max(0, (AutoPlay.deadline - Date.now()) / 1000);
           if (timeUntilCheck < 1) {
             nextHtml += '<div style="color: #6f6; font-size: 10px;">⚡ Buying in < 1s</div>';
           } else {
