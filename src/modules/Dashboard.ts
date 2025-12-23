@@ -499,6 +499,11 @@ export class Dashboard {
       return;
     }
 
+    // DEBUG: Log AutoPlay object itself
+    console.log('Dashboard Update - typeof AutoPlay:', typeof AutoPlay);
+    console.log('Dashboard Update - AutoPlay object:', AutoPlay);
+    console.log('Dashboard Update - AutoPlay.state:', (AutoPlay as any).state);
+
     // DEBUG: Log what we're seeing
     console.log('Dashboard Update - nextPurchase:', AutoPlay.nextPurchase, 'type:', AutoPlay.nextPurchaseType, 'price:', AutoPlay.nextPurchasePrice);
     console.log('Dashboard Update - mainActivity:', AutoPlay.mainActivity);

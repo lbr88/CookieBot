@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052.12';
+  static readonly version = '2.052.13';
 
   // State
   private config: AutoPlayConfig;
@@ -69,14 +69,23 @@ export default class AutoPlay {
   get wantAscend(): boolean { return this.state.wantAscend; }
   set wantAscend(value: boolean) { this.state.wantAscend = value; }
 
-  get mainActivity(): string { return this.state.mainActivity; }
+  get mainActivity(): string {
+    console.log('AutoPlay.mainActivity getter called, value:', this.state?.mainActivity);
+    return this.state.mainActivity;
+  }
   set mainActivity(value: string) { this.state.mainActivity = value; }
 
-  get activities(): string { return this.state.activities; }
+  get activities(): string {
+    console.log('AutoPlay.activities getter called, value:', this.state?.activities);
+    return this.state.activities;
+  }
   set activities(value: string) { this.state.activities = value; }
 
   // Additional accessors for Dashboard
-  get nextPurchase(): string | null { return this.state.nextPurchase; }
+  get nextPurchase(): string | null {
+    console.log('AutoPlay.nextPurchase getter called, this.state:', this.state, 'value:', this.state?.nextPurchase);
+    return this.state.nextPurchase;
+  }
   set nextPurchase(value: string | null) { this.state.nextPurchase = value; }
 
   get nextPurchaseType(): string | null { return this.state.nextPurchaseType; }
