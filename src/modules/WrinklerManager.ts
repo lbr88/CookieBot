@@ -1,0 +1,244 @@
+/**
+ * Manages wrinkler popping strategy
+ *
+ * This module handles:
+ * - Deciding when to pop wrinklers (all at once or one at a time)
+ * - Finding the best wrinkler to pop based on cookies sucked
+ * - Detecting shiny wrinklers (type === 1)
+ * - Calculating wrinkler value
+ * - Managing wrinkler-related achievements
+ */
+
+import type { AutoPlayState } from '../types/autoplay';
+import type { SeasonHandler } from './SeasonHandler';
+import { Logger } from '../utils/Logger';
+
+export class WrinklerManager {
+  private state: AutoPlayState;
+  private seasonHandler?: SeasonHandler;
+  private wantedAchievements: number[] = [];
+  private nextAchievement: number = 0;
+
+  constructor(state: AutoPlayState) {
+    this.state = state;
+  }
+
+  /**
+   * Set dependencies (called after construction to avoid circular dependencies)
+   */
+  setDependencies(
+    seasonHandler: SeasonHandler,
+    wantedAchievements: number[],
+    nextAchievement: number
+  ): void {
+    this.seasonHandler = seasonHandler;
+    this.wantedAchievements = wantedAchievements;
+    this.nextAchievement = nextAchievement;
+  }
+
+  /**
+   * Update state (called periodically from AutoPlay)
+   */
+  updateState(nextAchievement: number): void {
+    this.nextAchievement = nextAchievement;
+  }
+
+  /**
+   * Main wrinkler handling logic
+   * Runs periodically to manage wrinkler popping strategy
+   */
+  handleWrinklers(): void {
+    this.state.poppingWrinklers = false;
+
+    // Don't handle wrinklers until One mind is bought (unlocks wrinklers)
+    if (!Game.Upgrades["One mind"].bought) {
+      return;
+    }
+
+    // Determine if we should pop all wrinklers
+    const shouldPopAll = this.shouldPopAllWrinklers();
+
+    if (shouldPopAll) {
+      this.popAllWrinklers();
+    } else {
+      this.handleSingleWrinklerPopping();
+    }
+  }
+
+  /**
+   * Determine if we should pop all wrinklers at once
+   * This is done for:
+   * - Easter/Halloween seasons (for cookie drops)
+   * - Unholy bait achievement (Moistburster)
+   * - End phase achievement (Last Chance to See)
+   */
+  private shouldPopAllWrinklers(): boolean {
+    // Pop during easter or halloween if season not finished
+    let doPop = (Game.season === "easter" || Game.season === "halloween");
+    doPop = doPop && !this.seasonFinished();
+
+    // Pop if we have Unholy bait and haven't won Moistburster achievement
+    // Game.Upgrades[...].bought returns number (0 or 1), so convert to boolean
+    doPop = doPop ||
+      (!!Game.Upgrades["Unholy bait"].bought && !Game.Achievements["Moistburster"].won);
+
+    // Pop in end phase if we haven't won Last Chance to See achievement
+    doPop = doPop ||
+      (this.isEndPhase() && !Game.Achievements["Last Chance to See"].won);
+
+    return doPop;
+  }
+
+  /**
+   * Pop all attached wrinklers
+   */
+  private popAllWrinklers(): void {
+    this.state.poppingWrinklers = true;
+    this.state.wrinklerTime = this.state.now;
+
+    Logger.addActivity("Popping wrinklers for droppings and/or achievements.");
+    Logger.logStatus('wrinkler', 'Popping all wrinklers');
+
+    // Pop all attached wrinklers (close === 1)
+    Game.wrinklers.forEach((w: Wrinkler) => {
+      if (w.close === 1) {
+        w.hp = 0;  // Setting hp to 0 pops the wrinkler
+      }
+    });
+  }
+
+  /**
+   * Handle single wrinkler popping strategy
+   * Pops one wrinkler every 2 hours
+   */
+  private handleSingleWrinklerPopping(): void {
+    // Handle Wrinkler poker achievement (pop wrinkler #3)
+    if (!Game.Achievements['Wrinkler poker'].won && Game.wrinklers[3].close === 1) {
+      Game.wrinklers[3].selected = 1;
+      l('backgroundLeftCanvas').click();
+    }
+
+    // Find the next wrinkler to pop (highest sucked value)
+    this.findNextWrinkler();
+
+    // Calculate time since last pop
+    const minutesSinceLastPop = Math.floor((this.state.now - this.state.wrinklerTime) / 1000 / 60);
+    Logger.addActivity(`Popping one wrinkler per two hours, last ${minutesSinceLastPop} minutes ago.`);
+
+    // Pop the selected wrinkler if it's time (2 hours = 2*60*60*1000 ms)
+    if (this.state.nextWrinkler !== -1) {
+      const twoHoursInMs = 2 * 60 * 60 * 1000;
+      if (this.state.now - this.state.wrinklerTime >= twoHoursInMs) {
+        Game.wrinklers[this.state.nextWrinkler].hp = 0;  // Pop the wrinkler
+        this.state.wrinklerTime = this.state.now;
+        Logger.logStatus('wrinkler', 'Popped single wrinkler');
+      }
+    }
+  }
+
+  /**
+   * Find the next wrinkler to pop
+   * Selects the wrinkler with the most cookies sucked
+   * If there's an empty spot, don't pop any wrinkler (let it fill up)
+   */
+  private findNextWrinkler(): void {
+    let nextId = -1;
+    let maxSucked = 0;
+
+    for (const w of Game.wrinklers) {
+      // Check if there's an empty spot (not attached, but within max wrinklers)
+      if (w.close === 0 && w.id < Game.getWrinklersMax()) {
+        // Empty spot found - don't pop any wrinkler, let it fill up
+        this.state.nextWrinkler = -1;
+        return;
+      }
+
+      // Track wrinkler with most cookies sucked
+      if (w.sucked > maxSucked) {
+        maxSucked = w.sucked;
+        nextId = w.id;
+      }
+    }
+
+    this.state.nextWrinkler = nextId;
+  }
+
+  /**
+   * Check if a wrinkler is shiny
+   * Shiny wrinklers have type === 1 and are rarer/more valuable
+   */
+  isShinyWrinkler(wrinkler: Wrinkler): boolean {
+    return wrinkler.type === 1;
+  }
+
+  /**
+   * Calculate the value (cookies) stored in a wrinkler
+   * This is the amount of cookies that would be returned when popped
+   * Shiny wrinklers return 3x the normal amount
+   */
+  getWrinklerValue(wrinkler: Wrinkler): number {
+    if (wrinkler.close === 0) {
+      return 0;  // Not attached
+    }
+
+    // Base value is the amount sucked
+    let value = wrinkler.sucked;
+
+    // Wrinklers return 1.1x what they sucked
+    value *= 1.1;
+
+    // Shiny wrinklers return 3x
+    if (this.isShinyWrinkler(wrinkler)) {
+      value *= 3;
+    }
+
+    return value;
+  }
+
+  /**
+   * Get total value stored in all wrinklers
+   */
+  getTotalWrinklerValue(): number {
+    return Game.wrinklers.reduce((total, w) => {
+      return total + this.getWrinklerValue(w);
+    }, 0);
+  }
+
+  /**
+   * Count attached wrinklers
+   */
+  getAttachedWrinklerCount(): number {
+    return Game.wrinklers.filter(w => w.close === 1).length;
+  }
+
+  /**
+   * Count shiny wrinklers
+   */
+  getShinyWrinklerCount(): number {
+    return Game.wrinklers.filter(w => w.close === 1 && this.isShinyWrinkler(w)).length;
+  }
+
+  // ============ Helper methods ============
+
+  /**
+   * Check if current season is finished (all upgrades collected)
+   * Delegates to SeasonHandler
+   */
+  private seasonFinished(): boolean {
+    if (!this.seasonHandler) {
+      // Fallback if dependencies not set yet
+      return false;
+    }
+    return this.seasonHandler.seasonFinished(Game.season);
+  }
+
+  /**
+   * Check if we're in the end phase (all achievements collected)
+   * Returns true when nextAchievement is NOT in the wantedAchievements list
+   * (meaning we've completed all wanted achievements and moved to the end phase)
+   */
+  private isEndPhase(): boolean {
+    return this.wantedAchievements.indexOf(this.nextAchievement) < 0;
+  }
+
+}

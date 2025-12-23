@@ -1,0 +1,169 @@
+/**
+ * Manages cookie savings and reserves (Lucky, Lucky Frenzy)
+ *
+ * This module handles the calculation of savings goals based on different strategies:
+ * - NONE (0): No savings
+ * - AUTO (1): Automatically ramp up savings over time
+ * - LUCKY (2): Save for Lucky golden cookie (100 minutes of CPS)
+ * - LUCKY_FRENZY (3): Save for Lucky Frenzy (700 minutes of CPS)
+ */
+export class SavingsManager {
+  private savingsGoal: number = 0;
+  private savingsStart: number = 0;
+  private config: any; // Will be injected
+  private now: number = 0;
+  private logStatus: (type: string, message: string) => void;
+
+  // Constants for AUTO savings strategy
+  private readonly START_TIME = 30 * 60 * 1000;  // 30 minutes before starting to save
+  private readonly TARGET_TIME = 400 * 60 * 1000; // 400 minutes to reach target amount
+
+  // Reserve multipliers
+  private readonly LUCKY_MULTIPLIER = 100;        // 100 minutes of CPS
+  private readonly FRENZY_MULTIPLIER = 7;         // 7x for Lucky Frenzy
+
+  constructor(config: any = {}, logStatus: (type: string, message: string) => void = () => {}) {
+    this.config = config;
+    this.logStatus = logStatus;
+    this.savingsStart = Game.startDate;
+  }
+
+  /**
+   * Initialize savings tracking (called on ascension)
+   */
+  initializeSavings(currentTime: number): void {
+    this.savingsStart = currentTime;
+    this.now = currentTime;
+  }
+
+  /**
+   * Update current time (called each game loop)
+   */
+  setCurrentTime(currentTime: number): void {
+    this.now = currentTime;
+  }
+
+  /**
+   * Main savings calculation logic
+   * Migrated from AutoPlay.handleSavings (line 388-448 in cookieAutoPlayBeta.js)
+   */
+  handleSavings(): void {
+    // Do not save in reborn mode
+    if (Game.ascensionMode === 1) {
+      this.savingsGoal = 0;
+      return;
+    }
+
+    const strategy = this.config?.SavingStrategy ?? 1;
+
+    // NONE: No savings
+    if (strategy === 0) {
+      this.savingsGoal = 0;
+      return;
+    }
+
+    // LUCKY: Save for Lucky golden cookie (100 minutes of CPS)
+    if (strategy === 2) {
+      this.savingsGoal = Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER;
+      return;
+    }
+
+    // LUCKY FRENZY: Save for Lucky Frenzy (700 minutes of CPS)
+    if (strategy === 3) {
+      this.savingsGoal = Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER * this.FRENZY_MULTIPLIER;
+      return;
+    }
+
+    // AUTO: Linearly ramp up savings to target over time
+    // Wait 30 minutes before starting to save, then ramp up over 400 minutes
+    const elapsedTime = this.now - this.savingsStart - this.START_TIME;
+
+    // Calculate scaling factor (0 to 1) based on elapsed time
+    // Math.max(0, ...) fix ensures we don't get negative values
+    const scaling = Math.max(0, Math.min(elapsedTime / this.TARGET_TIME, 1));
+
+    // Still in startup period
+    if (elapsedTime < 0) {
+      this.savingsGoal = 0;
+      this.logStatus('reserve:startup', 'No reserve yet (startup period)');
+      return;
+    }
+
+    // Wait for golden cookie upgrades before saving
+    // Upgrade IDs: 52 (Lucky day), 53 (Serendipity)
+    if (Game.UpgradesById[52].bought && Game.UpgradesById[53].bought) {
+      this.savingsGoal = Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER;
+    } else {
+      this.savingsGoal = 0;
+      this.logStatus('reserve:waiting-upgrades', 'Waiting for golden cookie upgrades');
+      return;
+    }
+
+    // Upgrade to Lucky Frenzy if "Get lucky" upgrade is bought
+    // Upgrade ID: 86 (Get lucky)
+    if (Game.UpgradesById[86].bought) {
+      this.savingsGoal *= this.FRENZY_MULTIPLIER;
+    }
+
+    // Scale goal based on elapsed time (linearly ramp up)
+    if (elapsedTime < this.TARGET_TIME) {
+      this.savingsGoal *= scaling;
+
+      // Calculate actual savings progress (cookies saved vs goal)
+      const actualProgress = Math.min(100, (Game.cookies / this.savingsGoal) * 100);
+      const progressPct = actualProgress.toFixed(0);
+
+      // Log progress in 10% increments
+      this.logStatus(
+        'reserve:building-' + Math.floor(Number(progressPct) / 10) * 10,
+        'Reserve growing: ' + progressPct + '% saved'
+      );
+    } else {
+      this.logStatus('reserve:maintaining', 'Reserve at max');
+    }
+
+    // Auto-adjustment: if fallen behind savings plan, reset the start time
+    // This handles cases where the bot was stopped or a big purchase was made
+    const fractionSaved = Game.cookies / this.savingsGoal;
+
+    // Division by zero check: only adjust if scaling > 0
+    if (fractionSaved < 0.8 && scaling > 0) {
+      this.savingsStart = this.now - this.START_TIME - this.TARGET_TIME * fractionSaved / scaling;
+    }
+  }
+
+  /**
+   * Get the current savings goal
+   */
+  getSavingsGoal(): number {
+    return this.savingsGoal;
+  }
+
+  /**
+   * Get the reserve for Lucky cookie (100 minutes of CPS)
+   */
+  getLuckyReserve(): number {
+    return Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER;
+  }
+
+  /**
+   * Get the reserve for Lucky Frenzy (700 minutes of CPS)
+   */
+  getLuckyFrenzyReserve(): number {
+    return Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER * this.FRENZY_MULTIPLIER;
+  }
+
+  /**
+   * Get available cookies after accounting for savings
+   */
+  getAvailableCookies(): number {
+    return Math.max(0, Game.cookies - this.savingsGoal);
+  }
+
+  /**
+   * Check if we have enough cookies for a purchase (accounting for savings)
+   */
+  canAfford(price: number): boolean {
+    return price < Game.cookies - this.savingsGoal;
+  }
+}

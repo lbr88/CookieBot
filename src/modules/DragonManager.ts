@@ -1,0 +1,308 @@
+/**
+ * Manages dragon training and aura selection
+ *
+ * The Dragon (Krumblor) is unlocked after purchasing "A crumbly egg" upgrade.
+ * Dragon levels unlock through various sacrifices and achievements.
+ * Dragons provide powerful auras that boost game performance.
+ */
+
+declare const Game: any;
+declare const AutoPlay: any;
+
+import { Logger } from '../utils/Logger';
+
+/**
+ * Dragon aura indices
+ */
+enum DragonAura {
+  None = 0,
+  BreathOfMilk = 1,         // +5% milk
+  DragonCursor = 2,          // +5 cookies per click per cursor
+  ElderBattalion = 3,        // +1% CpS per grandma
+  ReaperOfFields = 4,        // +3% CpS per farm
+  Dragonflight = 5,          // Golden cookie effects last 10% longer
+  AncestralMetamorphosis = 6, // Grandmas give 10% more CpS
+  UnholyDominion = 7,        // Wrath cookie effects last 10% longer
+  FierceHoarder = 8,         // +5% CpS per building
+  DragonGod = 9,             // +5% to all building CpS
+  ArcaneAura = 10,           // Golden cookies appear 5% more often
+  FierceHoarder2 = 11,       // (duplicate in original)
+  DragonOrb = 12,            // +2% prestige
+  ReaperOfFields2 = 13,      // (duplicate in original)
+  RadiantAppetite = 15,      // Golden/wrath cookies gain +2% CpS
+  DragonsCurve = 17          // Sugar lumps ripen 5% faster
+}
+
+/**
+ * Lump harvest achievement IDs (266-272 and 396)
+ * These achievements require specific lump types or harvesting conditions
+ */
+const LUMP_HARVEST_ACHIEVEMENTS = [266, 267, 268, 269, 270, 271, 272, 396];
+
+/**
+ * Dragon drop items from petting
+ */
+const DRAGON_DROPS = [
+  'Dragon scale',
+  'Dragon claw',
+  'Dragon fang',
+  'Dragon teddy bear'
+] as const;
+
+/**
+ * Aura names for logging
+ */
+const AURA_NAMES: Record<number, string> = {
+  0: 'None',
+  1: 'Breath of Milk',
+  2: 'Dragon Cursor',
+  3: 'Elder Battalion',
+  4: 'Reaper of Fields',
+  5: 'Dragonflight',
+  6: 'Ancestral Metamorphosis',
+  7: 'Unholy Dominion',
+  8: 'Fierce Hoarder',
+  9: 'Dragon God',
+  10: 'Arcane Aura',
+  15: 'Radiant Appetite',
+  17: "Dragon's Curve"
+};
+
+export class DragonManager {
+  /**
+   * Main handler for all dragon-related activities
+   * Should be called periodically from the main AutoPlay loop
+   */
+  handleDragon(): void {
+    // Only proceed if dragon egg is unlocked
+    if (!Game.Upgrades['A crumbly egg'].unlocked) {
+      return;
+    }
+
+    // Train dragon to next level if possible
+    this.trainDragon();
+
+    // Pet dragon for drops
+    this.petDragon();
+
+    // Select optimal auras based on current dragon level
+    this.selectBestAuras();
+  }
+
+  /**
+   * Train dragon to the next level
+   * Handles building sacrifices required for leveling
+   */
+  private trainDragon(): void {
+    const maxLevel = Game.dragonLevels.length - 1;
+
+    // Check if dragon can be leveled up
+    if (Game.dragonLevel >= maxLevel) {
+      return;
+    }
+
+    const currentLevelData = Game.dragonLevels[Game.dragonLevel];
+    if (!currentLevelData.cost()) {
+      return; // Don't have resources to level up
+    }
+
+    // Determine what needs to be done after upgrading
+    let buildingToRestock: Building | null = null;
+    let shouldBuy150 = false;
+
+    // Levels 5-20: Sacrifice 100 of a specific building (one per level)
+    if (Game.dragonLevel >= 5 && Game.dragonLevel < maxLevel - 2) {
+      const buildingIndex = Game.dragonLevel - 5;
+      buildingToRestock = Game.ObjectsById[buildingIndex];
+    }
+    // Last 3 levels before max: Sacrifice 50/200/200 of all buildings
+    else if (Game.dragonLevel >= maxLevel - 2) {
+      shouldBuy150 = true;
+    }
+
+    // Upgrade the dragon
+    Game.specialTab = 'dragon';
+    Game.UpgradeDragon();
+    Game.ToggleSpecialMenu(0);
+
+    // Handle post-upgrade restocking
+    if (shouldBuy150) {
+      // After sacrificing 50 or 200 of all buildings, buy back to 150
+      // Ensure Farm exists for garden minigame
+      if (Game.Objects['Farm'].amount === 0) {
+        Game.Objects['Farm'].buy(1);
+      }
+
+      // Note: handleMinigames would need to be called here
+      // For now, just buy buildings
+      for (const building of Game.ObjectsById) {
+        const needed = 150 - building.amount;
+        if (needed > 0) {
+          building.buy(needed);
+        }
+      }
+    } else if (buildingToRestock) {
+      // After sacrificing 100 of a specific building, buy 50 back immediately
+      const needed = 50 - buildingToRestock.amount;
+      if (needed > 0) {
+        buildingToRestock.buy(needed);
+      }
+    }
+  }
+
+  /**
+   * Select the best auras based on current game state and dragon level
+   */
+  private selectBestAuras(): void {
+    // Set primary aura
+    if (Game.dragonLevel >= 5) {
+      this.setPrimaryAura();
+    }
+
+    // Set secondary aura (only available at max level)
+    if (Game.dragonLevel >= Game.dragonLevels.length - 1) {
+      this.setSecondaryAura();
+    }
+  }
+
+  /**
+   * Set the primary dragon aura (slot 0)
+   * Strategy:
+   * - Level 5+: Breath of Milk (kitten boost)
+   * - Level 19+: Radiant Appetite (golden cookie boost)
+   * - Level 21+: Dragon's Curve (lump ripening) OR Radiant Appetite
+   */
+  private setPrimaryAura(): void {
+    let desiredAura = DragonAura.None;
+
+    if (Game.dragonLevel >= 5) {
+      desiredAura = DragonAura.BreathOfMilk;
+    }
+    if (Game.dragonLevel >= 19) {
+      desiredAura = DragonAura.RadiantAppetite;
+    }
+    if (Game.dragonLevel >= 21) {
+      desiredAura = DragonAura.DragonsCurve;
+
+      // Switch to Radiant Appetite if we have plenty of lumps
+      // and not actively hunting lump harvest achievements
+      const hasPlentLumps = Game.lumps > 99;
+      const needsLumpAchievement = this.isHuntingLumpAchievement();
+
+      if (hasPlentLumps && !needsLumpAchievement) {
+        desiredAura = DragonAura.RadiantAppetite;
+      }
+    }
+
+    // Only change if different from current
+    if (Game.dragonAura !== desiredAura) {
+      Game.specialTab = 'dragon';
+      Game.SetDragonAura(desiredAura, 0);
+      (Game as any).ConfirmPrompt();
+      Game.ToggleSpecialMenu(0);
+
+      const auraName = AURA_NAMES[desiredAura] || 'Unknown';
+      Logger.logStatus('dragon', `Dragon aura 1: ${auraName}`);
+    }
+  }
+
+  /**
+   * Set the secondary dragon aura (slot 1)
+   * Always set to Breath of Milk for the kitten boost
+   */
+  private setSecondaryAura(): void {
+    const desiredAura = DragonAura.BreathOfMilk;
+
+    // Only change if different from current
+    if (Game.dragonAura2 !== desiredAura) {
+      Game.specialTab = 'dragon';
+      Game.SetDragonAura(desiredAura, 1);
+      (Game as any).ConfirmPrompt();
+      Game.ToggleSpecialMenu(0);
+
+      Logger.logStatus('dragon', 'Dragon aura 2: Breath of Milk');
+    }
+  }
+
+  /**
+   * Pet the dragon to get special drops
+   * Available at dragon level 8+
+   * Drops: Dragon scale, Dragon claw, Dragon fang, Dragon teddy bear
+   */
+  private petDragon(): void {
+    if (Game.dragonLevel < 8) {
+      return; // Can't pet dragon yet
+    }
+
+    // Check if there are any drops we haven't obtained yet
+    for (const drop of DRAGON_DROPS) {
+      if (!(Game as any).Has(drop) && !(Game as any).HasUnlocked(drop)) {
+        // Still have drops to collect
+        Logger.addActivity('Petting the dragon.');
+
+        Game.specialTab = 'dragon';
+        Game.ToggleSpecialMenu(1);
+        (Game as any).ClickSpecialPic();
+        Game.ToggleSpecialMenu(0);
+
+        return; // Only pet once per cycle
+      }
+    }
+  }
+
+  /**
+   * Check if buying a specific building is efficient based on dragon sacrifices
+   * Used by BuildingManager to avoid buying too many buildings during sacrifice phases
+   *
+   * @param buildingName - Name of the building to check
+   * @returns true if safe to buy, false if would interfere with dragon training
+   */
+  checkDragonLimits(buildingName: string): boolean {
+    // Don't limit purchases until "Here be dragon" achievement is won
+    if (!Game.Achievements['Here be dragon'].won) {
+      return true;
+    }
+
+    const building = Game.Objects[buildingName];
+    if (!building) {
+      return true;
+    }
+
+    // Haven't sacrificed the first 100 of this building yet
+    // Limit to 100 so we have exactly 100 to sacrifice
+    if (Game.dragonLevel - 5 <= building.id) {
+      return building.amount < 100;
+    }
+
+    // Waiting to sacrifice 50 of all buildings
+    // Limit to 50 so we have exactly 50 to sacrifice
+    if (Game.dragonLevel < Game.dragonLevels.length - 2) {
+      return building.amount < 50;
+    }
+
+    // Waiting to sacrifice 200 of all buildings
+    // Limit to 200 so we have exactly 200 to sacrifice
+    if (Game.dragonLevel < Game.dragonLevels.length - 1) {
+      return building.amount < 200;
+    }
+
+    // Fully trained or no restrictions
+    return true;
+  }
+
+  /**
+   * Check if we're currently hunting lump harvest achievements
+   * This affects aura selection - we want Dragon's Curve for faster ripening
+   *
+   * @returns true if hunting lump-related achievements
+   */
+  private isHuntingLumpAchievement(): boolean {
+    // Lump harvest achievements: IDs 266-272 and 396
+    // These require harvesting lumps at specific maturity levels
+    if (typeof AutoPlay !== 'undefined' && 'nextAchievement' in AutoPlay) {
+      return LUMP_HARVEST_ACHIEVEMENTS.includes((AutoPlay as any).nextAchievement);
+    }
+    return false;
+  }
+
+}

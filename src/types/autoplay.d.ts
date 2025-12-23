@@ -1,0 +1,190 @@
+// AutoPlay state and configuration types
+
+export interface AutoPlayConfig {
+  // UI settings
+  nightMode: boolean | number; // boolean for toggle, or 0=OFF, 1=AUTO, 2=ON (backward compat)
+  fontSize: number;
+  menuPos: [number, number];
+
+  // Automation settings
+  autoGoldenCookie: boolean;
+  autoReindeer: boolean;
+  autoFrenzy: boolean;
+  autoClickingFrenzy: boolean;
+  autoElderFrenzy: boolean;
+  autoSeason: boolean;
+  autoAscend: boolean;
+  autoSugarLumps: boolean;
+  autoWrinklers: boolean;
+
+  // Clicking settings
+  clickMode: number; // 0=off, 1=normal, 2+=aggressive
+
+  // Cheating settings
+  cheatLumps: number; // 0=off, 1=auto, 2-4=manual levels
+  cheatGolden: number; // 0=off, 1=auto, 2+=manual levels
+
+  // Strategy settings
+  buyMode: 'pp' | 'roi';
+  minCookieBank: number;
+  savingsGoal: number;
+  savingsEnabled: boolean;
+  SavingStrategy: number; // 0=NONE, 1=AUTO, 2=LUCKY, 3=LUCKY_FRENZY
+
+  // Seasons
+  seasonOrder: string[];
+  currentSeasonIndex: number;
+}
+
+export interface AutoPlayContext {
+  now: number;
+  nextAchievement: number;
+  wantedAchievements: number[];
+  lumpHarvestAchievements: number[];
+  wantAscend: boolean;
+  Config: {
+    HardcoreMode?: number;
+    NightMode?: number;
+  };
+  mainActivity: string;
+  activities: string;
+  hyperActive: boolean;
+  workingOnSpecialAchievement: boolean;
+  plantPending: boolean;
+  delay: number;
+  finished: boolean;
+
+  // Permanent slot arrays
+  kittens: number[];
+  maxBuildings: number[];
+  cursors: number[];
+  butterBiscuits: number[];
+  expensive: number[];
+
+  // Methods that need to be called
+  info: (message: string) => void;
+  logAction: (action: string, details?: string) => void;
+  logStatus: (type: string, message: string, details?: string) => void;
+  addActivity: (activity: string) => void;
+  setMainActivity: (activity: string) => void;
+  setDeadline: (time: number) => void;
+  findNextAchievement: () => void;
+  endPhase: () => boolean;
+  preNightMode: () => boolean;
+  mustRebornAscend: () => boolean;
+  assignSpirit: (slot: number, spirit: string, force: number) => void;
+}
+
+export interface AutoPlayState {
+  version: string;
+  now: number;
+  lastCheck: number;
+  timeToNextBuy: number;
+
+  // Execution control
+  delay: number; // Phase 1: Delay counter for pausing execution
+  deadline: number; // Phase 7: Next time to run periodic tasks
+  hyperActive: boolean; // Phase 5: High-activity mode flag
+
+  // Achievement tracking
+  nextAchievement: number; // Phase 2: Next achievement to work toward
+  workingOnSpecialAchievement: boolean; // Phase 8: Special achievement flag
+  plantPending: boolean; // Phase 8: Garden harvest warning
+
+  // Purchase tracking
+  nextPurchase: string | null; // Best next purchase item name
+  nextPurchaseType: string | null; // 'building' or 'upgrade'
+  nextPurchasePP: number | null; // Payback period in seconds
+  nextPurchasePrice: number | null; // Price of next purchase
+  buy10: boolean; // Flag to buy 10 buildings next time (Rigidel support)
+
+  // Ascension tracking
+  onAscend: boolean; // Phase 6: Currently on ascension screen
+
+  // Status tracking
+  statusInfo?: StatusInfo; // Cache for status() method results
+
+  // Savings tracking
+  savingsStart: number;
+  savingsFraction: number;
+
+  // Activity log
+  mainActivity: string; // Base activity message, reset periodically
+  activities: string; // HTML string that accumulates activity messages
+
+  // Dashboard state
+  menuVisible: boolean;
+
+  // Wrinkler tracking
+  nextWrinkler: number;
+  poppingWrinklers: boolean;
+  wrinklerTime: number;
+
+  // Reset tracking
+  resetTime?: number; // Time of last reincarnation
+
+  // Ascension tracking
+  wantAscend: boolean; // Preparing to ascend (avoid buying plants, etc.)
+  finished: boolean; // All lump-related achievements complete
+
+  // Temporary state
+  isInitialized: boolean;
+
+  // Just Right achievement tracking
+  runRightCount?: number; // Counter for cursor adjustment during Just Right achievement
+}
+
+export interface DashboardStats {
+  cps: number;
+  cookies: number;
+  bankTarget: number;
+  luckyReserve: number;
+  luckyFrenzyReserve: number;
+  nextBuyTime: number;
+  nextBuyItem: string;
+}
+
+// Config data structure for menu
+export interface ConfigOption {
+  label: string[];
+  desc: string;
+}
+
+export interface ConfigData {
+  [key: string]: ConfigOption;
+}
+
+export interface Config {
+  [key: string]: number;
+}
+
+// History entry types
+export interface ActionHistoryEntry {
+  time: Date;
+  action: string;
+  details?: string;
+}
+
+export interface StatusHistoryEntry {
+  time: Date;
+  type: string; // 'goal', 'reserve', 'mode', 'achievement', 'ascend', 'dragon', 'wrinkler', etc.
+  message: string;
+  details?: string;
+}
+
+export interface ActivityEntry {
+  time: Date;
+  type: 'status' | 'action';
+  color: string;
+  icon: string;
+  tooltip: string;
+  message: string;
+  details?: string;
+}
+
+export interface StatusInfo {
+  achievements: number;
+  shadowAchievements: number;
+  upgrades: number;
+  lumps: number;
+}
