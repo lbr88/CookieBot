@@ -429,10 +429,10 @@ export class AchievementHandler {
         }
       }
     }
-    // Check for "own X [building]" achievements
-    // Format: "Own <b>1</b> cursor." or "Own <b>100</b> cursors."
-    else if (achievement.ddesc.match(/own <b>[\d,]+<\/b>/i)) {
-      const ownMatch = achievement.ddesc.match(/own <b>([\d,]+)<\/b>\s+(\w+?)s?\./i);
+    // Check for "have X [building]" achievements
+    // Format: "Have <b>1 cursor</b>." or "Have <b>100 cursors</b>."
+    else if (achievement.ddesc.match(/have <b>[\d,]+\s+\w+?s?<\/b>/i)) {
+      const ownMatch = achievement.ddesc.match(/have <b>([\d,]+)\s+(\w+?)s?<\/b>\./i);
       if (ownMatch) {
         const targetCount = parseInt(ownMatch[1].replace(/,/g, ''));
         const buildingName = ownMatch[2];
