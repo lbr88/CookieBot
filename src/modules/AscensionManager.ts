@@ -190,6 +190,14 @@ export class AscensionManager {
       return;
     }
 
+    // Don't ascend if we just reincarnated (within 10 seconds)
+    // This prevents ascending loop for achievements that are won instantly after reincarnation
+    const timeSinceReset = Date.now() - this.state.resetTime;
+    if (timeSinceReset < 10000) {
+      this.context.logStatus('ascend', 'Achievement won too quickly after reincarnation - waiting before ascending (will check again)');
+      return;
+    }
+
     const date = new Date();
     date.setTime(this.context.now - Game.startDate);
     const legacyTime = Game.sayTime(date.getTime() / 1000 * Game.fps, -1);
