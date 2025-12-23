@@ -599,17 +599,21 @@ export class PurchaseManager {
   getBuildingStatus(): ModuleStatus {
     const hasCookieMonster = typeof CookieMonsterData !== 'undefined';
 
-    // Check if waiting for Hardcore achievement
-    if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
+    // In Born Again mode (ascensionMode = 1), no upgrades exist - buy buildings normally
+    // In normal mode with 0 upgrades, buildings are blocked until first upgrade purchased
+    const inBornAgain = Game.ascensionMode === 1;
+
+    if (!inBornAgain && !Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
       return {
         module: 'Buildings',
         status: 'blocked',
-        currentAction: 'Waiting for first upgrade',
-        reason: 'Hardcore achievement blocks all purchases',
-        nextAction: 'Will resume after manual upgrade purchase',
+        currentAction: 'Blocked until first upgrade',
+        reason: 'Cannot efficiently buy buildings without upgrades',
+        nextAction: 'Will resume after first upgrade purchased',
         icon: '🏢',
         details: {
-          'Blocked By': 'Hardcore achievement'
+          'Blocked By': 'No upgrades owned',
+          'Mode': 'Normal'
         }
       };
     }
@@ -668,7 +672,24 @@ export class PurchaseManager {
   getUpgradeStatus(): ModuleStatus {
     const hasCookieMonster = typeof CookieMonsterData !== 'undefined';
 
-    // Check if waiting for Hardcore achievement
+    // In Born Again mode (ascensionMode = 1), NO upgrades exist at all
+    const inBornAgain = Game.ascensionMode === 1;
+
+    if (inBornAgain) {
+      return {
+        module: 'Upgrades',
+        status: 'disabled',
+        currentAction: 'Not available',
+        reason: 'Born Again mode has no upgrades',
+        icon: '⬆️',
+        details: {
+          'Mode': 'Born Again',
+          'Upgrades': 'Not available in this mode'
+        }
+      };
+    }
+
+    // In normal mode with 0 upgrades, bot doesn't auto-buy first upgrade (Hardcore protection)
     if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
       // Count available upgrades
       let availableUpgrades = 0;
@@ -682,16 +703,15 @@ export class PurchaseManager {
       return {
         module: 'Upgrades',
         status: 'waiting',
-        currentAction: 'Waiting for manual purchase',
-        reason: 'Protecting Hardcore achievement - requires manual first upgrade',
-        nextAction: availableUpgrades > 0 ? `${availableUpgrades} upgrade${availableUpgrades !== 1 ? 's' : ''} available` : 'No upgrades unlocked yet',
+        currentAction: 'Waiting for first upgrade',
+        reason: 'Bot does not auto-buy first upgrade (Hardcore protection)',
+        nextAction: availableUpgrades > 0 ? `${availableUpgrades} upgrade${availableUpgrades !== 1 ? 's' : ''} available - purchase manually` : 'No upgrades unlocked yet',
         icon: '⬆️',
         details: {
           'Hardcore Won': false,
           'Upgrades Owned': 0,
           'Available': availableUpgrades,
-          'Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies) : Game.cookies,
-          'Action': 'Manually buy upgrade'
+          'Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies) : Game.cookies
         }
       };
     }
