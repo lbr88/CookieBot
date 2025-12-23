@@ -22,11 +22,12 @@ module.exports = {
   output: {
     filename: `cookieAutoPlayBeta-v${version}.js`,
     path: path.resolve(__dirname, 'dist'),
-    library: {
-      name: 'AutoPlay',
-      type: 'var',
-      export: 'default',
-    },
+    // Don't export as library - let index.ts handle global assignment
+    // library: {
+    //   name: 'AutoPlay',
+    //   type: 'var',
+    //   export: 'default',
+    // },
   },
   optimization: {
     minimize: false, // Keep readable for debugging
