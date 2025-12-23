@@ -34,19 +34,17 @@ export class GardenManager {
   private harvestPlant: boolean = false; // Have harvestable plant waiting
   private plantsMissing: boolean = true; // Still unlocked plants?
   private plantCookies: boolean = false; // Harvest cookie-dropping plants?
-  // private wantGardenSacrifice: boolean = false; // Want to sacrifice garden? - unused for now
+  private wantGardenSacrifice: boolean = false; // Want to sacrifice garden?
 
   // Injected state
   private now: number = Date.now();
   private cpsMult: number = 1.0;
-  // @ts-ignore - Will be used in full planting logic
-  private _wantAscend: boolean = false;
+  private wantAscend: boolean = false;
   private savingsGoal: number = 0;
   private canUseLumps: boolean = false;
   private finished: boolean = false;
   private lumpRelatedAchievements: number[] = [];
-  // @ts-ignore - Will be used in seedCalendar
-  private _poppingWrinklers: boolean = false;
+  private poppingWrinklers: boolean = false;
   // @ts-ignore - Will be used in plantSeed
   private _grindingCheat: boolean = false;
   // @ts-ignore - Will be used in plantSeed
@@ -150,7 +148,7 @@ export class GardenManager {
    * Original: AutoPlay.seedCalendar (lines 1329-1393)
    */
   private seedCalendar(garden: any, sector: number): string {
-    if (this._wantAscend || false) return 'bakerWheat'; // plant cheap before ascend (wantGardenSacrifice removed)
+    if (this.wantAscend || this.wantGardenSacrifice) return 'bakerWheat';
 
     if (sector === 0) this.plantsMissing = false;
 
@@ -204,7 +202,7 @@ export class GardenManager {
     this.plantCookies = false;
     this.switchSoil(garden, sector, this.plantPending ? 'fertilizer' : 'clay');
 
-    if (this._poppingWrinklers && garden.plants['wrinklegill']?.unlocked) {
+    if (this.poppingWrinklers && garden.plants['wrinklegill']?.unlocked) {
       return 'wrinklegill'; // faster wrinklers
     }
 
@@ -321,9 +319,6 @@ export class GardenManager {
    * Original: AutoPlay.planting (lines 1159-1220)
    */
   private planting(garden: any): void {
-    // Don't plant before ascend (wantAscend check)
-    if (this._wantAscend) return;
-
     // Wait for meddleweed (first plant that spawns randomly)
     if (!garden.plants['meddleweed']?.unlocked) {
       this.plantList = [0, 0, 0, 0];
@@ -345,13 +340,35 @@ export class GardenManager {
       return;
     }
 
-    // Full mutation chain - work through all 34 plants systematically
+    // Set plantsMissing = true BEFORE calling findPlants (original line 1172)
+    this.plantsMissing = true;
+
+    // Try to find a plant to work on for sector 0
+    if (!this.findPlants(garden, 0)) {
+      // No plants to work on - fill with dummy plants
+      this.plantList = [0, 0, 0, 0];
+      for (let i = 0; i < 4; i++) {
+        this.plantSector(garden, i);
+      }
+      return;
+    }
+
+    // Global soil selection with fallback (original lines 1186-1191)
+    // Priority: Fertilizer (if plantPending) > Wood Chips > Fertilizer (fallback) > Dirt
+    let soil = 'dirt';
+    if (this.plantPending && garden.parent.bought >= garden.soils['fertilizer'].req) {
+      soil = 'fertilizer'; // if waiting on a plant to mature
+    } else if (garden.parent.bought >= garden.soils['woodchips'].req) {
+      soil = 'woodchips'; // best for mutation
+    } else if (garden.parent.bought >= garden.soils['fertilizer'].req) {
+      soil = 'fertilizer'; // fallback if can't afford woodchips
+    }
+    this.switchSoil(garden, 0, soil);
+
     const farmLevel = Game.Objects['Farm'].level;
 
     // Farm level < 4: Use simple middle column planting (original lines 1192-1198)
     if (farmLevel < 4) {
-      this.findPlants(garden);
-      if (this.plantList[0] === 0) return;
 
       const dep = PLANT_DEPENDENCIES[this.plantList[0]];
       const targets: Array<[string, number, number]> = [
@@ -365,16 +382,13 @@ export class GardenManager {
       return;
     }
 
-    // Farm level == 4: Use two columns (original lines 1199-1210)
+    // Farm level == 4: Use two columns (original lines 1200-1213)
+    this.findPlants(garden, 1);
     if (farmLevel === 4) {
-      this.findPlants(garden);
-      if (this.plantList[0] === 0) return;
-
-      // Check if we need a second plant goal
       if (this.plantList[1] === 0) {
-        this.findPlants(garden); // This will set plantList[1]
+        this.logActivity('ERROR 42?');
+        return;
       }
-      if (this.plantList[1] === 0) return;
 
       const dep0 = PLANT_DEPENDENCIES[this.plantList[0]];
       const dep1 = PLANT_DEPENDENCIES[this.plantList[1]];
@@ -392,130 +406,92 @@ export class GardenManager {
       return;
     }
 
-    // Farm level >= 5: Use all 4 sectors (original lines 1211-1219)
-    this.findPlants(garden);
-    this.plantsMissing = false;
-
-    // Global soil selection with fallback (original lines 1180-1191)
-    // Priority: Fertilizer (if plantPending) > Wood Chips > Fertilizer (fallback) > Dirt
-    let soil = 'dirt';
-    if (this.plantPending && garden.parent.bought >= garden.soils['fertilizer'].req) {
-      soil = 'fertilizer'; // if waiting on a plant to mature
-    } else if (garden.parent.bought >= garden.soils['woodchips'].req) {
-      soil = 'woodchips'; // best for mutation
-    } else if (garden.parent.bought >= garden.soils['fertilizer'].req) {
-      soil = 'fertilizer'; // fallback if can't afford woodchips
-    }
-    this.switchSoil(garden, 0, soil);
-
+    // Farm level >= 5: Use all 4 sectors (original lines 1215-1219)
+    this.findPlants(garden, 2);
+    this.findPlants(garden, 3);
     for (let sector = 0; sector < 4; sector++) {
-      if (this.plantList[sector] === 0) continue;
-
-      const plantGoal = PLANT_DEPENDENCIES[this.plantList[sector]][0] as string;
-      if (garden.plants[plantGoal]?.unlocked) continue;
-
-      this.plantsMissing = true;
-      this.logActivity(`${this.sectorText(sector)}: Working on ${plantGoal}.`);
       this.plantSector(garden, sector);
     }
   }
 
   /**
-   * Find which plants to work on for each sector
-   * Traverses PLANT_DEPENDENCIES to find next unlockable plants
-   * Original: AutoPlay.findPlants (lines 1222-1253)
+   * Find next plant to work on for a specific sector
+   * Returns true if a plant goal was set, false otherwise
+   * Original: AutoPlay.findPlants (lines 1119-1157)
    */
-  private findPlants(garden: any): void {
-    const farmLevel = Game.Objects['Farm'].level;
+  private findPlants(garden: any, idx: number): boolean {
+    if (this.wantAscend) return false; // do not plant before ascend
 
-    // Reset plant list
-    this.plantList = [0, 0, 0, 0];
+    let couldPlant = 0;
 
-    // Check for special expensive plants first (indices 1-2)
-    // These are checked separately before the main loop
-    // Original: lines 1133-1143
-
-    // Check for everdaisy (index 2) - needs specific corner tile unlocked
-    const checkCorner = (sector: number) => {
-      const chkx = sector % 2 ? 0 : 5;
-      const chky = sector > 1 ? 0 : 5;
-      return garden.isTileUnlocked(chkx, chky);
-    };
-
-    // Farm level < 5: Only use one sector
-    if (farmLevel < 5) {
-      // Check special plants for sector 0
-      if (checkCorner(0) && !this.havePlant(garden, 'everdaisy') &&
-          garden.plants['elderwort']?.unlocked && garden.plants['tidygrass']?.unlocked) {
-        this.plantList[0] = 2; // everdaisy
-        return;
+    // Check if already assigned a plant to this sector
+    if (this.plantList[idx] !== 0) {
+      const oldPlant = PLANT_DEPENDENCIES[this.plantList[idx]][0];
+      this.logActivity(
+        `Trying to get plant ${garden.plants[oldPlant].name} on sector ${this.sectorText(idx)}.`
+      );
+      this.plantCookies = false;
+      if (this.havePlant(garden, oldPlant as string)) {
+        this.plantList[idx] = 0; // Got it, clear the goal
+      } else {
+        return true; // Still working on it
       }
-      if (checkCorner(0) && !this.havePlant(garden, 'queenbeetLump') &&
-          garden.plants['queenbeet']?.unlocked) {
-        this.plantList[0] = 1; // queenbeetLump
-        return;
-      }
-      this.plantList[0] = this.findNextPlant(garden, 0);
-      return;
     }
 
-    // Farm level >= 5: Use all 4 sectors
-    for (let sector = 0; sector < 4; sector++) {
-      // Check special plants first
-      if (checkCorner(sector) && !this.havePlant(garden, 'everdaisy') &&
-          garden.plants['elderwort']?.unlocked && garden.plants['tidygrass']?.unlocked) {
-        this.plantList[sector] = 2; // everdaisy
-        continue;
-      }
-      if (checkCorner(sector) && !this.havePlant(garden, 'queenbeetLump') &&
-          garden.plants['queenbeet']?.unlocked) {
-        this.plantList[sector] = 1; // queenbeetLump
-        continue;
-      }
-      this.plantList[sector] = this.findNextPlant(garden, sector);
-    }
-  }
+    // Try to plant expensive plants first (if possible) as they take longest time
+    const chkx = idx % 2 ? 0 : 5;
+    const chky = idx > 1 ? 0 : 5;
 
-  /**
-   * Find the next plant to work on for a specific sector
-   * Returns index into PLANT_DEPENDENCIES array
-   * Original: Logic from AutoPlay.findPlants (lines 1222-1253)
-   */
-  private findNextPlant(garden: any, sector: number): number {
-    // Start at index 3 to skip special cases (dummy, queenbeetLump, everdaisy)
-    // These are handled separately in findPlants()
-    // Original: line 1144 "for (var i = 3"
+    if (garden.isTileUnlocked(chkx, chky)) {
+      // only plant if the spot is big enough
+      // Check for everdaisy
+      if (
+        !this.havePlant(garden, 'everdaisy') &&
+        garden.plants['elderwort'].unlocked &&
+        garden.plants['tidygrass'].unlocked
+      ) {
+        if (this.plantList.includes(2)) {
+          couldPlant = 2; // Already planted elsewhere
+        } else {
+          this.plantList[idx] = 2;
+          return true;
+        }
+      }
+      // Check for queenbeetLump
+      if (
+        !this.havePlant(garden, 'queenbeetLump') &&
+        garden.plants['queenbeet'].unlocked
+      ) {
+        if (this.plantList.includes(1)) {
+          couldPlant = 1; // Already planted elsewhere
+        } else {
+          this.plantList[idx] = 1;
+          return true;
+        }
+      }
+    }
+
+    // Plant normal plants - start at index 3 to skip dummy, queenbeetLump, everdaisy
     for (let i = 3; i < PLANT_DEPENDENCIES.length; i++) {
-      const [targetPlant, parent1, parent2] = PLANT_DEPENDENCIES[i];
-
-      // Skip if already have it (unlocked or growing)
-      if (this.havePlant(garden, targetPlant as string)) continue;
-
-      // Check if both parents are unlocked
-      const hasParent1 = parent1 === 'dummy' || garden.plants[parent1]?.unlocked;
-      const hasParent2 = parent2 === 'dummy' || garden.plants[parent2]?.unlocked;
-
-      if (!hasParent1 || !hasParent2) continue;
-
-      // Special case: queenbeetLump needs mature queenbeet in center
-      if (targetPlant === 'queenbeetLump') {
-        const sectorX = sector % 2 ? 0 : 3;
-        const sectorY = sector > 1 ? 0 : 3;
-        const centerTile = garden.getTile(sectorX + 1, sectorY + 1);
-
-        // Check if center has mature queenbeet
-        if (centerTile[0] === 0) continue; // Empty
-        const centerPlant = garden.plantsById[centerTile[0] - 1];
-        if (centerPlant.key !== 'queenbeet') continue;
-        if (centerTile[1] < centerPlant.mature) continue; // Not mature yet
+      const plant = PLANT_DEPENDENCIES[i][0];
+      if (
+        !this.havePlant(garden, plant as string) &&
+        garden.plants[PLANT_DEPENDENCIES[i][1]].unlocked &&
+        garden.plants[PLANT_DEPENDENCIES[i][2]].unlocked
+      ) {
+        // Want it
+        if (this.plantList.includes(i)) {
+          if (!couldPlant) couldPlant = i; // already planted - remember it
+        } else {
+          this.plantList[idx] = i;
+          return true;
+        }
       }
-
-      // Found a plant we can work on
-      return i;
     }
 
-    // No plants to work on
-    return 0;
+    if (!couldPlant) return false;
+    this.plantList[idx] = couldPlant;
+    return true;
   }
 
   /**
@@ -580,11 +556,13 @@ export class GardenManager {
    * Check if ready to sacrifice garden for "Seedless to nay" achievement
    */
   private gardenSacrificeReady(garden: any): boolean {
+    this.wantGardenSacrifice = false;
     // Achievement 382 = "Seedless to nay" (sacrifice garden with all plants)
     if (!Game.AchievementsById[382].won && garden.plantsUnlockedN === garden.plantsN) {
       if (!this.harvestPlant) {
         return true;
       }
+      this.wantGardenSacrifice = true;
       this.logActivity('Waiting for harvest before getting Seedless to Nay.');
     }
 
@@ -818,12 +796,12 @@ export class GardenManager {
   }): void {
     this.now = state.now;
     this.cpsMult = state.cpsMult;
-    this._wantAscend = state.wantAscend;
+    this.wantAscend = state.wantAscend;
     this.savingsGoal = state.savingsGoal;
     this.canUseLumps = state.canUseLumps;
     this.finished = state.finished;
     this.lumpRelatedAchievements = state.lumpRelatedAchievements;
-    this._poppingWrinklers = state.poppingWrinklers;
+    this.poppingWrinklers = state.poppingWrinklers;
     this._grindingCheat = state.grindingCheat;
     this._cheatGolden = state.cheatGolden;
   }

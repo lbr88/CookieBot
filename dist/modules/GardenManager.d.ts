@@ -20,14 +20,15 @@ export declare class GardenManager {
     private harvestPlant;
     private plantsMissing;
     private plantCookies;
+    private wantGardenSacrifice;
     private now;
     private cpsMult;
-    private _wantAscend;
+    private wantAscend;
     private savingsGoal;
     private canUseLumps;
     private finished;
     private lumpRelatedAchievements;
-    private _poppingWrinklers;
+    private poppingWrinklers;
     private _grindingCheat;
     private _cheatGolden;
     private addActivity?;
@@ -66,17 +67,11 @@ export declare class GardenManager {
      */
     private planting;
     /**
-     * Find which plants to work on for each sector
-     * Traverses PLANT_DEPENDENCIES to find next unlockable plants
-     * Original: AutoPlay.findPlants (lines 1222-1253)
+     * Find next plant to work on for a specific sector
+     * Returns true if a plant goal was set, false otherwise
+     * Original: AutoPlay.findPlants (lines 1119-1157)
      */
     private findPlants;
-    /**
-     * Find the next plant to work on for a specific sector
-     * Returns index into PLANT_DEPENDENCIES array
-     * Original: Logic from AutoPlay.findPlants (lines 1222-1253)
-     */
-    private findNextPlant;
     /**
      * Plant parent plants in a sector to create mutations
      * Original: AutoPlay.plantSector (lines 1222-1251)

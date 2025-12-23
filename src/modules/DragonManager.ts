@@ -111,12 +111,12 @@ export class DragonManager {
     let shouldBuy150 = false;
 
     // Levels 5-20: Sacrifice 100 of a specific building (one per level)
-    if (Game.dragonLevel >= 5 && Game.dragonLevel < maxLevel - 2) {
+    if (Game.dragonLevel >= 5 && Game.dragonLevel < maxLevel - 3) {
       const buildingIndex = Game.dragonLevel - 5;
       buildingToRestock = Game.ObjectsById[buildingIndex];
     }
     // Last 3 levels before max: Sacrifice 50/200/200 of all buildings
-    else if (Game.dragonLevel >= maxLevel - 2) {
+    else if (Game.dragonLevel >= maxLevel - 3) {
       shouldBuy150 = true;
     }
 
