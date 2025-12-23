@@ -52,10 +52,66 @@ export default class AutoPlay {
   // Shared context for upgrade manager (moved to BuildingManager)
   // private upgradeContext: UpgradeManagerContext;
 
+  // Public properties for global AutoPlay access (needed by modules)
+  wantedAchievements: number[] = [];
+  lateAchievements: number[] = [];
+  robotName: string = 'Automated ';
+  backupHeight: number = 0;
+  giftCode: number | string = 0;
+
+  // Public accessors for state properties (proxies to this.state)
+  get nextAchievement(): number { return this.state.nextAchievement; }
+  set nextAchievement(value: number) { this.state.nextAchievement = value; }
+
+  get finished(): boolean { return this.state.finished; }
+  set finished(value: boolean) { this.state.finished = value; }
+
+  get wantAscend(): boolean { return this.state.wantAscend; }
+  set wantAscend(value: boolean) { this.state.wantAscend = value; }
+
+  get mainActivity(): string { return this.state.mainActivity; }
+  set mainActivity(value: string) { this.state.mainActivity = value; }
+
+  get activities(): string { return this.state.activities; }
+  set activities(value: string) { this.state.activities = value; }
+
+  // Public methods expected by modules
+  info(message: string): void {
+    console.log(`[CookieBot] ${message}`);
+  }
+
+  setMainActivity(activity: string): void {
+    this.state.mainActivity = activity;
+  }
+
+  addActivity(activity: string): boolean {
+    if (!this.state.activities.includes(activity)) {
+      this.state.activities += '<div class="line"></div>' + activity;
+      return true;
+    }
+    return false;
+  }
+
+  logAction(action: string, details?: string): void {
+    if (this.dashboard) {
+      this.dashboard.logAction(action, details);
+    }
+  }
+
+  logStatus(category: string, message: string, details?: string): void {
+    if (this.dashboard) {
+      this.dashboard.logStatus(category, message, details);
+    }
+  }
+
   constructor() {
     // Initialize default configuration
     this.config = this.getDefaultConfig();
     this.state = this.getDefaultState();
+
+    // Initialize public achievement arrays
+    this.wantedAchievements = [...WANTED_ACHIEVEMENTS];
+    this.lateAchievements = [...LUMP_RELATED_ACHIEVEMENTS];
 
     // Helper methods for logging and activities
     const logAction = (action: string, details?: string) => {
@@ -752,7 +808,7 @@ export default class AutoPlay {
    *
    * Original: AutoPlay.endPhase()
    */
-  private endPhase(): boolean {
+  endPhase(): boolean {
     const wantedAchievements = WANTED_ACHIEVEMENTS as readonly number[];
     return wantedAchievements.indexOf(this.state.nextAchievement) < 0;
   }

@@ -21,6 +21,26 @@ export default class AutoPlay {
     private grimoireManager;
     private gardenManager;
     private stockMarketManager;
+    wantedAchievements: number[];
+    lateAchievements: number[];
+    robotName: string;
+    backupHeight: number;
+    giftCode: number | string;
+    get nextAchievement(): number;
+    set nextAchievement(value: number);
+    get finished(): boolean;
+    set finished(value: boolean);
+    get wantAscend(): boolean;
+    set wantAscend(value: boolean);
+    get mainActivity(): string;
+    set mainActivity(value: string);
+    get activities(): string;
+    set activities(value: string);
+    info(message: string): void;
+    setMainActivity(activity: string): void;
+    addActivity(activity: string): boolean;
+    logAction(action: string, details?: string): void;
+    logStatus(category: string, message: string, details?: string): void;
     constructor();
     /**
      * Initialize the bot
@@ -90,7 +110,7 @@ export default class AutoPlay {
      *
      * Original: AutoPlay.endPhase()
      */
-    private endPhase;
+    endPhase(): boolean;
     /**
      * Check if we're in grinding mode (working on final achievements)
      *

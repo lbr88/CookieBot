@@ -5398,12 +5398,56 @@ class StockMarketManager {
 
 
 class AutoPlay_AutoPlay {
-    // Shared context for upgrade manager (moved to BuildingManager)
-    // private upgradeContext: UpgradeManagerContext;
+    // Public accessors for state properties (proxies to this.state)
+    get nextAchievement() { return this.state.nextAchievement; }
+    set nextAchievement(value) { this.state.nextAchievement = value; }
+    get finished() { return this.state.finished; }
+    set finished(value) { this.state.finished = value; }
+    get wantAscend() { return this.state.wantAscend; }
+    set wantAscend(value) { this.state.wantAscend = value; }
+    get mainActivity() { return this.state.mainActivity; }
+    set mainActivity(value) { this.state.mainActivity = value; }
+    get activities() { return this.state.activities; }
+    set activities(value) { this.state.activities = value; }
+    // Public methods expected by modules
+    info(message) {
+        console.log(`[CookieBot] ${message}`);
+    }
+    setMainActivity(activity) {
+        this.state.mainActivity = activity;
+    }
+    addActivity(activity) {
+        if (!this.state.activities.includes(activity)) {
+            this.state.activities += '<div class="line"></div>' + activity;
+            return true;
+        }
+        return false;
+    }
+    logAction(action, details) {
+        if (this.dashboard) {
+            this.dashboard.logAction(action, details);
+        }
+    }
+    logStatus(category, message, details) {
+        if (this.dashboard) {
+            this.dashboard.logStatus(category, message, details);
+        }
+    }
     constructor() {
+        // Shared context for upgrade manager (moved to BuildingManager)
+        // private upgradeContext: UpgradeManagerContext;
+        // Public properties for global AutoPlay access (needed by modules)
+        this.wantedAchievements = [];
+        this.lateAchievements = [];
+        this.robotName = 'Automated ';
+        this.backupHeight = 0;
+        this.giftCode = 0;
         // Initialize default configuration
         this.config = this.getDefaultConfig();
         this.state = this.getDefaultState();
+        // Initialize public achievement arrays
+        this.wantedAchievements = [...WANTED_ACHIEVEMENTS];
+        this.lateAchievements = [...gameIds_LUMP_RELATED_ACHIEVEMENTS];
         // Helper methods for logging and activities
         const logAction = (action, details) => {
             // Note: No console.log in original - only in error handlers
@@ -6308,11 +6352,12 @@ AutoPlay_AutoPlay.version = '2.052.5';
  * Entry point for the application
  */
 
-// Export AutoPlay as default for webpack to expose as global
+// Export AutoPlay class as default for webpack
 /* harmony default export */ const src = (src_AutoPlay);
-// Auto-initialize when loaded
+// Auto-initialize when loaded and expose instance globally
 if (typeof Game !== 'undefined' && Game.ready) {
     const bot = new src_AutoPlay();
+    globalThis.AutoPlay = bot;
     bot.init();
 }
 else {
@@ -6321,6 +6366,7 @@ else {
         if (typeof Game !== 'undefined' && Game.ready) {
             clearInterval(checkReady);
             const bot = new src_AutoPlay();
+            globalThis.AutoPlay = bot;
             bot.init();
         }
     }, 1000);
