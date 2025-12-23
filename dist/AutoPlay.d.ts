@@ -27,6 +27,10 @@ export default class AutoPlay {
      */
     init(): void;
     /**
+     * Hook into Game.UpdateMenu to add config options to preferences menu
+     */
+    private setupMenuHook;
+    /**
      * Main execution cycle - implements 8-phase model from original
      * Runs every 300ms via setInterval
      */

@@ -5525,10 +5525,41 @@ class AutoPlay_AutoPlay {
         console.log(`CookieBot v${AutoPlay_AutoPlay.version} initializing...`);
         // Load saved configuration
         this.loadConfig();
+        // Find first achievement to work on
+        this.achievementHandler.findNextAchievement();
+        // Create dashboard UI
+        this.dashboard.createDashboard();
+        this.dashboard.updateDashboard();
+        // Update dashboard every second for real-time stats
+        setInterval(() => {
+            this.dashboard.updateDashboard();
+        }, 1000);
+        // Hook into Game.UpdateMenu to add config options to preferences
+        this.setupMenuHook();
         // Set up periodic execution
         this.scheduleNextRun();
         this.state.isInitialized = true;
         console.log('CookieBot initialized successfully');
+    }
+    /**
+     * Hook into Game.UpdateMenu to add config options to preferences menu
+     */
+    setupMenuHook() {
+        const Game = globalThis.Game;
+        // Backup original UpdateMenu if not already backed up
+        if (!Game.__originalUpdateMenu) {
+            Game.__originalUpdateMenu = Game.UpdateMenu;
+        }
+        // Override UpdateMenu to inject our config options
+        const self = this;
+        Game.UpdateMenu = function () {
+            // Call original UpdateMenu first
+            Game.__originalUpdateMenu();
+            // Add our config menu when on preferences screen
+            if (Game.onMenu === 'prefs') {
+                self.dashboard.addMenuPref();
+            }
+        };
     }
     /**
      * Main execution cycle - implements 8-phase model from original

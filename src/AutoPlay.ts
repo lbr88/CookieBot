@@ -205,11 +205,50 @@ export default class AutoPlay {
     // Load saved configuration
     this.loadConfig();
 
+    // Find first achievement to work on
+    this.achievementHandler.findNextAchievement();
+
+    // Create dashboard UI
+    this.dashboard.createDashboard();
+    this.dashboard.updateDashboard();
+
+    // Update dashboard every second for real-time stats
+    setInterval(() => {
+      this.dashboard.updateDashboard();
+    }, 1000);
+
+    // Hook into Game.UpdateMenu to add config options to preferences
+    this.setupMenuHook();
+
     // Set up periodic execution
     this.scheduleNextRun();
 
     this.state.isInitialized = true;
     console.log('CookieBot initialized successfully');
+  }
+
+  /**
+   * Hook into Game.UpdateMenu to add config options to preferences menu
+   */
+  private setupMenuHook(): void {
+    const Game = (globalThis as any).Game;
+
+    // Backup original UpdateMenu if not already backed up
+    if (!(Game as any).__originalUpdateMenu) {
+      (Game as any).__originalUpdateMenu = Game.UpdateMenu;
+    }
+
+    // Override UpdateMenu to inject our config options
+    const self = this;
+    Game.UpdateMenu = function() {
+      // Call original UpdateMenu first
+      (Game as any).__originalUpdateMenu();
+
+      // Add our config menu when on preferences screen
+      if (Game.onMenu === 'prefs') {
+        self.dashboard.addMenuPref();
+      }
+    };
   }
 
   /**
