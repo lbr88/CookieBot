@@ -488,15 +488,17 @@ export default class AutoPlay {
     // Check ascend often in reborn and during ascend
     if (Game.ascensionMode === 1 || this.state.onAscend) {
       this.ascensionManager.handleAscend();
-      // Sync wantAscend state from ascension manager context
+      // Sync state from ascension manager
       this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
+      this.state.onAscend = (this.ascensionManager as any).state.onAscend;
     }
 
     // Check ascend often for lucky payout
     if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
       this.ascensionManager.handleAscend();
-      // Sync wantAscend state from ascension manager context
+      // Sync state from ascension manager
       this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
+      this.state.onAscend = (this.ascensionManager as any).state.onAscend;
     }
 
     // ===== Phase 7: Deadline check (end of high-activity) =====
@@ -601,8 +603,9 @@ export default class AutoPlay {
 
     // Ascension
     this.ascensionManager.handleAscend();
-    // Sync wantAscend state from ascension manager context
+    // Sync state from ascension manager
     this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
+    this.state.onAscend = (this.ascensionManager as any).state.onAscend;
 
     // Minigames (garden, pantheon, stock market)
     this.handleMinigames();
