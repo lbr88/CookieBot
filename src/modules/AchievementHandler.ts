@@ -363,6 +363,89 @@ export class AchievementHandler {
     const totalAchievements = Object.keys(Game.Achievements).length;
     const wonCount = Object.values(Game.Achievements).filter((a: any) => a.won).length;
 
+    // Track progress for "bake X cookies" achievements
+    let progress: { current: number; target: number; percent: number; label: string } | undefined;
+    let timeRemaining: number | undefined;
+    let progressColor: string | undefined;
+
+    // List of "bake X cookies" achievement IDs (from original dashboard code)
+    const bakingAchievements = [2, 8, 21, 27, 35, 42, 48, 54, 60, 66, 72, 78, 84, 90, 96, 102, 202, 267, 318];
+
+    // Check if this is a trackable achievement
+    if (bakingAchievements.indexOf(achievement.id) !== -1) {
+      // Extract cookie threshold from achievement description
+      const thresholdMatch = achievement.ddesc.match(/bake <b>([\d,]+) cookies?<\/b>/i);
+      if (thresholdMatch) {
+        const thresholdStr = thresholdMatch[1].replace(/,/g, '');
+        const cookieThreshold = parseFloat(thresholdStr);
+        const currentCookies = Game.cookiesEarned;
+
+        const progressPercent = Math.min(100, (currentCookies / cookieThreshold) * 100);
+        progressColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
+
+        progress = {
+          current: currentCookies,
+          target: cookieThreshold,
+          percent: progressPercent,
+          label: 'Cookies Baked'
+        };
+
+        // Calculate time remaining
+        if (currentCookies < cookieThreshold && Game.cookiesPs > 0) {
+          const remaining = cookieThreshold - currentCookies;
+          timeRemaining = (remaining / Game.cookiesPs) * 1000; // Convert to milliseconds
+        }
+      }
+    }
+    // Special achievements (Hardcore, Neverclick, True Neverclick)
+    else if (achievement.id === 38 || achievement.id === 39 || achievement.id === 203) {
+      // Hardcore (38), Neverclick (39), True Neverclick (203)
+      const isHardcore = achievement.id === 38;
+      const isNeverclick = achievement.id === 39;
+      const isTrueNeverclick = achievement.id === 203;
+
+      if (isHardcore) {
+        // "Bake 1 billion cookies with no upgrades purchased"
+        const cookieThreshold = 1000000000;
+        const currentCookies = Game.cookiesEarned;
+        const upgradesCheck = Game.UpgradesOwned === 0;
+
+        const progressPercent = Math.min(100, (currentCookies / cookieThreshold) * 100);
+        progressColor = upgradesCheck ? (progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6')) : '#f66';
+
+        progress = {
+          current: currentCookies,
+          target: cookieThreshold,
+          percent: progressPercent,
+          label: 'Cookies (No upgrades)'
+        };
+
+        if (currentCookies < cookieThreshold && Game.cookiesPs > 0) {
+          const remaining = cookieThreshold - currentCookies;
+          timeRemaining = (remaining / Game.cookiesPs) * 1000;
+        }
+      } else if (isNeverclick || isTrueNeverclick) {
+        // Track cookie progress for Neverclick achievements
+        const cookieThreshold = 1000000; // Neverclick threshold
+        const currentCookies = Game.cookiesEarned;
+
+        const progressPercent = Math.min(100, (currentCookies / cookieThreshold) * 100);
+        progressColor = progressPercent < 50 ? '#f66' : (progressPercent < 80 ? '#fc6' : '#6f6');
+
+        progress = {
+          current: currentCookies,
+          target: cookieThreshold,
+          percent: progressPercent,
+          label: isNeverclick ? 'Cookies (≤15 clicks)' : 'Cookies (0 clicks)'
+        };
+
+        if (currentCookies < cookieThreshold && Game.cookiesPs > 0) {
+          const remaining = cookieThreshold - currentCookies;
+          timeRemaining = (remaining / Game.cookiesPs) * 1000;
+        }
+      }
+    }
+
     return {
       module: 'Achievements',
       status: 'active',
@@ -370,6 +453,9 @@ export class AchievementHandler {
       reason: achievement.ddesc.replace(/<q>.*?<\/q>/ig, '').substring(0, 50),
       nextAction: this.grinding() ? 'Grinding mode (no sleep)' : undefined,
       icon: '🏆',
+      progress,
+      timeRemaining,
+      progressColor,
       details: {
         'Current': achievement.name,
         'Progress': `${wonCount}/${totalAchievements}`,

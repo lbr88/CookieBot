@@ -617,7 +617,20 @@ export class PurchaseManager {
 
     // Check if next purchase is a building
     if (this.state.nextPurchase && this.state.nextPurchaseType === 'building') {
-      const canAfford = this.state.nextPurchasePrice && this.state.nextPurchasePrice < (Game.cookies - this.savingsGoal);
+      const price = this.state.nextPurchasePrice || 0;
+      const available = Game.cookies - this.savingsGoal;
+      const canAfford = price < available;
+
+      // Calculate progress
+      const progressPercent = Math.min(100, (available / price) * 100);
+      const progressColor = canAfford ? '#6f6' : (progressPercent > 50 ? '#fc6' : '#f66');
+
+      // Calculate time remaining (if not affordable yet)
+      let timeRemaining: number | undefined;
+      if (!canAfford && Game.cookiesPs > 0) {
+        const shortfall = price - available;
+        timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
+      }
 
       return {
         module: 'Buildings',
@@ -627,10 +640,18 @@ export class PurchaseManager {
           ? `Best payback: ${this.state.nextPurchasePP?.toFixed(1)}s`
           : 'Using fallback strategy',
         icon: '🏢',
+        progress: {
+          current: available,
+          target: price,
+          percent: progressPercent,
+          label: 'Cookies'
+        },
+        timeRemaining,
+        progressColor,
         details: {
           'Next Building': this.state.nextPurchase,
-          'Price': typeof Beautify !== 'undefined' ? Beautify(this.state.nextPurchasePrice || 0) : (this.state.nextPurchasePrice || 0),
-          'Available': typeof Beautify !== 'undefined' ? Beautify(Game.cookies - this.savingsGoal) : (Game.cookies - this.savingsGoal),
+          'Price': typeof Beautify !== 'undefined' ? Beautify(price) : price,
+          'Available': typeof Beautify !== 'undefined' ? Beautify(available) : available,
           'Buy 10 Mode': this.state.buy10
         }
       };
@@ -699,7 +720,20 @@ export class PurchaseManager {
 
     // Check if next purchase is an upgrade
     if (this.state.nextPurchase && this.state.nextPurchaseType === 'upgrade') {
-      const canAfford = this.state.nextPurchasePrice && this.state.nextPurchasePrice < (Game.cookies - this.savingsGoal);
+      const price = this.state.nextPurchasePrice || 0;
+      const available = Game.cookies - this.savingsGoal;
+      const canAfford = price < available;
+
+      // Calculate progress
+      const progressPercent = Math.min(100, (available / price) * 100);
+      const progressColor = canAfford ? '#6f6' : (progressPercent > 50 ? '#fc6' : '#f66');
+
+      // Calculate time remaining (if not affordable yet)
+      let timeRemaining: number | undefined;
+      if (!canAfford && Game.cookiesPs > 0) {
+        const shortfall = price - available;
+        timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
+      }
 
       return {
         module: 'Upgrades',
@@ -709,10 +743,18 @@ export class PurchaseManager {
           ? `Best payback: ${this.state.nextPurchasePP?.toFixed(1)}s`
           : 'Using fallback strategy',
         icon: '⬆️',
+        progress: {
+          current: available,
+          target: price,
+          percent: progressPercent,
+          label: 'Cookies'
+        },
+        timeRemaining,
+        progressColor,
         details: {
           'Next Upgrade': this.state.nextPurchase,
-          'Price': typeof Beautify !== 'undefined' ? Beautify(this.state.nextPurchasePrice || 0) : (this.state.nextPurchasePrice || 0),
-          'Available': typeof Beautify !== 'undefined' ? Beautify(Game.cookies - this.savingsGoal) : (Game.cookies - this.savingsGoal),
+          'Price': typeof Beautify !== 'undefined' ? Beautify(price) : price,
+          'Available': typeof Beautify !== 'undefined' ? Beautify(available) : available,
           'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.savingsGoal) : this.savingsGoal
         }
       };

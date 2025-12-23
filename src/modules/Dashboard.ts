@@ -283,10 +283,16 @@ export class Dashboard {
     const dashboard = document.createElement('div');
     dashboard.id = 'cookieBotDashboard';
 
-    // Create header with toggle button
+    // Create header with toggle button and next update timer
     const header = document.createElement('div');
     header.style.cssText = 'padding: 8px 16px; background: rgba(0, 100, 0, 0.3); cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
-    header.innerHTML = '<span style="color: #6f6; font-size: 14px; font-weight: bold;">CookieBot Dashboard</span><span id="dashboardToggle" style="color: #6f6; font-size: 12px;">▼ Collapse</span>';
+    header.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span style="color: #6f6; font-size: 14px; font-weight: bold;">CookieBot Dashboard</span>
+        <span id="dashboardNextUpdate" style="color: #9cf; font-size: 10px; opacity: 0.8;">Next update: checking...</span>
+      </div>
+      <span id="dashboardToggle" style="color: #6f6; font-size: 12px;">▼ Collapse</span>
+    `;
 
     // Create content area
     const content = document.createElement('div');
@@ -474,10 +480,41 @@ export class Dashboard {
         return;
       }
 
+      this.updateNextUpdateTimer();
       this.updateModuleColumns();
       this.updateActivity();
     } catch (e) {
       console.error('Dashboard update error:', e);
+    }
+  }
+
+  /**
+   * Update the "next update" timer in the header
+   */
+  private updateNextUpdateTimer(): void {
+    const timerElement = document.getElementById('dashboardNextUpdate');
+    if (!timerElement) return;
+
+    try {
+      // Check if AutoPlay has a deadline
+      if (typeof AutoPlay !== 'undefined' && AutoPlay.deadline) {
+        const now = Date.now();
+        const timeUntilUpdate = AutoPlay.deadline - now;
+
+        if (timeUntilUpdate > 0) {
+          timerElement.textContent = `Next update: ${this.formatTimeRemaining(timeUntilUpdate)}`;
+          timerElement.style.color = '#9cf';
+        } else {
+          timerElement.textContent = 'Next update: now';
+          timerElement.style.color = '#6f6';
+        }
+      } else {
+        timerElement.textContent = 'Next update: continuous';
+        timerElement.style.color = '#9cf';
+      }
+    } catch (e) {
+      timerElement.textContent = 'Next update: unknown';
+      timerElement.style.color = '#888';
     }
   }
 
@@ -633,34 +670,34 @@ export class Dashboard {
           activeHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
         }
 
-        // Add progress bars and time calculations where applicable
-        if (status.details && Object.keys(status.details).length > 0) {
+        // Add standardized progress bar and time remaining
+        if (status.progress) {
           activeHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
 
-          // Special handling for buildings/upgrades with price and affordability
-          if ((status.module === 'Buildings' || status.module === 'Upgrades') && status.details['Price'] && status.details['Available']) {
-            const priceStr = String(status.details['Price']);
-            const availableStr = String(status.details['Available']);
-            // Try to parse numbers (strip commas/formatting)
-            const price = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
-            const available = parseFloat(availableStr.replace(/[^0-9.]/g, '')) || 0;
+          const progressColor = status.progressColor || '#6f6';
+          const label = status.progress.label || 'Progress';
 
-            if (price > 0) {
-              const percent = Math.min(100, (available / price) * 100);
-              const color = percent >= 100 ? '#6f6' : '#fc6';
-              activeHtml += '<div style="color: #aaa; margin-top: 2px;">Affordability: ' + percent.toFixed(1) + '%</div>';
-              activeHtml += this.createProgressBar(percent, color);
-
-              // Show time remaining if not affordable
-              if (percent < 100 && Game.cookiesPs > 0) {
-                const needed = price - available;
-                const timeMs = (needed / Game.cookiesPs) * 1000;
-                activeHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(timeMs) + '</div>';
-              }
-            }
+          // Show progress with formatted values
+          if (typeof Beautify !== 'undefined') {
+            activeHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + Beautify(status.progress.current) + ' / ' + Beautify(status.progress.target) + '</div>';
+          } else {
+            activeHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + status.progress.percent.toFixed(1) + '%</div>';
           }
 
-          // Show other details
+          // Progress bar
+          activeHtml += this.createProgressBar(status.progress.percent, progressColor);
+
+          // Time remaining
+          if (status.timeRemaining) {
+            activeHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(status.timeRemaining) + '</div>';
+          }
+
+          activeHtml += '</div>';
+        }
+
+        // Show additional details
+        if (status.details && Object.keys(status.details).length > 0) {
+          activeHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
           for (const [key, value] of Object.entries(status.details)) {
             if (key !== 'Price' && key !== 'Available') {
               activeHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
@@ -694,36 +731,34 @@ export class Dashboard {
           waitingHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
         }
 
-        // Add time calculations where applicable
-        if (status.details && Object.keys(status.details).length > 0) {
+        // Add standardized progress bar and time remaining
+        if (status.progress) {
           waitingHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
 
-          // Special handling for wrinklers with time until pop
-          if (status.module === 'Wrinklers' && typeof Game !== 'undefined' && Game.wrinklers) {
-            const maxWrinklers = 12;
-            const currentCount = Game.wrinklers.filter((w: any) => w.phase > 0).length;
-            if (currentCount < maxWrinklers) {
-              // Show progress for wrinkler spawning (they take time to spawn)
-              const percent = (currentCount / maxWrinklers) * 100;
-              waitingHtml += '<div style="color: #aaa; margin-top: 2px;">Wrinklers: ' + currentCount + '/' + maxWrinklers + '</div>';
-              waitingHtml += this.createProgressBar(percent, '#a8a');
-            }
+          const progressColor = status.progressColor || '#6f6';
+          const label = status.progress.label || 'Progress';
+
+          // Show progress with formatted values
+          if (typeof Beautify !== 'undefined') {
+            waitingHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + Beautify(status.progress.current) + ' / ' + Beautify(status.progress.target) + '</div>';
+          } else {
+            waitingHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + status.progress.percent.toFixed(1) + '%</div>';
           }
 
-          // Special handling for sugar lumps with time until harvest
-          if (status.module === 'Sugar Lumps' && typeof Game !== 'undefined' && Game.lumpT) {
-            const timeUntilRipe = Game.lumpT - Date.now();
-            if (timeUntilRipe > 0) {
-              const totalTime = 20 * 60 * 60 * 1000; // 20 hours
-              const elapsed = totalTime - timeUntilRipe;
-              const percent = (elapsed / totalTime) * 100;
-              waitingHtml += '<div style="color: #aaa; margin-top: 2px;">Time until ripe:</div>';
-              waitingHtml += this.createProgressBar(percent, '#fc6');
-              waitingHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(timeUntilRipe) + '</div>';
-            }
+          // Progress bar
+          waitingHtml += this.createProgressBar(status.progress.percent, progressColor);
+
+          // Time remaining
+          if (status.timeRemaining) {
+            waitingHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(status.timeRemaining) + '</div>';
           }
 
-          // Show other details
+          waitingHtml += '</div>';
+        }
+
+        // Show additional details
+        if (status.details && Object.keys(status.details).length > 0) {
+          waitingHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
           for (const [key, value] of Object.entries(status.details)) {
             waitingHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
           }

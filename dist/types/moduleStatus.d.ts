@@ -20,6 +20,17 @@ export interface ModuleStatus {
     details?: {
         [key: string]: string | number | boolean;
     };
+    /** Progress tracking (e.g., cookies saved, items purchased) */
+    progress?: {
+        current: number;
+        target: number;
+        percent: number;
+        label?: string;
+    };
+    /** Time remaining until completion (in milliseconds) */
+    timeRemaining?: number;
+    /** Color for progress bar (e.g., "#6f6", "#fc6") */
+    progressColor?: string;
 }
 /**
  * Collection of all module statuses

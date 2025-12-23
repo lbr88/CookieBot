@@ -79,6 +79,10 @@ export declare class Dashboard {
      */
     updateDashboard(): void;
     /**
+     * Update the "next update" timer in the header
+     */
+    private updateNextUpdateTimer;
+    /**
      * Helper to create a progress bar HTML
      */
     private createProgressBar;

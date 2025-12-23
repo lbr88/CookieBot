@@ -28,6 +28,20 @@ export interface ModuleStatus {
   details?: {
     [key: string]: string | number | boolean;
   };
+
+  /** Progress tracking (e.g., cookies saved, items purchased) */
+  progress?: {
+    current: number;    // Current value (e.g., cookies saved, items purchased)
+    target: number;     // Target value (e.g., savings goal, achievement threshold)
+    percent: number;    // Percentage complete (0-100)
+    label?: string;     // Label for the progress (e.g., "Cookies", "Buildings")
+  };
+
+  /** Time remaining until completion (in milliseconds) */
+  timeRemaining?: number;
+
+  /** Color for progress bar (e.g., "#6f6", "#fc6") */
+  progressColor?: string;
 }
 
 /**
