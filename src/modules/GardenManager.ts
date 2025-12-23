@@ -225,8 +225,17 @@ export class GardenManager {
    * Original: AutoPlay.havePlant (lines 1110-1117)
    */
   private havePlant(garden: any, plantKey: string): boolean {
+    // Safety check: ensure plantKey is valid
+    if (!plantKey || typeof plantKey !== 'string') {
+      console.error('GardenManager.havePlant: Invalid plantKey:', plantKey);
+      return false;
+    }
+
     // Safety check: ensure plant exists before accessing properties
-    if (!garden.plants[plantKey]) return false;
+    if (!garden.plants[plantKey]) {
+      console.error('GardenManager.havePlant: Plant not found in garden.plants:', plantKey);
+      return false;
+    }
 
     if (garden.plants[plantKey].unlocked) return true;
 
