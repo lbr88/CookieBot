@@ -670,16 +670,26 @@ export class PurchaseManager {
 
     // Check if waiting for Hardcore achievement
     if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
+      // Count available upgrades
+      let availableUpgrades = 0;
+      for (const key in Game.Upgrades) {
+        const upgrade = Game.Upgrades[key];
+        if (upgrade.unlocked && !upgrade.bought) {
+          availableUpgrades++;
+        }
+      }
+
       return {
         module: 'Upgrades',
-        status: 'blocked',
-        currentAction: 'Waiting for first upgrade',
-        reason: 'Protecting Hardcore achievement',
-        nextAction: 'Manually purchase any upgrade to continue',
+        status: 'waiting',
+        currentAction: 'Waiting for manual purchase',
+        reason: 'Protecting Hardcore achievement - requires manual first upgrade',
+        nextAction: availableUpgrades > 0 ? `${availableUpgrades} upgrade${availableUpgrades !== 1 ? 's' : ''} available` : 'No upgrades unlocked yet',
         icon: '⬆️',
         details: {
           'Hardcore Won': false,
           'Upgrades Owned': 0,
+          'Available': availableUpgrades,
           'Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies) : Game.cookies,
           'Action': 'Manually buy upgrade'
         }
