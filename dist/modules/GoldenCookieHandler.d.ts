@@ -6,6 +6,8 @@ import type { ModuleStatus } from '../types/moduleStatus';
 export interface GoldenCookieConfig {
     GoldenClickMode?: number;
     CheatGolden?: number;
+    getGoldenClickMode?: () => number;
+    getCheatGolden?: () => number;
 }
 export declare class GoldenCookieHandler {
     private config;
@@ -18,6 +20,14 @@ export declare class GoldenCookieHandler {
     private addActivity;
     private grindingCheat;
     constructor(config?: GoldenCookieConfig, logAction?: (action: string, details?: string) => void, addActivity?: (activity: string) => void, grindingCheat?: () => boolean);
+    /**
+     * Get current GoldenClickMode (from live config or fallback)
+     */
+    private getGoldenClickMode;
+    /**
+     * Get current CheatGolden (from live config or fallback)
+     */
+    private getCheatGolden;
     /**
      * Update runtime state
      */

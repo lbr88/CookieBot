@@ -205,6 +205,8 @@ export default class AutoPlay {
       {
         GoldenClickMode: this.config.autoGoldenCookie ? 1 : 0,
         CheatGolden: this.config.cheatGolden,
+        getGoldenClickMode: () => this.config.autoGoldenCookie ? 1 : 0,  // Live getter
+        getCheatGolden: () => this.config.cheatGolden  // Live getter
       },
       logAction,
       addActivity,

@@ -11,6 +11,8 @@ declare const Beautify: ((value: number, floats?: number) => string) | undefined
 export interface GoldenCookieConfig {
   GoldenClickMode?: number; // 0=off, 1=normal, 2=aggressive
   CheatGolden?: number; // 0=off, 1=auto, 2+=manual levels
+  getGoldenClickMode?: () => number; // Live getter for current config value
+  getCheatGolden?: () => number; // Live getter for current config value
 }
 
 export class GoldenCookieHandler {
@@ -36,6 +38,26 @@ export class GoldenCookieHandler {
     this.logAction = logAction || (() => {});
     this.addActivity = addActivity || (() => {});
     this.grindingCheat = grindingCheat || (() => false);
+  }
+
+  /**
+   * Get current GoldenClickMode (from live config or fallback)
+   */
+  private getGoldenClickMode(): number {
+    if (this.config.getGoldenClickMode) {
+      return this.config.getGoldenClickMode();
+    }
+    return this.config.GoldenClickMode || 0;
+  }
+
+  /**
+   * Get current CheatGolden (from live config or fallback)
+   */
+  private getCheatGolden(): number {
+    if (this.config.getCheatGolden) {
+      return this.config.getCheatGolden();
+    }
+    return this.config.CheatGolden || 0;
   }
 
   /**
@@ -65,7 +87,8 @@ export class GoldenCookieHandler {
    * Pops first golden cookie or reindeer based on configuration
    */
   handleGoldenCookies(): void {
-    if (!this.config.GoldenClickMode || this.config.GoldenClickMode === 0) return;
+    const goldenClickMode = this.getGoldenClickMode();
+    if (!goldenClickMode || goldenClickMode === 0) return;
 
     // Grab fortune cookie from ticker
     if (Game.TickerEffect) {
@@ -91,7 +114,7 @@ export class GoldenCookieHandler {
       this.hyperActive = true; // check whether full activity
 
       // Handle cookie storm drops (aggressive mode only)
-      if (s.force === 'cookie storm drop' && this.config.GoldenClickMode === 2) {
+      if (s.force === 'cookie storm drop' && goldenClickMode === 2) {
         s.pop();
         this.logAction('Clicked cookie storm drop', s.type);
       }
@@ -154,16 +177,17 @@ export class GoldenCookieHandler {
    * Cheat golden cookies by advancing their spawn timer
    */
   private cheatGoldenCookies(): void {
-    if (!this.config.CheatGolden || this.config.CheatGolden === 0) return;
+    const cheatGolden = this.getCheatGolden();
+    if (!cheatGolden || cheatGolden === 0) return;
 
     // Don't cheat if Lucky payout isn't bought and we have enough heavenly chips
     if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
       return;
     }
 
-    let level = 10 + 30 * (this.config.CheatGolden - 1);
+    let level = 10 + 30 * (cheatGolden - 1);
 
-    if (this.config.CheatGolden === 1) {
+    if (cheatGolden === 1) {
       // Auto cheat mode
       if (this.wantAscend) return; // already cheated enough
       if (!this.grindingCheat()) return; // only cheat in grinding
@@ -232,8 +256,11 @@ export class GoldenCookieHandler {
    * Get current golden cookie handler status
    */
   getStatus(): ModuleStatus {
+    const goldenClickMode = this.getGoldenClickMode();
+    const cheatGolden = this.getCheatGolden();
+
     // Check if golden cookie clicking is enabled
-    if (!this.config.GoldenClickMode || this.config.GoldenClickMode === 0) {
+    if (!goldenClickMode || goldenClickMode === 0) {
       return {
         module: 'Golden Cookies',
         status: 'disabled',
@@ -273,8 +300,8 @@ export class GoldenCookieHandler {
     const activeBuff = this.getActiveBuff();
 
     // Check for cheating mode
-    if (this.config.CheatGolden && this.config.CheatGolden > 0) {
-      const level = this.config.CheatGolden === 1 ? 'Auto' : this.config.CheatGolden;
+    if (cheatGolden && cheatGolden > 0) {
+      const level = cheatGolden === 1 ? 'Auto' : cheatGolden;
       return {
         module: 'Golden Cookies',
         status: 'active',
@@ -283,7 +310,7 @@ export class GoldenCookieHandler {
         nextAction: activeFrenzy ? `Active: ${activeBuff}` : 'Waiting for golden cookies',
         icon: '✨',
         details: {
-          'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+          'Mode': goldenClickMode === 2 ? 'Aggressive' : 'Normal',
           'Cheat Level': level,
           'Active Shimmers': activeShimmers,
           'Golden Cookies': goldenCount,
@@ -298,11 +325,11 @@ export class GoldenCookieHandler {
         module: 'Golden Cookies',
         status: 'active',
         currentAction: 'Clicking shimmers',
-        reason: this.config.GoldenClickMode === 2 ? 'Aggressive mode (includes storm drops)' : 'Normal mode',
+        reason: goldenClickMode === 2 ? 'Aggressive mode (includes storm drops)' : 'Normal mode',
         nextAction: activeFrenzy ? `Active buff: ${activeBuff}` : undefined,
         icon: '✨',
         details: {
-          'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+          'Mode': goldenClickMode === 2 ? 'Aggressive' : 'Normal',
           'Active Shimmers': activeShimmers,
           'Golden Cookies': goldenCount,
           'Active Buff': activeBuff || 'None',
@@ -315,7 +342,7 @@ export class GoldenCookieHandler {
       module: 'Golden Cookies',
       status: 'idle',
       currentAction: 'Waiting for golden cookies',
-      reason: this.config.GoldenClickMode === 2 ? 'Aggressive mode' : 'Normal mode',
+      reason: goldenClickMode === 2 ? 'Aggressive mode' : 'Normal mode',
       icon: '✨',
       details: {
         'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
