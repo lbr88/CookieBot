@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-1';
+  static readonly version = '2.052-2';
 
   // State
   private config: AutoPlayConfig;
@@ -390,10 +390,6 @@ export default class AutoPlay {
     // ===== Phase 2: Setup =====
     this.state.now = Date.now();
 
-    // DON'T reset activities every cycle - let them accumulate
-    // Only reset when mainActivity changes (checked in Phase 8)
-    // this.state.activities = this.state.mainActivity;
-
     // Handle "Just Right" achievement (special case)
     if (this.state.nextAchievement === 397) {
       this.runJustRight();
@@ -475,6 +471,10 @@ export default class AutoPlay {
     if (bakeryName.slice(0, robotName.length) !== robotName) {
       (Game as any).bakeryNameL.textContent = robotName + bakeryName;
     }
+
+    // Reset activities to mainActivity at start of periodic phase
+    // Activities will be added to throughout Phase 8 by various modules
+    this.state.activities = this.state.mainActivity;
 
     // Skip status() when menu is open - it closes the menu
     if (!Game.onMenu) {
