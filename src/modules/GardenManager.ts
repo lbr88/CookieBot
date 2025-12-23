@@ -225,17 +225,8 @@ export class GardenManager {
    * Original: AutoPlay.havePlant (lines 1110-1117)
    */
   private havePlant(garden: any, plantKey: string): boolean {
-    // Safety check: ensure plantKey is valid
-    if (!plantKey || typeof plantKey !== 'string') {
-      console.error('GardenManager.havePlant: Invalid plantKey:', plantKey);
-      return false;
-    }
-
-    // Safety check: ensure plant exists before accessing properties
-    if (!garden.plants[plantKey]) {
-      console.error('GardenManager.havePlant: Plant not found in garden.plants:', plantKey);
-      return false;
-    }
+    // Safety check: ensure plantKey is valid and exists
+    if (!plantKey || !garden.plants[plantKey]) return false;
 
     if (garden.plants[plantKey].unlocked) return true;
 
@@ -440,14 +431,47 @@ export class GardenManager {
     // Reset plant list
     this.plantList = [0, 0, 0, 0];
 
+    // Check for special expensive plants first (indices 1-2)
+    // These are checked separately before the main loop
+    // Original: lines 1133-1143
+
+    // Check for everdaisy (index 2) - needs specific corner tile unlocked
+    const checkCorner = (sector: number) => {
+      const chkx = sector % 2 ? 0 : 5;
+      const chky = sector > 1 ? 0 : 5;
+      return garden.isTileUnlocked(chkx, chky);
+    };
+
     // Farm level < 5: Only use one sector
     if (farmLevel < 5) {
+      // Check special plants for sector 0
+      if (checkCorner(0) && !this.havePlant(garden, 'everdaisy') &&
+          garden.plants['elderwort']?.unlocked && garden.plants['tidygrass']?.unlocked) {
+        this.plantList[0] = 2; // everdaisy
+        return;
+      }
+      if (checkCorner(0) && !this.havePlant(garden, 'queenbeetLump') &&
+          garden.plants['queenbeet']?.unlocked) {
+        this.plantList[0] = 1; // queenbeetLump
+        return;
+      }
       this.plantList[0] = this.findNextPlant(garden, 0);
       return;
     }
 
     // Farm level >= 5: Use all 4 sectors
     for (let sector = 0; sector < 4; sector++) {
+      // Check special plants first
+      if (checkCorner(sector) && !this.havePlant(garden, 'everdaisy') &&
+          garden.plants['elderwort']?.unlocked && garden.plants['tidygrass']?.unlocked) {
+        this.plantList[sector] = 2; // everdaisy
+        continue;
+      }
+      if (checkCorner(sector) && !this.havePlant(garden, 'queenbeetLump') &&
+          garden.plants['queenbeet']?.unlocked) {
+        this.plantList[sector] = 1; // queenbeetLump
+        continue;
+      }
       this.plantList[sector] = this.findNextPlant(garden, sector);
     }
   }
@@ -458,8 +482,10 @@ export class GardenManager {
    * Original: Logic from AutoPlay.findPlants (lines 1222-1253)
    */
   private findNextPlant(garden: any, sector: number): number {
-    // Traverse PLANT_DEPENDENCIES to find first unlockable plant
-    for (let i = 0; i < PLANT_DEPENDENCIES.length; i++) {
+    // Start at index 3 to skip special cases (dummy, queenbeetLump, everdaisy)
+    // These are handled separately in findPlants()
+    // Original: line 1144 "for (var i = 3"
+    for (let i = 3; i < PLANT_DEPENDENCIES.length; i++) {
       const [targetPlant, parent1, parent2] = PLANT_DEPENDENCIES[i];
 
       // Skip if already have it (unlocked or growing)
