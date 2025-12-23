@@ -368,8 +368,8 @@ export class AchievementHandler {
     let timeRemaining: number | undefined;
     let progressColor: string | undefined;
 
-    // List of "bake X cookies" achievement IDs (from original dashboard code)
-    const bakingAchievements = [2, 8, 21, 27, 35, 42, 48, 54, 60, 66, 72, 78, 84, 90, 96, 102, 202, 267, 318];
+    // List of "bake X cookies" achievement IDs (from original dashboard code line 2794)
+    const bakingAchievements = [225, 227, 229, 279, 280, 372, 373, 374, 375, 390, 391, 429, 451, 452, 453, 470, 471, 472, 534, 535, 536, 578, 579, 586, 587, 592, 593];
 
     // Check if this is a trackable achievement
     if (bakingAchievements.indexOf(achievement.id) !== -1) {
