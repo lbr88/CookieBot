@@ -34,8 +34,8 @@
 
     if (typeof Game !== 'undefined' && typeof Game.ready !== 'undefined' && Game.ready) {
       showStatus('Game ready, loading bot...');
-      // Load the compiled TypeScript version from dist (latest version)
-      Game.LoadMod('https://lbr88.github.io/CookieBot/dist/cookieAutoPlayBeta-latest.js');
+      // Load the compiled TypeScript version from dist (versioned file matches userscript version)
+      Game.LoadMod('https://lbr88.github.io/CookieBot/dist/cookieAutoPlayBeta-v2.052.7.js');
       clearInterval(readyCheck);
       setTimeout(() => showStatus('Bot loaded!'), 1000);
     }
