@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052.11';
+  static readonly version = '2.052.12';
 
   // State
   private config: AutoPlayConfig;
@@ -646,12 +646,15 @@ export default class AutoPlay {
 
     // Sync purchase info from BuildingManager to AutoPlay state
     const purchaseInfo = this.purchaseManager.getPurchaseInfo();
+    console.log('AutoPlay.bestBuy: purchaseInfo from manager:', purchaseInfo);
     if (purchaseInfo) {
       this.state.nextPurchase = purchaseInfo.name;
       this.state.nextPurchaseType = purchaseInfo.type;
       this.state.nextPurchasePP = purchaseInfo.pp;
       this.state.nextPurchasePrice = purchaseInfo.price;
+      console.log('AutoPlay.bestBuy: Synced to state:', this.state.nextPurchase, this.state.nextPurchaseType, this.state.nextPurchasePrice);
     } else {
+      console.log('AutoPlay.bestBuy: No purchase info, clearing state');
       this.state.nextPurchase = null;
       this.state.nextPurchaseType = null;
       this.state.nextPurchasePP = null;

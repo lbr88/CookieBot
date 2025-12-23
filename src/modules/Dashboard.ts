@@ -499,6 +499,11 @@ export class Dashboard {
       return;
     }
 
+    // DEBUG: Log what we're seeing
+    console.log('Dashboard Update - nextPurchase:', AutoPlay.nextPurchase, 'type:', AutoPlay.nextPurchaseType, 'price:', AutoPlay.nextPurchasePrice);
+    console.log('Dashboard Update - mainActivity:', AutoPlay.mainActivity);
+    console.log('Dashboard Update - activities:', AutoPlay.activities);
+
     // Show next purchase
     if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
       const purchaseColor = AutoPlay.nextPurchaseType === 'building' ? '#6f6' : '#fc6';
@@ -607,8 +612,13 @@ export class Dashboard {
     }
 
     const nextContent = document.getElementById('dashNextContent');
+    console.log('Dashboard Update - nextContent element:', nextContent);
+    console.log('Dashboard Update - generated HTML length:', nextHtml.length);
     if (nextContent) {
       nextContent.innerHTML = nextHtml || 'Initializing...';
+      console.log('Dashboard Update - HTML inserted, new innerHTML length:', nextContent.innerHTML.length);
+    } else {
+      console.error('Dashboard Update - dashNextContent element not found!');
     }
   }
 

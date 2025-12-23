@@ -63,14 +63,17 @@ export class PurchaseManager {
    * Get current purchase info for dashboard
    */
   getPurchaseInfo(): PurchaseInfo | null {
+    console.log('PurchaseManager.getPurchaseInfo: state.nextPurchase =', this.state.nextPurchase);
     if (!this.state.nextPurchase) return null;
 
-    return {
+    const info = {
       name: this.state.nextPurchase,
       type: this.state.nextPurchaseType || 'building',
       pp: this.state.nextPurchasePP,
       price: this.state.nextPurchasePrice || 0,
     };
+    console.log('PurchaseManager.getPurchaseInfo: returning', info);
+    return info;
   }
 
   /**
@@ -292,6 +295,7 @@ export class PurchaseManager {
 
     // Early game: if no buildings owned yet, buy the cheapest available
     if (Game.BuildingsOwned === 0) {
+      console.log('PurchaseManager: Early game mode - BuildingsOwned = 0');
       for (let i = 0; i < Game.ObjectsById.length; i++) {
         const me = Game.ObjectsById[i];
         if (me.locked) continue;
@@ -301,6 +305,7 @@ export class PurchaseManager {
           this.state.nextPurchaseType = 'building';
           this.state.nextPurchasePrice = me.getPrice();
           this.state.nextPurchasePP = null;
+          console.log('PurchaseManager: Set early game purchase:', this.state.nextPurchase, this.state.nextPurchasePrice);
         }
         if (this.buyBuilding(me, checkAmount, buyAmount)) return;
       }
