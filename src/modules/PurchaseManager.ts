@@ -214,6 +214,9 @@ export class PurchaseManager {
     if (Game.Achievements["Hardcore"].won || Game.UpgradesOwned !== 0) {
       for (const u of Game.UpgradesInStore) {
         if (!this.shouldAvoidBuy(u) && !u.bought) {
+          // Safety check: ensure upgrade exists in CookieMonster data
+          if (!CookieMonsterData.Upgrades[u.name]) continue;
+
           if (CookieMonsterData.Upgrades[u.name].pp < 1) {
             if (this.buyUpgrade(u)) haveBought = true;
           } else if (CookieMonsterData.Upgrades[u.name].pp < minpp) {
