@@ -71,6 +71,8 @@ export class AscensionManager {
       neverclickWarn: true,
       resetTime: Date.now()
     };
+    // Initialize global AutoPlay.onAscend flag
+    AutoPlay.onAscend = false;
   }
 
   /**
@@ -88,6 +90,7 @@ export class AscensionManager {
       this.context.setDeadline(0); // reactivate all activities
       this.context.now = Date.now();
       this.state.onAscend = false;
+      AutoPlay.onAscend = false; // Sync with global AutoPlay object
       this.state.loggedAchievements = {}; // Reset achievement tracking for new run
       return;
     }
@@ -187,14 +190,6 @@ export class AscensionManager {
     if (isFirstRun && currentPrestige < 365 && !isHardcoreAchievement) {
       // Don't ascend yet - need to reach 365+ prestige for first ascension
       this.context.logStatus('prestige', 'Waiting for 365+ prestige before first ascension (currently ' + Math.floor(currentPrestige) + ')');
-      return;
-    }
-
-    // Don't ascend if we just reincarnated (within 10 seconds)
-    // This prevents ascending loop for achievements that are won instantly after reincarnation
-    const timeSinceReset = Date.now() - this.state.resetTime;
-    if (timeSinceReset < 10000) {
-      this.context.logStatus('ascend', 'Achievement won too quickly after reincarnation - waiting before ascending (will check again)');
       return;
     }
 
@@ -495,6 +490,7 @@ export class AscensionManager {
       }
       Game.Ascend(true);
       this.state.onAscend = true;
+      AutoPlay.onAscend = true; // Sync with global AutoPlay object
     }
   }
 
