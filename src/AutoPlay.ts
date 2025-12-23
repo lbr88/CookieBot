@@ -26,7 +26,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-8';
+  static readonly version = '2.052-36';
 
   // State
   private config: AutoPlayConfig;
@@ -257,7 +257,11 @@ export default class AutoPlay {
       () => this.grindingCheat()
     );
 
-    this.savingsManager = new SavingsManager(this.Config, logStatus);
+    this.savingsManager = new SavingsManager(
+      { SavingStrategy: this.Config.SavingStrategy },
+      { getSavingStrategy: () => this.Config.SavingStrategy },  // Live getter reads from Config
+      logStatus
+    );
 
     this.purchaseManager = new PurchaseManager({
       logAction,
@@ -291,7 +295,10 @@ export default class AutoPlay {
 
     this.dragonManager = new DragonManager();
     // Dashboard already created at top of constructor
-    this.nightMode = new NightMode(this.config);
+    this.nightMode = new NightMode(
+      { nightMode: this.Config.NightMode },
+      { getNightMode: () => this.Config.NightMode }  // Live getter reads from Config
+    );
     this.pantheonManager = new PantheonManager();
     this.grimoireManager = new GrimoireManager();
     this.gardenManager = new GardenManager();

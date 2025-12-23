@@ -7,17 +7,28 @@
  * - LUCKY (2): Save for Lucky golden cookie (100 minutes of CPS)
  * - LUCKY_FRENZY (3): Save for Lucky Frenzy (700 minutes of CPS)
  */
+interface SavingsManagerConfig {
+    SavingStrategy: number;
+}
+interface SavingsManagerContext {
+    getSavingStrategy: () => number;
+}
 export declare class SavingsManager {
     private savingsGoal;
     private savingsStart;
     private config;
+    private context;
     private now;
     private logStatus;
     private readonly START_TIME;
     private readonly TARGET_TIME;
     private readonly LUCKY_MULTIPLIER;
     private readonly FRENZY_MULTIPLIER;
-    constructor(config?: any, logStatus?: (type: string, message: string) => void);
+    constructor(config: SavingsManagerConfig, context: SavingsManagerContext, logStatus?: (type: string, message: string) => void);
+    /**
+     * Get current saving strategy (from live config or context getter)
+     */
+    private getSavingStrategy;
     /**
      * Initialize savings tracking (called on ascension)
      */
@@ -56,4 +67,5 @@ export declare class SavingsManager {
      */
     getStatus(): any;
 }
+export {};
 //# sourceMappingURL=SavingsManager.d.ts.map

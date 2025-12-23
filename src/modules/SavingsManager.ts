@@ -10,10 +10,19 @@
 
 declare const Beautify: (num: number) => string;
 
+interface SavingsManagerConfig {
+  SavingStrategy: number; // 0=NONE, 1=AUTO, 2=LUCKY, 3=LUCKY_FRENZY
+}
+
+interface SavingsManagerContext {
+  getSavingStrategy: () => number; // Live getter for current config value
+}
+
 export class SavingsManager {
   private savingsGoal: number = 0;
   private savingsStart: number = 0;
-  private config: any; // Will be injected
+  private config: SavingsManagerConfig;
+  private context: SavingsManagerContext;
   private now: number = 0;
   private logStatus: (type: string, message: string) => void;
 
@@ -25,10 +34,27 @@ export class SavingsManager {
   private readonly LUCKY_MULTIPLIER = 100;        // 100 minutes of CPS
   private readonly FRENZY_MULTIPLIER = 7;         // 7x for Lucky Frenzy
 
-  constructor(config: any = {}, logStatus: (type: string, message: string) => void = () => {}) {
+  constructor(
+    config: SavingsManagerConfig,
+    context: SavingsManagerContext,
+    logStatus: (type: string, message: string) => void = () => {}
+  ) {
     this.config = config;
+    this.context = context;
     this.logStatus = logStatus;
     this.savingsStart = Game.startDate;
+  }
+
+  /**
+   * Get current saving strategy (from live config or context getter)
+   */
+  private getSavingStrategy(): number {
+    // Prefer context getter if available (live config value)
+    if (this.context?.getSavingStrategy) {
+      return this.context.getSavingStrategy();
+    }
+    // Fallback to config passed at construction
+    return this.config.SavingStrategy ?? 1;
   }
 
   /**
@@ -57,7 +83,7 @@ export class SavingsManager {
       return;
     }
 
-    const strategy = this.config?.SavingStrategy ?? 1;
+    const strategy = this.getSavingStrategy();
 
     // NONE: No savings
     if (strategy === 0) {
@@ -174,7 +200,7 @@ export class SavingsManager {
    * Get status for dashboard display
    */
   getStatus(): any {
-    const strategy = this.config?.SavingStrategy ?? 1;
+    const strategy = this.getSavingStrategy();
     const isActive = this.savingsGoal > 0;
 
     // Calculate thresholds

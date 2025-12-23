@@ -10,10 +10,16 @@
  * Night hours: 11pm (23:00) to 7am (07:00)
  * Active hours: 7am to 11pm
  */
-import type { AutoPlayConfig } from '../types/autoplay';
+interface NightModeConfig {
+    nightMode: number;
+}
+interface NightModeContext {
+    getNightMode: () => number;
+}
 export declare class NightMode {
     private isNight;
     private config;
+    private context;
     private addActivity?;
     private useLumpCallback?;
     private grindinCheckCallback?;
@@ -21,10 +27,15 @@ export declare class NightMode {
     private pantheonManager?;
     private stockMarketManager?;
     /**
-     * Constructor - expects config object
-     * @param config AutoPlayConfig for accessing night mode settings
+     * Constructor - expects config object and context with live getter
+     * @param config NightModeConfig for accessing night mode settings
+     * @param context Context with live config getter
      */
-    constructor(config: AutoPlayConfig);
+    constructor(config: NightModeConfig, context: NightModeContext);
+    /**
+     * Get current night mode (from live config or context getter)
+     */
+    private getNightMode;
     /**
      * Set callback for activity logging
      */
@@ -91,6 +102,7 @@ export declare class NightMode {
     isCurrentlySleeping(): boolean;
     /**
      * Toggle night mode
+     * Note: This method is deprecated - config should be changed via AutoPlay.Config
      */
     toggle(): void;
     /**
@@ -98,4 +110,5 @@ export declare class NightMode {
      */
     getStatus(): any;
 }
+export {};
 //# sourceMappingURL=NightMode.d.ts.map

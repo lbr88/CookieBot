@@ -11,11 +11,18 @@
  * Active hours: 7am to 11pm
  */
 
-import type { AutoPlayConfig } from '../types/autoplay';
+interface NightModeConfig {
+  nightMode: number; // 0=OFF, 1=AUTO, 2=ON
+}
+
+interface NightModeContext {
+  getNightMode: () => number; // Live getter for current config value
+}
 
 export class NightMode {
   private isNight: boolean = false;
-  private config: AutoPlayConfig;
+  private config: NightModeConfig;
+  private context: NightModeContext;
 
   // Optional callbacks for integration with AutoPlay
   private addActivity?: (msg: string) => void;
@@ -26,11 +33,25 @@ export class NightMode {
   private stockMarketManager?: any; // StockMarketManager reference
 
   /**
-   * Constructor - expects config object
-   * @param config AutoPlayConfig for accessing night mode settings
+   * Constructor - expects config object and context with live getter
+   * @param config NightModeConfig for accessing night mode settings
+   * @param context Context with live config getter
    */
-  constructor(config: AutoPlayConfig) {
+  constructor(config: NightModeConfig, context: NightModeContext) {
     this.config = config;
+    this.context = context;
+  }
+
+  /**
+   * Get current night mode (from live config or context getter)
+   */
+  private getNightMode(): number {
+    // Prefer context getter if available (live config value)
+    if (this.context?.getNightMode) {
+      return this.context.getNightMode();
+    }
+    // Fallback to config passed at construction
+    return this.config.nightMode;
   }
 
   /**
@@ -89,10 +110,8 @@ export class NightMode {
    * Used for pre-night preparation activities
    */
   isPreNightMode(): boolean {
-    // Convert config value to numeric mode
-    const mode = typeof this.config.nightMode === 'number'
-      ? this.config.nightMode
-      : (this.config.nightMode ? 1 : 0);
+    // Read mode from Config (numeric: 0=OFF, 1=AUTO)
+    const mode = this.getNightMode();
 
     // Only prepare for night if mode is not OFF
     if (mode === 0) return false;
@@ -110,10 +129,8 @@ export class NightMode {
     // Don't sleep if on ascension screen
     if (Game.OnAscend) return false;
 
-    // Convert config value to numeric mode: 0=OFF, 1=AUTO, 2=ON
-    const mode = typeof this.config.nightMode === 'number'
-      ? this.config.nightMode
-      : (this.config.nightMode ? 1 : 0);
+    // Read mode from Config (numeric: 0=OFF, 1=AUTO)
+    const mode = this.getNightMode();
 
     // Mode 0: OFF - never sleep
     if (mode === 0) return false;
@@ -275,16 +292,18 @@ export class NightMode {
 
   /**
    * Toggle night mode
+   * Note: This method is deprecated - config should be changed via AutoPlay.Config
    */
   toggle(): void {
-    this.config.nightMode = !this.config.nightMode;
+    // This method is deprecated - modules should not modify config directly
+    // User should change AutoPlay.Config.NightMode instead
   }
 
   /**
    * Get status for dashboard display
    */
   getStatus(): any {
-    const isEnabled = typeof this.config.nightMode === 'number' ? this.config.nightMode > 0 : this.config.nightMode;
+    const isEnabled = this.getNightMode() > 0;
     const isActive = this.isNight;
 
     if (!isEnabled) {
