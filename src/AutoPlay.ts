@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052.19';
+  static readonly version = '2.052.20';
 
   // State
   private config: AutoPlayConfig;
@@ -376,19 +376,18 @@ export default class AutoPlay {
    * Runs every 300ms via setInterval
    */
   private periodic(): void {
+    // Schedule next run FIRST so it always continues regardless of early returns
+    this.scheduleNextRun();
+
     // Declare Game global
     const Game = (globalThis as any).Game;
 
     // ===== Phase 0: Early exits for timers =====
-    if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0) {
-      this.scheduleNextRun();
-      return;
-    }
+    if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0) return;
 
     // ===== Phase 1: Delay handling =====
     if (this.state.delay > 0) {
       this.state.delay--;
-      this.scheduleNextRun();
       return;
     }
 
@@ -402,7 +401,6 @@ export default class AutoPlay {
     // Handle "Just Right" achievement (special case)
     if (this.state.nextAchievement === 397) {
       this.runJustRight();
-      this.scheduleNextRun();
       return;
     }
 
@@ -418,7 +416,6 @@ export default class AutoPlay {
       if (this.config.cheatLumps === 4) {
         this.sugarLumpManager.handleSugarLumps();
       }
-      this.scheduleNextRun();
       return;
     }
 
@@ -475,7 +472,6 @@ export default class AutoPlay {
     console.log('Phase 7 check: now=', this.state.now, 'deadline=', this.state.deadline, 'check result=', (this.state.now < this.state.deadline));
     if (this.state.now < this.state.deadline) {
       console.log('Phase 7: Deadline not reached, returning early (Phase 8 skipped)');
-      this.scheduleNextRun();
       return;
     }
 
@@ -600,8 +596,7 @@ export default class AutoPlay {
       }
     }
 
-    // Schedule next periodic run to keep the loop going
-    this.scheduleNextRun();
+    // Note: scheduleNextRun() is called at the START of periodic(), not here
   }
 
   /**
