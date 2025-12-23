@@ -6,6 +6,18 @@ export default class AutoPlay {
     static readonly version = "2.052-8";
     private config;
     private state;
+    Config: {
+        BotMode: number;
+        NightMode: number;
+        ClickMode: number;
+        GoldenClickMode: number;
+        SavingStrategy: number;
+        CheatLumps: number;
+        CheatGolden: number;
+        ShowDashboard: number;
+        HardcoreMode: number;
+        [key: string]: number;
+    };
     private clickManager;
     private goldenCookieHandler;
     private savingsManager;

@@ -47,6 +47,13 @@ export class Dashboard {
   }
 
   /**
+   * Get the current config object (for AutoPlay.Config sync)
+   */
+  getConfig(): Config {
+    return this.config;
+  }
+
+  /**
    * Initialize configuration options
    */
   private initializeConfigData(): void {

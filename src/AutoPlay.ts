@@ -32,6 +32,21 @@ export default class AutoPlay {
   private config: AutoPlayConfig;
   private state: AutoPlayState;
 
+  // Public Config object (matches original AutoPlay.Config structure)
+  // Dashboard and modules read from this
+  public Config: {
+    BotMode: number;
+    NightMode: number;
+    ClickMode: number;
+    GoldenClickMode: number;
+    SavingStrategy: number;
+    CheatLumps: number;
+    CheatGolden: number;
+    ShowDashboard: number;
+    HardcoreMode: number;
+    [key: string]: number;
+  };
+
   // Modules
   private clickManager: ClickManager;
   private goldenCookieHandler: GoldenCookieHandler;
@@ -155,12 +170,30 @@ export default class AutoPlay {
     this.config = this.getDefaultConfig();
     this.state = this.getDefaultState();
 
+    // Initialize public Config object (matches original structure)
+    // This will be synchronized with Dashboard's config after Dashboard is created
+    this.Config = {
+      BotMode: 1,
+      NightMode: 1,
+      ClickMode: 1,
+      GoldenClickMode: 1,
+      SavingStrategy: 1,
+      CheatLumps: 1,
+      CheatGolden: 1,
+      ShowDashboard: 1,
+      HardcoreMode: 1
+    };
+
     // Initialize public achievement arrays
     this.wantedAchievements = [...WANTED_ACHIEVEMENTS];
     this.lateAchievements = [...LUMP_RELATED_ACHIEVEMENTS];
 
     // Create dashboard FIRST so logging callbacks can use it
     this.dashboard = new Dashboard();
+
+    // Sync Config with Dashboard's config system (Dashboard loads from localStorage)
+    // Cast to our Config type since Dashboard's Config interface is just [key: string]: number
+    this.Config = this.dashboard.getConfig() as typeof this.Config;
 
     // Helper methods for logging and activities (now dashboard exists)
     const logAction = (action: string, details?: string) => {
@@ -191,29 +224,30 @@ export default class AutoPlay {
     });
 
     // Initialize modules with proper constructor arguments
+    // Use this.Config (original structure) instead of this.config (TypeScript structure)
     this.clickManager = new ClickManager(
-      { clickMode: this.config.clickMode },
+      { clickMode: this.Config.ClickMode },
       {
         now: this.state.now,
         endPhase: () => this.endPhase(),
         grindingCheat: () => this.grindingCheat(),
-        getClickMode: () => this.config.clickMode  // Live getter for current config
+        getClickMode: () => this.Config.ClickMode  // Live getter reads from Config
       }
     );
 
     this.goldenCookieHandler = new GoldenCookieHandler(
       {
-        GoldenClickMode: this.config.autoGoldenCookie ? 1 : 0,
-        CheatGolden: this.config.cheatGolden,
-        getGoldenClickMode: () => this.config.autoGoldenCookie ? 1 : 0,  // Live getter
-        getCheatGolden: () => this.config.cheatGolden  // Live getter
+        GoldenClickMode: this.Config.GoldenClickMode,
+        CheatGolden: this.Config.CheatGolden,
+        getGoldenClickMode: () => this.Config.GoldenClickMode,  // Live getter reads from Config
+        getCheatGolden: () => this.Config.CheatGolden  // Live getter reads from Config
       },
       logAction,
       addActivity,
       () => this.grindingCheat()
     );
 
-    this.savingsManager = new SavingsManager(this.config, logStatus);
+    this.savingsManager = new SavingsManager(this.Config, logStatus);
 
     this.purchaseManager = new PurchaseManager({
       logAction,
@@ -419,7 +453,7 @@ export default class AutoPlay {
     // ===== Phase 3: Night mode =====
     if (this.nightMode.checkNightMode() && !Game.ascensionMode) {
       // If sleeping, only cheat sugar lumps at level 4 and return
-      if (this.config.cheatLumps === 4) {
+      if (this.Config.CheatLumps === 4) {
         this.sugarLumpManager.handleSugarLumps();
       }
       return;
@@ -427,13 +461,10 @@ export default class AutoPlay {
 
     // ===== Phase 4: Fast actions (always run every 300ms) =====
     this.clickManager.handleClicking();
-
-    if (this.config.autoGoldenCookie) {
-      this.goldenCookieHandler.handleGoldenCookies();
-    }
+    this.goldenCookieHandler.handleGoldenCookies();
 
     // Speed cheat sugar lumps if level 4
-    if (this.config.cheatLumps === 4 && this.config.autoSugarLumps) {
+    if (this.Config.CheatLumps === 4) {
       this.sugarLumpManager.handleSugarLumps();
     }
 
@@ -456,20 +487,16 @@ export default class AutoPlay {
     // ===== Phase 6: Frequent ascension checks =====
     // Check ascend often in reborn and during ascend
     if (Game.ascensionMode === 1 || this.state.onAscend) {
-      if (this.config.autoAscend) {
-        this.ascensionManager.handleAscend();
-        // Sync wantAscend state from ascension manager context
-        this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
-      }
+      this.ascensionManager.handleAscend();
+      // Sync wantAscend state from ascension manager context
+      this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
     }
 
     // Check ascend often for lucky payout
     if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
-      if (this.config.autoAscend) {
-        this.ascensionManager.handleAscend();
-        // Sync wantAscend state from ascension manager context
-        this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
-      }
+      this.ascensionManager.handleAscend();
+      // Sync wantAscend state from ascension manager context
+      this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
     }
 
     // ===== Phase 7: Deadline check (end of high-activity) =====
@@ -573,11 +600,9 @@ export default class AutoPlay {
     }
 
     // Ascension
-    if (this.config.autoAscend) {
-      this.ascensionManager.handleAscend();
-      // Sync wantAscend state from ascension manager context
-      this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
-    }
+    this.ascensionManager.handleAscend();
+    // Sync wantAscend state from ascension manager context
+    this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
 
     // Minigames (garden, pantheon, stock market)
     this.handleMinigames();

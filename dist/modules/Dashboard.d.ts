@@ -2,6 +2,7 @@
  * Manages UI dashboard and menu
  * Migrated from cookieAutoPlayBeta.js lines 2271-3068
  */
+import type { Config } from '../types/autoplay';
 export declare class Dashboard {
     private config;
     private configData;
@@ -18,6 +19,10 @@ export declare class Dashboard {
     private colorTextPre;
     private colorBlue;
     constructor();
+    /**
+     * Get the current config object (for AutoPlay.Config sync)
+     */
+    getConfig(): Config;
     /**
      * Initialize configuration options
      */
