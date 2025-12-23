@@ -826,12 +826,12 @@ export class GardenManager {
    */
   getStatus(): ModuleStatus {
     // Check if garden is unlocked
-    if (!Game.Objects['Farm'] || !Game.Objects['Farm'].minigames || !Game.Objects['Farm'].minigames[0]) {
+    if (!Game.isMinigameReady(Game.Objects['Farm'])) {
       return {
         module: 'Garden',
         status: 'disabled',
         currentAction: 'Not unlocked',
-        reason: 'Farm minigame not available yet',
+        reason: 'Need Farm level 1 to unlock Garden minigame',
         icon: '🌱',
         details: {
           'Farm Level': Game.Objects['Farm']?.level || 0,
