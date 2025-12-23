@@ -988,6 +988,9 @@ export class Dashboard {
       if (AutoPlay.seasonHandler && typeof AutoPlay.seasonHandler.getStatus === 'function') {
         statuses.season = AutoPlay.seasonHandler.getStatus();
       }
+      if (AutoPlay.achievementHandler && typeof AutoPlay.achievementHandler.getStatus === 'function') {
+        statuses.achievements = AutoPlay.achievementHandler.getStatus();
+      }
 
       // Render module statuses
       const moduleOrder: (keyof ModuleStatuses)[] = [
@@ -1002,7 +1005,8 @@ export class Dashboard {
         'stockMarket',
         'sugarLumps',
         'ascension',
-        'season'
+        'season',
+        'achievements'
       ];
 
       // Map status to colors

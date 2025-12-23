@@ -1,6 +1,7 @@
 /**
  * Handles achievement hunting (small achievements, ascension-related)
  */
+import type { ModuleStatus } from '../types/moduleStatus';
 export declare class AchievementHandler {
     /**
      * Handle small achievements that can be obtained through simple interactions
@@ -38,5 +39,9 @@ export declare class AchievementHandler {
      * Main handler called periodically
      */
     handleAchievements(): void;
+    /**
+     * Get achievement handler status
+     */
+    getStatus(): ModuleStatus;
 }
 //# sourceMappingURL=AchievementHandler.d.ts.map

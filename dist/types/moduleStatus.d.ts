@@ -37,5 +37,6 @@ export interface ModuleStatuses {
     sugarLumps?: ModuleStatus;
     ascension?: ModuleStatus;
     season?: ModuleStatus;
+    achievements?: ModuleStatus;
 }
 //# sourceMappingURL=moduleStatus.d.ts.map

@@ -46,4 +46,5 @@ export interface ModuleStatuses {
   sugarLumps?: ModuleStatus;
   ascension?: ModuleStatus;
   season?: ModuleStatus;
+  achievements?: ModuleStatus;
 }

@@ -2,6 +2,10 @@
  * Handles achievement hunting (small achievements, ascension-related)
  */
 
+import type { ModuleStatus } from '../types/moduleStatus';
+
+declare const Game: any;
+
 // AutoPlay global state (defined in cookieAutoPlayBeta.js)
 declare const AutoPlay: {
   robotName: string;
@@ -325,5 +329,53 @@ export class AchievementHandler {
     if (Game.AchievementsById[AutoPlay.nextAchievement].won) {
       this.findNextAchievement();
     }
+  }
+
+  /**
+   * Get achievement handler status
+   */
+  getStatus(): ModuleStatus {
+    if (AutoPlay.finished) {
+      return {
+        module: 'Achievements',
+        status: 'idle',
+        currentAction: 'All achievements complete',
+        reason: 'Job done, idling along',
+        icon: '🏆',
+        details: {
+          'Status': 'Complete'
+        }
+      };
+    }
+
+    const achievement = Game.AchievementsById[AutoPlay.nextAchievement];
+    if (!achievement) {
+      return {
+        module: 'Achievements',
+        status: 'active',
+        currentAction: 'Tracking achievements',
+        reason: 'Looking for next achievement',
+        icon: '🏆',
+        details: {}
+      };
+    }
+
+    const totalAchievements = Object.keys(Game.Achievements).length;
+    const wonCount = Object.values(Game.Achievements).filter((a: any) => a.won).length;
+
+    return {
+      module: 'Achievements',
+      status: 'active',
+      currentAction: `Working on: ${achievement.name}`,
+      reason: achievement.ddesc.replace(/<q>.*?<\/q>/ig, '').substring(0, 50),
+      nextAction: this.grinding() ? 'Grinding mode (no sleep)' : undefined,
+      icon: '🏆',
+      details: {
+        'Current': achievement.name,
+        'Progress': `${wonCount}/${totalAchievements}`,
+        'Grinding': this.grinding(),
+        'Cheating': this.grindingCheat()
+      }
+    };
   }
 }
