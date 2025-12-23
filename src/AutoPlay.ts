@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-2';
+  static readonly version = '2.052-3';
 
   // State
   private config: AutoPlayConfig;

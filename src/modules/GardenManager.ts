@@ -157,43 +157,43 @@ export class GardenManager {
     const doPrint = (sector === 0) || (sector !== 3 && Game.Objects['Farm'].level === sector + 6);
 
     // Priority order: Try to unlock cookie-dropping upgrades
-    if (!Game.Upgrades['Ichor syrup'].unlocked && garden.plants['ichorpuff'].unlocked) {
+    if (!Game.Upgrades['Ichor syrup'].unlocked && garden.plants['ichorpuff']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Ichor syrup.');
       this.plantCookies = true;
       return 'ichorpuff';
     }
-    if (!Game.Upgrades['Green yeast digestives'].unlocked && garden.plants['greenRot'].unlocked) {
+    if (!Game.Upgrades['Green yeast digestives'].unlocked && garden.plants['greenRot']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Green yeast digestives.');
       this.plantCookies = true;
       return 'greenRot';
     }
-    if (!Game.Upgrades['Duketater cookies'].unlocked && garden.plants['duketater'].unlocked) {
+    if (!Game.Upgrades['Duketater cookies'].unlocked && garden.plants['duketater']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Duketater cookies.');
       this.plantCookies = true;
       return 'duketater';
     }
-    if (!Game.Upgrades['Elderwort biscuits'].unlocked && garden.plants['elderwort'].unlocked) {
+    if (!Game.Upgrades['Elderwort biscuits'].unlocked && garden.plants['elderwort']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Elderwort cookies.');
       this.plantCookies = true;
       return 'elderwort';
     }
-    if (!Game.Upgrades['Bakeberry cookies'].unlocked && garden.plants['bakeberry'].unlocked) {
+    if (!Game.Upgrades['Bakeberry cookies'].unlocked && garden.plants['bakeberry']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Bakeberry cookies.');
       this.plantCookies = true;
       return 'bakeberry';
     }
-    if (!Game.Upgrades['Wheat slims'].unlocked && garden.plants['bakerWheat'].unlocked) {
+    if (!Game.Upgrades['Wheat slims'].unlocked && garden.plants['bakerWheat']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Wheat slims.');
       this.plantCookies = true;
       return 'bakerWheat';
     }
-    if (!Game.Upgrades['Fern tea'].unlocked && garden.plants['drowsyfern'].unlocked) {
+    if (!Game.Upgrades['Fern tea'].unlocked && garden.plants['drowsyfern']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Fern tea.');
       this.plantCookies = true;
@@ -204,18 +204,18 @@ export class GardenManager {
     this.plantCookies = false;
     this.switchSoil(garden, sector, this.plantPending ? 'fertilizer' : 'clay');
 
-    if (this._poppingWrinklers && garden.plants['wrinklegill'].unlocked) {
+    if (this._poppingWrinklers && garden.plants['wrinklegill']?.unlocked) {
       return 'wrinklegill'; // faster wrinklers
     }
 
     // Use bakeberry if all lump achievements are done (1% CPS + harvest 30 mins)
-    if (garden.plants['bakeberry'].unlocked &&
+    if (garden.plants['bakeberry']?.unlocked &&
         this.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
       return 'bakeberry';
     }
 
     // Whiskerbloom gives ~1.5% CPS
-    if (garden.plants['whiskerbloom'].unlocked) return 'whiskerbloom';
+    if (garden.plants['whiskerbloom']?.unlocked) return 'whiskerbloom';
 
     return 'bakerWheat'; // fallback
   }
@@ -225,6 +225,9 @@ export class GardenManager {
    * Original: AutoPlay.havePlant (lines 1110-1117)
    */
   private havePlant(garden: any, plantKey: string): boolean {
+    // Safety check: ensure plant exists before accessing properties
+    if (!garden.plants[plantKey]) return false;
+
     if (garden.plants[plantKey].unlocked) return true;
 
     const plantID = garden.plants[plantKey].id + 1;
@@ -322,7 +325,7 @@ export class GardenManager {
     if (this._wantAscend) return;
 
     // Wait for meddleweed (first plant that spawns randomly)
-    if (!garden.plants['meddleweed'].unlocked) {
+    if (!garden.plants['meddleweed']?.unlocked) {
       this.plantList = [0, 0, 0, 0];
       this.logActivity('Waiting for meddleweed.');
       this.switchSoil(garden, 0, 'fertilizer');
@@ -330,7 +333,7 @@ export class GardenManager {
     }
 
     // Use meddleweed to get crumbspore and brownMold
-    if (!garden.plants['crumbspore'].unlocked || !garden.plants['brownMold'].unlocked) {
+    if (!garden.plants['crumbspore']?.unlocked || !garden.plants['brownMold']?.unlocked) {
       this.logActivity('Trying to get crumbspore and brown mold.');
       for (let x = 0; x < 6; x++) {
         for (let y = 0; y < 6; y++) {
@@ -409,7 +412,7 @@ export class GardenManager {
       if (this.plantList[sector] === 0) continue;
 
       const plantGoal = PLANT_DEPENDENCIES[this.plantList[sector]][0] as string;
-      if (garden.plants[plantGoal].unlocked) continue;
+      if (garden.plants[plantGoal]?.unlocked) continue;
 
       this.plantsMissing = true;
       this.logActivity(`${this.sectorText(sector)}: Working on ${plantGoal}.`);
@@ -454,8 +457,8 @@ export class GardenManager {
       if (this.havePlant(garden, targetPlant as string)) continue;
 
       // Check if both parents are unlocked
-      const hasParent1 = parent1 === 'dummy' || garden.plants[parent1].unlocked;
-      const hasParent2 = parent2 === 'dummy' || garden.plants[parent2].unlocked;
+      const hasParent1 = parent1 === 'dummy' || garden.plants[parent1]?.unlocked;
+      const hasParent2 = parent2 === 'dummy' || garden.plants[parent2]?.unlocked;
 
       if (!hasParent1 || !hasParent2) continue;
 
