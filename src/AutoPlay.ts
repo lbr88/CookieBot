@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052.14';
+  static readonly version = '2.052.15';
 
   // State
   private config: AutoPlayConfig;
@@ -320,6 +320,26 @@ export default class AutoPlay {
     // Hook into Game.UpdateMenu to add config options to preferences
     this.setupMenuHook();
 
+    // Do an initial bestBuy check to populate purchase info for dashboard
+    console.log('CookieBot: Running initial bestBuy() to populate purchase info');
+    const Game = (globalThis as any).Game;
+    const cpsMult = Game.cookiesPs / Game.unbuffedCps;
+    this.purchaseManager.setState(
+      this.config.savingsGoal,
+      Date.now(),
+      cpsMult,
+      this.sugarLumpManager.getCanUseLumps(),
+      this.state.nextAchievement
+    );
+    this.purchaseManager.bestBuy();
+    const purchaseInfo = this.purchaseManager.getPurchaseInfo();
+    if (purchaseInfo) {
+      this.state.nextPurchase = purchaseInfo.name;
+      this.state.nextPurchaseType = purchaseInfo.type;
+      this.state.nextPurchasePP = purchaseInfo.pp;
+      this.state.nextPurchasePrice = purchaseInfo.price;
+    }
+
     // Set up periodic execution
     this.scheduleNextRun();
 
@@ -409,7 +429,9 @@ export default class AutoPlay {
     }
 
     // ===== Phase 5: High-activity phase =====
+    console.log('Phase 5 check: hyperActive=', this.state.hyperActive, 'now=', this.state.now, 'deadline=', this.state.deadline, 'check result=', (this.state.hyperActive || (this.state.now >= this.state.deadline)));
     if (this.state.hyperActive || (this.state.now >= this.state.deadline)) {
+      console.log('Phase 5: Entering high-activity phase, calling bestBuy()');
       this.state.hyperActive = false; // Reset flag, can be overwritten
 
       // Unified bestBuy logic (compares buildings and upgrades by PP)
