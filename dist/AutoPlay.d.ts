@@ -77,6 +77,10 @@ export default class AutoPlay {
     addActivity(activity: string): boolean;
     logAction(action: string, details?: string): void;
     logStatus(category: string, message: string, details?: string): void;
+    /**
+     * Find next achievement to target (delegates to AchievementHandler)
+     */
+    findNextAchievement(): void;
     constructor();
     /**
      * Initialize the bot

@@ -166,6 +166,15 @@ export default class AutoPlay {
     }
   }
 
+  /**
+   * Find next achievement to target (delegates to AchievementHandler)
+   */
+  findNextAchievement(): void {
+    if (this.achievementHandler) {
+      this.achievementHandler.findNextAchievement();
+    }
+  }
+
   constructor() {
     // Initialize default configuration
     this.config = this.getDefaultConfig();
