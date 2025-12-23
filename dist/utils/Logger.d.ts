@@ -4,8 +4,8 @@
  */
 export interface LoggerCallbacks {
     logAction: (action: string, details?: string) => void;
-    logStatus: (type: string, message: string) => void;
-    addActivity: (activity: string) => void;
+    logStatus: (type: string, message: string, details?: string) => void;
+    addActivity: (activity: string) => boolean;
 }
 /**
  * Singleton logger instance
@@ -34,13 +34,15 @@ declare class LoggerService {
      * Log a status update
      * @param type - Status type (e.g., 'wrinkler', 'dragon', 'ascend')
      * @param message - Status message
+     * @param details - Optional details
      */
-    logStatus(type: string, message: string): void;
+    logStatus(type: string, message: string, details?: string): void;
     /**
      * Add an activity message to the activity log
      * @param activity - Activity description
+     * @returns true if activity was added, false if it already existed
      */
-    addActivity(activity: string): void;
+    addActivity(activity: string): boolean;
     /**
      * Check if logger is initialized
      */

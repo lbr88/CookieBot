@@ -289,19 +289,37 @@ export class PurchaseManager {
 
     // Track best building for dashboard
     let bestBuilding: Building | null = null;
-    for (let i = Game.ObjectsById.length - 1; i >= 0; i--) {
-      const me = Game.ObjectsById[i];
-      if (me.locked) continue;
-      if (me.storedCps / me.price > cpc / 2 || me.amount % 50 >= 40) {
+
+    // Early game: if no buildings owned yet, buy the cheapest available
+    if (Game.BuildingsOwned === 0) {
+      for (let i = 0; i < Game.ObjectsById.length; i++) {
+        const me = Game.ObjectsById[i];
+        if (me.locked) continue;
         if (!bestBuilding) {
           bestBuilding = me;
           this.state.nextPurchase = me.name;
           this.state.nextPurchaseType = 'building';
           this.state.nextPurchasePrice = me.getPrice();
-          this.state.nextPurchasePP = null; // No payback calculation without Cookie Monster
+          this.state.nextPurchasePP = null;
         }
-        // This checks price, sets deadline
         if (this.buyBuilding(me, checkAmount, buyAmount)) return;
+      }
+    } else {
+      // Normal game: use efficiency-based buying
+      for (let i = Game.ObjectsById.length - 1; i >= 0; i--) {
+        const me = Game.ObjectsById[i];
+        if (me.locked) continue;
+        if (me.storedCps / me.price > cpc / 2 || me.amount % 50 >= 40) {
+          if (!bestBuilding) {
+            bestBuilding = me;
+            this.state.nextPurchase = me.name;
+            this.state.nextPurchaseType = 'building';
+            this.state.nextPurchasePrice = me.getPrice();
+            this.state.nextPurchasePP = null; // No payback calculation without Cookie Monster
+          }
+          // This checks price, sets deadline
+          if (this.buyBuilding(me, checkAmount, buyAmount)) return;
+        }
       }
     }
 

@@ -5,8 +5,8 @@
 
 export interface LoggerCallbacks {
   logAction: (action: string, details?: string) => void;
-  logStatus: (type: string, message: string) => void;
-  addActivity: (activity: string) => void;
+  logStatus: (type: string, message: string, details?: string) => void;
+  addActivity: (activity: string) => boolean;
 }
 
 /**
@@ -54,24 +54,27 @@ class LoggerService {
    * Log a status update
    * @param type - Status type (e.g., 'wrinkler', 'dragon', 'ascend')
    * @param message - Status message
+   * @param details - Optional details
    */
-  logStatus(type: string, message: string): void {
+  logStatus(type: string, message: string, details?: string): void {
     if (this.callbacks?.logStatus) {
-      this.callbacks.logStatus(type, message);
+      this.callbacks.logStatus(type, message, details);
     } else {
-      console.log(`[${type}] ${message}`);
+      console.log(`[${type}] ${message}${details ? ': ' + details : ''}`);
     }
   }
 
   /**
    * Add an activity message to the activity log
    * @param activity - Activity description
+   * @returns true if activity was added, false if it already existed
    */
-  addActivity(activity: string): void {
+  addActivity(activity: string): boolean {
     if (this.callbacks?.addActivity) {
-      this.callbacks.addActivity(activity);
+      return this.callbacks.addActivity(activity);
     } else {
       console.log(`[Activity] ${activity}`);
+      return true;
     }
   }
 
