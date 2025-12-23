@@ -116,8 +116,12 @@ export declare class PurchaseManager {
      */
     private handleUpgrades;
     /**
-     * Get current module status for dashboard
+     * Get building purchase status for dashboard
      */
-    getStatus(): ModuleStatus;
+    getBuildingStatus(): ModuleStatus;
+    /**
+     * Get upgrade purchase status for dashboard
+     */
+    getUpgradeStatus(): ModuleStatus;
 }
 //# sourceMappingURL=PurchaseManager.d.ts.map

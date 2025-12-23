@@ -949,9 +949,14 @@ export class Dashboard {
       // Collect statuses from all managers
       const statuses: ModuleStatuses = {};
 
-      // Get statuses from each manager (if they exist and have getStatus method)
-      if (AutoPlay.purchaseManager && typeof AutoPlay.purchaseManager.getStatus === 'function') {
-        statuses.purchases = AutoPlay.purchaseManager.getStatus();
+      // Get statuses from purchase manager (buildings and upgrades separately)
+      if (AutoPlay.purchaseManager) {
+        if (typeof AutoPlay.purchaseManager.getBuildingStatus === 'function') {
+          statuses.buildings = AutoPlay.purchaseManager.getBuildingStatus();
+        }
+        if (typeof AutoPlay.purchaseManager.getUpgradeStatus === 'function') {
+          statuses.upgrades = AutoPlay.purchaseManager.getUpgradeStatus();
+        }
       }
       if (AutoPlay.gardenManager && typeof AutoPlay.gardenManager.getStatus === 'function') {
         statuses.garden = AutoPlay.gardenManager.getStatus();
@@ -986,7 +991,8 @@ export class Dashboard {
 
       // Render module statuses
       const moduleOrder: (keyof ModuleStatuses)[] = [
-        'purchases',
+        'buildings',
+        'upgrades',
         'garden',
         'wrinklers',
         'goldenCookies',

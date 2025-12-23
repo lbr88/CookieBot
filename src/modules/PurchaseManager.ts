@@ -594,26 +594,22 @@ export class PurchaseManager {
   }
 
   /**
-   * Get current module status for dashboard
+   * Get building purchase status for dashboard
    */
-  getStatus(): ModuleStatus {
-    // Check if Cookie Monster is available
+  getBuildingStatus(): ModuleStatus {
     const hasCookieMonster = typeof CookieMonsterData !== 'undefined';
 
     // Check if waiting for Hardcore achievement
     if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
       return {
-        module: 'Purchases',
+        module: 'Buildings',
         status: 'blocked',
         currentAction: 'Waiting for first upgrade',
-        reason: 'Protecting Hardcore achievement (1M cookies without upgrades)',
-        nextAction: 'Will auto-buy after you manually buy your first upgrade',
-        icon: '🔒',
+        reason: 'Hardcore achievement blocks all purchases',
+        nextAction: 'Will resume after manual upgrade purchase',
+        icon: '🏢',
         details: {
-          'Hardcore Won': false,
-          'Upgrades Owned': 0,
-          'Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies) : Game.cookies,
-          'Action Required': 'Manually buy any upgrade to start auto-purchasing'
+          'Blocked By': 'Hardcore achievement'
         }
       };
     }
@@ -621,51 +617,120 @@ export class PurchaseManager {
     // Check if in cursed finger mode
     if (this.cpsMult === 0) {
       return {
-        module: 'Purchases',
+        module: 'Buildings',
         status: 'waiting',
-        currentAction: 'Paused during Cursed Finger',
-        reason: 'CPS multiplier is 0',
-        icon: '👆',
+        currentAction: 'Paused',
+        reason: 'Cursed Finger active (CPS = 0)',
+        icon: '🏢',
         details: {
           'CPS Multiplier': 0
         }
       };
     }
 
-    // Active purchasing
-    if (this.state.nextPurchase) {
+    // Check if next purchase is a building
+    if (this.state.nextPurchase && this.state.nextPurchaseType === 'building') {
       const canAfford = this.state.nextPurchasePrice && this.state.nextPurchasePrice < (Game.cookies - this.savingsGoal);
 
       return {
-        module: 'Purchases',
+        module: 'Buildings',
         status: canAfford ? 'active' : 'waiting',
         currentAction: canAfford ? `Buying ${this.state.nextPurchase}` : `Saving for ${this.state.nextPurchase}`,
         reason: hasCookieMonster
-          ? `Best payback period: ${this.state.nextPurchasePP?.toFixed(1)}s`
-          : 'Using fallback strategy (no Cookie Monster)',
-        nextAction: this.state.nextPurchase,
-        icon: this.state.nextPurchaseType === 'building' ? '🏢' : '⬆️',
+          ? `Best payback: ${this.state.nextPurchasePP?.toFixed(1)}s`
+          : 'Using fallback strategy',
+        icon: '🏢',
         details: {
-          'Next Purchase': this.state.nextPurchase,
-          'Type': this.state.nextPurchaseType || 'unknown',
+          'Next Building': this.state.nextPurchase,
           'Price': typeof Beautify !== 'undefined' ? Beautify(this.state.nextPurchasePrice || 0) : (this.state.nextPurchasePrice || 0),
-          'Available Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies - this.savingsGoal) : (Game.cookies - this.savingsGoal),
-          'Cookie Monster': hasCookieMonster,
+          'Available': typeof Beautify !== 'undefined' ? Beautify(Game.cookies - this.savingsGoal) : (Game.cookies - this.savingsGoal),
           'Buy 10 Mode': this.state.buy10
         }
       };
     }
 
-    // Idle/looking for purchases
+    // Not buying buildings currently
     return {
-      module: 'Purchases',
-      status: 'active',
-      currentAction: 'Evaluating purchases',
-      reason: hasCookieMonster ? 'Using Cookie Monster strategy' : 'Using fallback strategy',
-      icon: '💰',
+      module: 'Buildings',
+      status: 'idle',
+      currentAction: this.state.nextPurchaseType === 'upgrade' ? 'Upgrade has priority' : 'Evaluating options',
+      reason: hasCookieMonster ? 'Cookie Monster strategy' : 'Fallback strategy',
+      icon: '🏢',
       details: {
-        'Cookie Monster': hasCookieMonster,
-        'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.savingsGoal) : this.savingsGoal
+        'Strategy': hasCookieMonster ? 'Cookie Monster' : 'Fallback'
+      }
+    };
+  }
+
+  /**
+   * Get upgrade purchase status for dashboard
+   */
+  getUpgradeStatus(): ModuleStatus {
+    const hasCookieMonster = typeof CookieMonsterData !== 'undefined';
+
+    // Check if waiting for Hardcore achievement
+    if (!Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
+      return {
+        module: 'Upgrades',
+        status: 'blocked',
+        currentAction: 'Waiting for first upgrade',
+        reason: 'Protecting Hardcore achievement',
+        nextAction: 'Manually purchase any upgrade to continue',
+        icon: '⬆️',
+        details: {
+          'Hardcore Won': false,
+          'Upgrades Owned': 0,
+          'Cookies': typeof Beautify !== 'undefined' ? Beautify(Game.cookies) : Game.cookies,
+          'Action': 'Manually buy upgrade'
+        }
+      };
+    }
+
+    // Check if in cursed finger mode
+    if (this.cpsMult === 0) {
+      return {
+        module: 'Upgrades',
+        status: 'waiting',
+        currentAction: 'Paused',
+        reason: 'Cursed Finger active (CPS = 0)',
+        icon: '⬆️',
+        details: {
+          'CPS Multiplier': 0
+        }
+      };
+    }
+
+    // Check if next purchase is an upgrade
+    if (this.state.nextPurchase && this.state.nextPurchaseType === 'upgrade') {
+      const canAfford = this.state.nextPurchasePrice && this.state.nextPurchasePrice < (Game.cookies - this.savingsGoal);
+
+      return {
+        module: 'Upgrades',
+        status: canAfford ? 'active' : 'waiting',
+        currentAction: canAfford ? `Buying ${this.state.nextPurchase}` : `Saving for ${this.state.nextPurchase}`,
+        reason: hasCookieMonster
+          ? `Best payback: ${this.state.nextPurchasePP?.toFixed(1)}s`
+          : 'Using fallback strategy',
+        icon: '⬆️',
+        details: {
+          'Next Upgrade': this.state.nextPurchase,
+          'Price': typeof Beautify !== 'undefined' ? Beautify(this.state.nextPurchasePrice || 0) : (this.state.nextPurchasePrice || 0),
+          'Available': typeof Beautify !== 'undefined' ? Beautify(Game.cookies - this.savingsGoal) : (Game.cookies - this.savingsGoal),
+          'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.savingsGoal) : this.savingsGoal
+        }
+      };
+    }
+
+    // Not buying upgrades currently
+    return {
+      module: 'Upgrades',
+      status: 'idle',
+      currentAction: this.state.nextPurchaseType === 'building' ? 'Building has priority' : 'Evaluating options',
+      reason: hasCookieMonster ? 'Cookie Monster strategy' : 'Fallback strategy',
+      icon: '⬆️',
+      details: {
+        'Strategy': hasCookieMonster ? 'Cookie Monster' : 'Fallback',
+        'Upgrades Owned': Game.UpgradesOwned
       }
     };
   }
