@@ -129,7 +129,7 @@ export class GoldenCookieHandler {
 
     // Check if this was a Lucky or Lucky Frenzy golden cookie
     if (shimmer.type === 'golden' && cookiesGained > 0 && typeof Beautify !== 'undefined') {
-      const bonusType = shimmer.force || 'shimmer';
+      const bonusType = shimmer.force || 'fading luck';
       // Lucky and Lucky Frenzy both have "lucky" in their force name
       if (bonusType.toLowerCase().includes('lucky')) {
         this.logAction(
@@ -142,16 +142,6 @@ export class GoldenCookieHandler {
 
     // Log regular shimmer click
     if (shimmer.type === 'golden') {
-      if (cookiesGained > 0 && typeof Beautify !== 'undefined') {
-        const bonusType = shimmer.force || 'fading luck';
-        if (bonusType.toLowerCase().includes('lucky')) {
-          this.logAction(
-            `Clicked ${bonusType} golden cookie`,
-            `💰 +${Beautify(cookiesGained)} cookies`
-          );
-          return;
-        }
-      }
       this.logAction('Clicked golden cookie', shimmer.force || 'fading luck');
     } else {
       this.logAction(`Clicked ${shimmer.type}`, shimmer.force || 'shimmer');

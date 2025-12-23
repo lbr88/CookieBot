@@ -27,9 +27,13 @@ export declare class PurchaseManager {
     private nextAchievement;
     private logAction;
     private addActivity;
+    private setHyperActive;
+    private setDeadline;
     constructor(callbacks?: {
         logAction?: (action: string, details: string) => void;
         addActivity?: (activity: string) => void;
+        setHyperActive?: () => void;
+        setDeadline?: (deadline: number) => void;
     });
     /**
      * Update state values before processing

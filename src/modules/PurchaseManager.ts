@@ -34,8 +34,15 @@ export class PurchaseManager {
   private nextAchievement: number = 0;
   private logAction: (action: string, details: string) => void = () => {};
   private addActivity: (activity: string) => void = () => {};
+  private setHyperActive: (() => void) | null = null;
+  private setDeadline: ((deadline: number) => void) | null = null;
 
-  constructor(callbacks?: { logAction?: (action: string, details: string) => void; addActivity?: (activity: string) => void }) {
+  constructor(callbacks?: {
+    logAction?: (action: string, details: string) => void;
+    addActivity?: (activity: string) => void;
+    setHyperActive?: () => void;
+    setDeadline?: (deadline: number) => void;
+  }) {
     this.state = {
       nextPurchase: null,
       nextPurchaseType: null,
@@ -49,6 +56,12 @@ export class PurchaseManager {
     }
     if (callbacks?.addActivity) {
       this.addActivity = callbacks.addActivity;
+    }
+    if (callbacks?.setHyperActive) {
+      this.setHyperActive = callbacks.setHyperActive;
+    }
+    if (callbacks?.setDeadline) {
+      this.setDeadline = callbacks.setDeadline;
     }
   }
 
@@ -244,7 +257,8 @@ export class PurchaseManager {
     if (!haveBought) {
       if ((this.now - Game.startDate) < 10 * 60 * 1000 &&
           Game.Achievements['Neverclick'].won) {
-        // Wait five seconds before next step (would set deadline in original)
+        // Wait five seconds before next step
+        if (this.setDeadline) this.setDeadline(this.now + 5000);
       }
       this.addActivity('Waiting to buy ' + best);
     }
@@ -361,6 +375,7 @@ export class PurchaseManager {
         'Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''),
         Beautify(price) + ' cookies'
       );
+      if (this.setHyperActive) this.setHyperActive(); // might buy more soon
       return true;
     }
     return false;
@@ -494,6 +509,7 @@ export class PurchaseManager {
       const price = upgrade.getPrice();
       upgrade.buy(bypass);
       this.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
+      if (this.setHyperActive) this.setHyperActive(); // might buy more soon
       return true;
     }
     return false;
