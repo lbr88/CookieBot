@@ -369,7 +369,8 @@ export class AchievementHandler {
     let progressColor: string | undefined;
 
     // Check for "bake X cookies in one ascension" achievements by pattern matching
-    const bakeCookiesMatch = achievement.ddesc.match(/bake <b>([\d,\.]+(?:\s+\w+)?)\s+cookies?<\/b>\s+in one ascension/i);
+    // Format: "Bake <b>1</b> cookie in one ascension." or "Bake <b>1 million</b> cookies in one ascension."
+    const bakeCookiesMatch = achievement.ddesc.match(/bake <b>([\d,\.]+(?:\s+\w+)?)\s*<\/b>\s+cookies?\s+in one ascension\./i);
     if (bakeCookiesMatch) {
       // Parse the cookie threshold (handles numbers like "1 million", "1.5 billion", etc.)
       let cookieThreshold = 0;
@@ -379,16 +380,33 @@ export class AchievementHandler {
       if (achievement.threshold) {
         cookieThreshold = achievement.threshold;
       } else {
-        // Fallback: parse the text (simple numbers like "1,000" or "100")
+        // Fallback: parse the text (handles "1,000" or "1 million" or "1 septendecillion")
         const numMatch = valueStr.match(/^([\d,\.]+)/);
         if (numMatch) {
           cookieThreshold = parseFloat(numMatch[1].replace(/,/g, ''));
-          // Check for multipliers (million, billion, etc.)
-          if (valueStr.toLowerCase().includes('million')) cookieThreshold *= 1000000;
-          else if (valueStr.toLowerCase().includes('billion')) cookieThreshold *= 1000000000;
-          else if (valueStr.toLowerCase().includes('trillion')) cookieThreshold *= 1000000000000;
-          else if (valueStr.toLowerCase().includes('quadrillion')) cookieThreshold *= 1000000000000000;
-          else if (valueStr.toLowerCase().includes('quintillion')) cookieThreshold *= 1000000000000000000;
+          // Check for multipliers (million, billion, trillion, etc.)
+          const lowerValue = valueStr.toLowerCase();
+          if (lowerValue.includes('thousand')) cookieThreshold *= 1e3;
+          else if (lowerValue.includes('million')) cookieThreshold *= 1e6;
+          else if (lowerValue.includes('billion')) cookieThreshold *= 1e9;
+          else if (lowerValue.includes('trillion')) cookieThreshold *= 1e12;
+          else if (lowerValue.includes('quadrillion')) cookieThreshold *= 1e15;
+          else if (lowerValue.includes('quintillion')) cookieThreshold *= 1e18;
+          else if (lowerValue.includes('sextillion')) cookieThreshold *= 1e21;
+          else if (lowerValue.includes('septillion')) cookieThreshold *= 1e24;
+          else if (lowerValue.includes('octillion')) cookieThreshold *= 1e27;
+          else if (lowerValue.includes('nonillion')) cookieThreshold *= 1e30;
+          else if (lowerValue.includes('decillion')) cookieThreshold *= 1e33;
+          else if (lowerValue.includes('undecillion')) cookieThreshold *= 1e36;
+          else if (lowerValue.includes('duodecillion')) cookieThreshold *= 1e39;
+          else if (lowerValue.includes('tredecillion')) cookieThreshold *= 1e42;
+          else if (lowerValue.includes('quattuordecillion')) cookieThreshold *= 1e45;
+          else if (lowerValue.includes('quindecillion')) cookieThreshold *= 1e48;
+          else if (lowerValue.includes('sexdecillion')) cookieThreshold *= 1e51;
+          else if (lowerValue.includes('septendecillion')) cookieThreshold *= 1e54;
+          else if (lowerValue.includes('octodecillion')) cookieThreshold *= 1e57;
+          else if (lowerValue.includes('novemdecillion')) cookieThreshold *= 1e60;
+          else if (lowerValue.includes('vigintillion')) cookieThreshold *= 1e63;
         }
       }
 
@@ -412,10 +430,11 @@ export class AchievementHandler {
       }
     }
     // Check for "own X [building]" achievements
-    else if (achievement.ddesc.match(/own <b>\d+<\/b>/i)) {
-      const ownMatch = achievement.ddesc.match(/own <b>(\d+)<\/b>\s+(\w+)/i);
+    // Format: "Own <b>1</b> cursor." or "Own <b>100</b> cursors."
+    else if (achievement.ddesc.match(/own <b>[\d,]+<\/b>/i)) {
+      const ownMatch = achievement.ddesc.match(/own <b>([\d,]+)<\/b>\s+(\w+?)s?\./i);
       if (ownMatch) {
-        const targetCount = parseInt(ownMatch[1]);
+        const targetCount = parseInt(ownMatch[1].replace(/,/g, ''));
         const buildingName = ownMatch[2];
 
         // Find the building in Game.Objects
