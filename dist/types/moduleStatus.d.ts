@@ -25,6 +25,7 @@ export interface ModuleStatus {
  * Collection of all module statuses
  */
 export interface ModuleStatuses {
+    clicking?: ModuleStatus;
     buildings?: ModuleStatus;
     upgrades?: ModuleStatus;
     garden?: ModuleStatus;

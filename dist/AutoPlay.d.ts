@@ -6,6 +6,7 @@ export default class AutoPlay {
     static readonly version = "2.052-8";
     private config;
     private state;
+    private clickManager;
     private goldenCookieHandler;
     private savingsManager;
     private purchaseManager;
@@ -82,15 +83,6 @@ export default class AutoPlay {
      * Original runs at fixed 300ms interval via setInterval
      */
     private scheduleNextRun;
-    /**
-     * Handle clicking - respects Neverclick/True Neverclick achievements
-     * Click modes: 0=off, 1=normal, 2+=aggressive
-     */
-    private handleClicking;
-    /**
-     * Speed clicking with multiplier (for aggressive click modes)
-     */
-    private speedClicking;
     /**
      * Unified bestBuy - compares buildings AND upgrades by payback period
      * Delegates to BuildingManager which has full CookieMonster integration

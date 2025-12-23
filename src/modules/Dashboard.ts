@@ -524,6 +524,11 @@ export class Dashboard {
       // Collect statuses from all managers
       const statuses: ModuleStatuses = {};
 
+      // Get status from click manager
+      if (AutoPlay.clickManager && typeof AutoPlay.clickManager.getStatus === 'function') {
+        statuses.clicking = AutoPlay.clickManager.getStatus();
+      }
+
       // Get statuses from purchase manager (buildings and upgrades separately)
       if (AutoPlay.purchaseManager) {
         if (typeof AutoPlay.purchaseManager.getBuildingStatus === 'function') {
@@ -569,6 +574,7 @@ export class Dashboard {
 
       // Render module statuses
       const moduleOrder: (keyof ModuleStatuses)[] = [
+        'clicking',
         'buildings',
         'upgrades',
         'garden',

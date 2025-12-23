@@ -2,6 +2,7 @@
  * Main AutoPlay class that coordinates all modules
  */
 
+import { ClickManager } from './modules/ClickManager';
 import { GoldenCookieHandler } from './modules/GoldenCookieHandler';
 import { SavingsManager } from './modules/SavingsManager';
 import { PurchaseManager } from './modules/PurchaseManager';
@@ -32,6 +33,7 @@ export default class AutoPlay {
   private state: AutoPlayState;
 
   // Modules
+  private clickManager: ClickManager;
   private goldenCookieHandler: GoldenCookieHandler;
   private savingsManager: SavingsManager;
   private purchaseManager: PurchaseManager;
@@ -189,6 +191,15 @@ export default class AutoPlay {
     });
 
     // Initialize modules with proper constructor arguments
+    this.clickManager = new ClickManager(
+      { clickMode: this.config.clickMode },
+      {
+        now: this.state.now,
+        endPhase: () => this.endPhase(),
+        grindingCheat: () => this.grindingCheat()
+      }
+    );
+
     this.goldenCookieHandler = new GoldenCookieHandler(
       {
         GoldenClickMode: this.config.autoGoldenCookie ? 1 : 0,
@@ -412,7 +423,7 @@ export default class AutoPlay {
     }
 
     // ===== Phase 4: Fast actions (always run every 300ms) =====
-    this.handleClicking();
+    this.clickManager.handleClicking();
 
     if (this.config.autoGoldenCookie) {
       this.goldenCookieHandler.handleGoldenCookies();
@@ -595,62 +606,6 @@ export default class AutoPlay {
     setTimeout(() => this.periodic(), 300);
   }
 
-  /**
-   * Handle clicking - respects Neverclick/True Neverclick achievements
-   * Click modes: 0=off, 1=normal, 2+=aggressive
-   */
-  private handleClicking(): void {
-    const Game = (globalThis as any).Game;
-
-    if (this.config.clickMode === 0) return;
-
-    // Respect Neverclick achievement
-    if (!Game.Achievements['Neverclick'].won && Game.cookieClicks <= 15) {
-      return;
-    }
-
-    // Respect True Neverclick achievement in reborn endgame
-    if (Game.ascensionMode === 1 && this.endPhase() &&
-        !Game.Achievements['True Neverclick'].won && !Game.cookieClicks) {
-      return;
-    }
-
-    // Uncanny clicker achievement (5 clicks in a row)
-    if (!Game.Achievements['Uncanny clicker'].won) {
-      for (let i = 1; i < 6; i++) {
-        setTimeout(() => Game.ClickCookie(), 50 * i);
-      }
-    }
-
-    // Aggressive clicking (mode 2+)
-    if (this.config.clickMode > 1) {
-      for (let i = 1; i < 10; i++) {
-        setTimeout(() => this.speedClicking(), 30 * i);
-      }
-    } else {
-      // Normal clicking (mode 1)
-      Game.ClickCookie();
-
-      // Extra clicks during frenzy buffs
-      if ('Click frenzy' in Game.buffs ||
-          'Dragonflight' in Game.buffs ||
-          'Cursed finger' in Game.buffs) {
-        for (let i = 1; i < 5; i++) {
-          setTimeout(() => Game.ClickCookie(), 30 * i);
-        }
-      }
-    }
-  }
-
-  /**
-   * Speed clicking with multiplier (for aggressive click modes)
-   */
-  private speedClicking(): void {
-    const Game = (globalThis as any).Game;
-    Game.ClickCookie();
-    const clickCount = 1 << (10 * (this.config.clickMode - 2));
-    Game.ClickCookie(0, clickCount * Game.computedMouseCps);
-  }
 
   /**
    * Unified bestBuy - compares buildings AND upgrades by payback period
