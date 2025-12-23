@@ -463,14 +463,23 @@ export class Dashboard {
    * Update dashboard content
    */
   updateDashboard(): void {
-    if (!document.getElementById('cookieBotDashboard')) return;
+    if (!document.getElementById('cookieBotDashboard')) {
+      console.log('Dashboard element not found, skipping update');
+      return;
+    }
 
     try {
+      // Check if AutoPlay is available
+      if (typeof AutoPlay === 'undefined') {
+        console.log('AutoPlay is undefined, dashboard cannot update');
+        return;
+      }
+
       this.updateNextActions();
       this.updateProgress();
       this.updateActivity();
     } catch (e) {
-      console.log('Dashboard update error:', e);
+      console.error('Dashboard update error:', e);
     }
   }
 
@@ -479,6 +488,16 @@ export class Dashboard {
    */
   private updateNextActions(): void {
     let nextHtml = '';
+
+    // Safety check for AutoPlay global
+    if (typeof AutoPlay === 'undefined') {
+      nextHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
+      const nextContent = document.getElementById('dashNextContent');
+      if (nextContent) {
+        nextContent.innerHTML = nextHtml;
+      }
+      return;
+    }
 
     // Show next purchase
     if (AutoPlay.nextPurchase && typeof Beautify !== 'undefined') {
@@ -599,8 +618,18 @@ export class Dashboard {
   private updateProgress(): void {
     let progressHtml = '';
 
+    // Safety check for AutoPlay global
+    if (typeof AutoPlay === 'undefined') {
+      progressHtml = '<div style="color: #f66; font-size: 11px;">AutoPlay not initialized yet...</div>';
+      const progressContent = document.getElementById('dashProgressContent');
+      if (progressContent) {
+        progressContent.innerHTML = progressHtml;
+      }
+      return;
+    }
+
     // Savings progress bar (golden cookie reserve)
-    if (typeof Beautify !== 'undefined' && Game.unbuffedCps > 0) {
+    if (typeof Beautify !== 'undefined' && typeof Game !== 'undefined' && Game.unbuffedCps > 0) {
       // Calculate base thresholds (without time scaling)
       const baseLucky = Game.unbuffedCps * 60 * 100; // 6000 seconds of CPS
       const baseLuckyFrenzy = baseLucky * 7; // 42000 seconds of CPS
@@ -766,6 +795,9 @@ export class Dashboard {
    * Get achievement progress HTML
    */
   private getAchievementProgress(): string {
+    if (typeof AutoPlay === 'undefined' || typeof Game === 'undefined') {
+      return '';
+    }
     if (!AutoPlay.nextAchievement || typeof Beautify === 'undefined' || !Game.AchievementsById) {
       return '';
     }
