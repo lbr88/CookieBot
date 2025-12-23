@@ -19,7 +19,7 @@ import { PantheonManager } from './modules/PantheonManager';
 import { GrimoireManager } from './modules/GrimoireManager';
 import { GardenManager } from './modules/GardenManager';
 import { StockMarketManager } from './modules/StockMarketManager';
-import type { AutoPlayConfig, AutoPlayState, AutoPlayContext } from './types/autoplay';
+import type { AutoPlayConfig, AutoPlayState } from './types/autoplay';
 // import type { UpgradeManagerContext } from './modules/UpgradeManager'; // Moved to BuildingManager
 import { WANTED_ACHIEVEMENTS, LUMP_RELATED_ACHIEVEMENTS } from './constants/gameIds';
 import { Logger } from './utils/Logger';
@@ -276,39 +276,9 @@ export default class AutoPlay {
     this.wrinklerManager = new WrinklerManager(this.state);
     this.achievementHandler = new AchievementHandler();
 
-    // Create ascension context (simplified - will need full AutoPlayContext later)
-    const ascensionContext: AutoPlayContext = {
-      now: this.state.now,
-      nextAchievement: 0,
-      wantedAchievements: [...WANTED_ACHIEVEMENTS],
-      lumpHarvestAchievements: [],
-      wantAscend: false,
-      Config: {},
-      mainActivity: '',
-      activities: '',
-      hyperActive: false,
-      workingOnSpecialAchievement: false,
-      plantPending: false,
-      delay: 0,
-      finished: false,
-      kittens: [],
-      maxBuildings: [],
-      cursors: [],
-      butterBiscuits: [],
-      expensive: [],
-      info: (msg: string) => console.log(msg),
-      logAction,
-      logStatus,
-      addActivity,
-      setMainActivity: (activity: string) => console.log(`Main: ${activity}`),
-      setDeadline: (time: number) => console.log(`Deadline: ${time}`),
-      findNextAchievement: () => {},
-      endPhase: () => false,
-      preNightMode: () => false,
-      mustRebornAscend: () => false,
-      assignSpirit: () => {},
-    };
-    this.ascensionManager = new AscensionManager(ascensionContext);
+    // Pass 'this' as context so AscensionManager can read live properties via getters
+    // Cast to any to satisfy the AutoPlayContext interface (this has all required properties)
+    this.ascensionManager = new AscensionManager(this as any);
 
     this.dragonManager = new DragonManager();
     // Dashboard already created at top of constructor
