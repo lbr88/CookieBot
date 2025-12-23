@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052.8';
+  static readonly version = '2.052.9';
 
   // State
   private config: AutoPlayConfig;
@@ -115,7 +115,11 @@ export default class AutoPlay {
   }
 
   setMainActivity(activity: string): void {
-    this.state.mainActivity = activity;
+    // When mainActivity changes, reset activities to the new base
+    if (this.state.mainActivity !== activity) {
+      this.state.mainActivity = activity;
+      this.state.activities = activity;
+    }
   }
 
   addActivity(activity: string): boolean {
@@ -358,8 +362,9 @@ export default class AutoPlay {
     // ===== Phase 2: Setup =====
     this.state.now = Date.now();
 
-    // Reset activities to base message each cycle (original line 97)
-    this.state.activities = this.state.mainActivity;
+    // DON'T reset activities every cycle - let them accumulate
+    // Only reset when mainActivity changes (checked in Phase 8)
+    // this.state.activities = this.state.mainActivity;
 
     // Handle "Just Right" achievement (special case)
     if (this.state.nextAchievement === 397) {

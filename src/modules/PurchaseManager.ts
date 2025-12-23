@@ -79,8 +79,7 @@ export class PurchaseManager {
   bestBuy(): boolean {
     // If cookie monster isn't installed, use fallback strategy
     if (typeof CookieMonsterData === 'undefined') {
-      // Clear purchase tracking when CookieMonster isn't available
-      this.clearPurchaseTracking();
+      // Fallback methods will set purchase tracking if they find something
       this.handleBuildingsFallback();
       this.handleUpgrades(); // Original line 477
       return false;
