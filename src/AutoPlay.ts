@@ -492,6 +492,7 @@ export default class AutoPlay {
       // Sync state from ascension manager
       this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
       this.state.onAscend = (this.ascensionManager as any).state.onAscend;
+      this.onAscend = this.state.onAscend; // Sync public property with internal state
     }
 
     // Check ascend often for lucky payout
@@ -500,6 +501,7 @@ export default class AutoPlay {
       // Sync state from ascension manager
       this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
       this.state.onAscend = (this.ascensionManager as any).state.onAscend;
+      this.onAscend = this.state.onAscend; // Sync public property with internal state
     }
 
     // ===== Phase 7: Deadline check (end of high-activity) =====
@@ -607,6 +609,7 @@ export default class AutoPlay {
     // Sync state from ascension manager
     this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
     this.state.onAscend = (this.ascensionManager as any).state.onAscend;
+    this.onAscend = this.state.onAscend; // Sync public property with internal state
 
     // Minigames (garden, pantheon, stock market)
     this.handleMinigames();
@@ -943,8 +946,10 @@ export default class AutoPlay {
 
     // Handle ascension checks
     this.ascensionManager.handleAscend();
-    // Sync wantAscend state from ascension manager context
+    // Sync state from ascension manager
     this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
+    this.state.onAscend = (this.ascensionManager as any).state.onAscend;
+    this.onAscend = this.state.onAscend; // Sync public property with internal state
 
     // If "You" building exists, we need to start fresh
     const youBuilding = Game.ObjectsById[Game.ObjectsById.length - 1];
