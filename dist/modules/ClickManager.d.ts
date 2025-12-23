@@ -11,11 +11,16 @@ interface ClickManagerContext {
     now: number;
     endPhase: () => boolean;
     grindingCheat: () => boolean;
+    getClickMode: () => number;
 }
 export declare class ClickManager {
     private config;
     private context;
     constructor(config: ClickManagerConfig, context: ClickManagerContext);
+    /**
+     * Get current click mode (from live config or context getter)
+     */
+    private getClickMode;
     /**
      * Handle clicking - respects Neverclick/True Neverclick achievements
      * Original: AutoPlay.handleClicking (lines 360-378)

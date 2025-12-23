@@ -17,6 +17,7 @@ interface ClickManagerContext {
   now: number;
   endPhase: () => boolean;
   grindingCheat: () => boolean;
+  getClickMode: () => number; // Live getter for current config value
 }
 
 export class ClickManager {
@@ -29,11 +30,24 @@ export class ClickManager {
   }
 
   /**
+   * Get current click mode (from live config or context getter)
+   */
+  private getClickMode(): number {
+    // Prefer context getter if available (live config value)
+    if (this.context.getClickMode) {
+      return this.context.getClickMode();
+    }
+    // Fallback to config passed at construction
+    return this.config.clickMode;
+  }
+
+  /**
    * Handle clicking - respects Neverclick/True Neverclick achievements
    * Original: AutoPlay.handleClicking (lines 360-378)
    */
   handleClicking(): void {
-    if (this.config.clickMode === 0) return;
+    const clickMode = this.getClickMode();
+    if (clickMode === 0) return;
 
     // Respect Neverclick achievement (max 15 clicks)
     if (!Game.Achievements['Neverclick'].won && Game.cookieClicks <= 15) {
@@ -54,7 +68,7 @@ export class ClickManager {
     }
 
     // Aggressive clicking (mode 2+)
-    if (this.config.clickMode > 1) {
+    if (clickMode > 1) {
       for (let i = 1; i < 10; i++) {
         setTimeout(() => this.speedClicking(), 30 * i);
       }
@@ -78,8 +92,9 @@ export class ClickManager {
    * Original: AutoPlay.speedClicking (lines 380-383)
    */
   private speedClicking(): void {
+    const clickMode = this.getClickMode();
     Game.ClickCookie();
-    const clickCount = 1 << (10 * (this.config.clickMode - 2));
+    const clickCount = 1 << (10 * (clickMode - 2));
     Game.ClickCookie(0, clickCount * Game.computedMouseCps);
   }
 
@@ -87,7 +102,8 @@ export class ClickManager {
    * Get clicking status for dashboard
    */
   getStatus(): ModuleStatus {
-    if (this.config.clickMode === 0) {
+    const clickMode = this.getClickMode();
+    if (clickMode === 0) {
       return {
         module: 'Clicking',
         status: 'disabled',
@@ -136,7 +152,7 @@ export class ClickManager {
     }
 
     // Active clicking
-    const clicksPerSecond = this.config.clickMode === 1 ? '~3-5' : '~10+';
+    const clicksPerSecond = clickMode === 1 ? '~3-5' : '~10+';
     const hasFrenzy = 'Click frenzy' in Game.buffs || 'Dragonflight' in Game.buffs || 'Cursed finger' in Game.buffs;
 
     return {
@@ -160,12 +176,13 @@ export class ClickManager {
    * Get human-readable click mode name
    */
   private getClickModeName(): string {
-    switch (this.config.clickMode) {
+    const clickMode = this.getClickMode();
+    switch (clickMode) {
       case 0: return 'OFF';
       case 1: return 'Normal';
       case 2: return 'Aggressive';
       case 3: return 'Very Aggressive';
-      default: return `Level ${this.config.clickMode}`;
+      default: return `Level ${clickMode}`;
     }
   }
 }

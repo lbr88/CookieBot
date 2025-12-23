@@ -196,7 +196,8 @@ export default class AutoPlay {
       {
         now: this.state.now,
         endPhase: () => this.endPhase(),
-        grindingCheat: () => this.grindingCheat()
+        grindingCheat: () => this.grindingCheat(),
+        getClickMode: () => this.config.clickMode  // Live getter for current config
       }
     );
 
