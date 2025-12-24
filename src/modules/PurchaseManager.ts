@@ -634,7 +634,7 @@ export class PurchaseManager {
 
       return {
         module: 'Buildings',
-        status: canAfford ? 'active' : 'waiting',
+        status: 'active',
         currentAction: canAfford ? `Buying ${this.state.nextPurchase}` : `Saving for ${this.state.nextPurchase}`,
         reason: hasCookieMonster
           ? `Best payback: ${this.state.nextPurchasePP?.toFixed(1)}s`
@@ -737,7 +737,7 @@ export class PurchaseManager {
 
       return {
         module: 'Upgrades',
-        status: canAfford ? 'active' : 'waiting',
+        status: 'active',
         currentAction: canAfford ? `Buying ${this.state.nextPurchase}` : `Saving for ${this.state.nextPurchase}`,
         reason: hasCookieMonster
           ? `Best payback: ${this.state.nextPurchasePP?.toFixed(1)}s`
