@@ -26,7 +26,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-39';
+  static readonly version = '2.052-40';
 
   // State
   private config: AutoPlayConfig;
@@ -906,6 +906,15 @@ export default class AutoPlay {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Check if it's currently pre-night mode (after 10pm)
+   * Used by AscensionManager and other modules
+   * @public - Used by modules that need to prepare for night
+   */
+  preNightMode(): boolean {
+    return this.nightMode.isPreNightMode();
   }
 
   /**

@@ -3,7 +3,7 @@
  */
 import type { AutoPlayConfig, AutoPlayState } from './types/autoplay';
 export default class AutoPlay {
-    static readonly version = "2.052-39";
+    static readonly version = "2.052-40";
     private config;
     private state;
     Config: {
@@ -164,6 +164,12 @@ export default class AutoPlay {
      * @public - Used by GoldenCookieHandler for aggressive tactics
      */
     grindingCheat(): boolean;
+    /**
+     * Check if it's currently pre-night mode (after 10pm)
+     * Used by AscensionManager and other modules
+     * @public - Used by modules that need to prepare for night
+     */
+    preNightMode(): boolean;
     /**
      * Run Just Right achievement special logic
      *
