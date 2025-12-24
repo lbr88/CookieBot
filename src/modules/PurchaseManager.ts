@@ -625,11 +625,19 @@ export class PurchaseManager {
       const progressPercent = Math.min(100, (available / price) * 100);
       const progressColor = canAfford ? '#6f6' : (progressPercent > 50 ? '#fc6' : '#f66');
 
-      // Calculate time remaining (if not affordable yet)
+      // Calculate time remaining using CookieMonster's approach (if available)
       let timeRemaining: number | undefined;
       if (!canAfford && Game.cookiesPs > 0) {
-        const shortfall = price - available;
-        timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
+        if (hasCookieMonster && CookieMonsterData?.Cache) {
+          // Use CookieMonster's calculation: account for wrinkler cookies
+          const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.savingsGoal;
+          const shortfall = Math.max(price - totalAvailable, 0);
+          timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
+        } else {
+          // Fallback: simple calculation without wrinklers
+          const shortfall = price - available;
+          timeRemaining = (shortfall / Game.cookiesPs) * 1000;
+        }
       }
 
       return {
@@ -728,11 +736,19 @@ export class PurchaseManager {
       const progressPercent = Math.min(100, (available / price) * 100);
       const progressColor = canAfford ? '#6f6' : (progressPercent > 50 ? '#fc6' : '#f66');
 
-      // Calculate time remaining (if not affordable yet)
+      // Calculate time remaining using CookieMonster's approach (if available)
       let timeRemaining: number | undefined;
       if (!canAfford && Game.cookiesPs > 0) {
-        const shortfall = price - available;
-        timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
+        if (hasCookieMonster && CookieMonsterData?.Cache) {
+          // Use CookieMonster's calculation: account for wrinkler cookies
+          const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.savingsGoal;
+          const shortfall = Math.max(price - totalAvailable, 0);
+          timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
+        } else {
+          // Fallback: simple calculation without wrinklers
+          const shortfall = price - available;
+          timeRemaining = (shortfall / Game.cookiesPs) * 1000;
+        }
       }
 
       return {
