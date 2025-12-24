@@ -301,20 +301,15 @@ export class Dashboard {
       <span id="dashboardToggle" style="color: #6f6; font-size: 12px;">▼ Collapse</span>
     `;
 
-    // Create content area
+    // Create content area - flexible grid for modules + activity column
     const content = document.createElement('div');
     content.id = 'dashboardContent';
     content.style.cssText = 'display: flex; padding: 12px; gap: 16px; max-height: 350px; overflow-y: auto;';
 
-    // Three columns: Active Modules | Waiting/Idle Modules | Recent Activity
+    // Left 2/3: Flexible grid of all modules | Right 1/3: Recent Activity
     content.innerHTML = `
-      <div id="dashActiveModules" style="flex: 1; min-width: 280px;">
-        <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">⚡ Active Modules</div>
-        <div id="dashActiveContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 300px; overflow-y: auto;">Loading...</div>
-      </div>
-      <div id="dashWaitingModules" style="flex: 1; min-width: 280px;">
-        <div style="color: #fc6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">⏳ Waiting / Idle Modules</div>
-        <div id="dashWaitingContent" style="color: #fff; font-size: 11px; line-height: 1.5; max-height: 300px; overflow-y: auto;">Loading...</div>
+      <div id="dashModulesGrid" style="flex: 2; min-width: 400px; display: flex; flex-direction: column; gap: 12px;">
+        <div id="dashModulesContent" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; color: #fff; font-size: 11px; line-height: 1.5;">Loading...</div>
       </div>
       <div id="dashActivity" style="flex: 1; min-width: 240px;">
         <div style="color: #6f6; font-size: 13px; margin-bottom: 8px; font-weight: bold;">📋 Recent Activity</div>
@@ -557,10 +552,8 @@ export class Dashboard {
   private updateModuleColumns(): void {
     // Safety check for AutoPlay global
     if (typeof AutoPlay === 'undefined') {
-      const activeContent = document.getElementById('dashActiveContent');
-      const waitingContent = document.getElementById('dashWaitingContent');
-      if (activeContent) activeContent.innerHTML = '<div style="color: #f66;">AutoPlay not initialized...</div>';
-      if (waitingContent) waitingContent.innerHTML = '<div style="color: #f66;">AutoPlay not initialized...</div>';
+      const modulesContent = document.getElementById('dashModulesContent');
+      if (modulesContent) modulesContent.innerHTML = '<div style="color: #f66; grid-column: 1 / -1;">AutoPlay not initialized...</div>';
       return;
     }
 
@@ -652,156 +645,106 @@ export class Dashboard {
         'error': '#f00'
       };
 
-      // Group modules by activity level
-      const activeModules: Array<{ key: keyof ModuleStatuses; status: any }> = [];
-      const waitingModules: Array<{ key: keyof ModuleStatuses; status: any }> = [];
+      // Collect all modules and sort by priority (active/blocked first, then others)
+      const allModules: Array<{ key: keyof ModuleStatuses; status: any; priority: number }> = [];
 
       for (const key of moduleOrder) {
         const status = statuses[key];
         if (!status) continue;
 
+        // Priority: active/blocked = 0, waiting/error = 1, idle/disabled = 2
+        let priority = 2;
         if (status.status === 'active' || status.status === 'blocked') {
-          activeModules.push({ key, status });
-        } else {
-          waitingModules.push({ key, status });
+          priority = 0;
+        } else if (status.status === 'waiting' || status.status === 'error') {
+          priority = 1;
         }
+
+        allModules.push({ key, status, priority });
       }
 
-      // Render active modules
-      let activeHtml = '';
-      for (const { status } of activeModules) {
+      // Sort by priority, then by module name
+      allModules.sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        return a.status.module.localeCompare(b.status.module);
+      });
+
+      // Helper function to render a module card
+      const renderModuleCard = (status: any): string => {
         const color = statusColors[status.status as keyof typeof statusColors] || '#ccc';
         const icon = status.icon || '📦';
 
-        activeHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + ';">';
-        activeHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-        activeHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
-        activeHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
-        activeHtml += '</div>';
-        activeHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
-        activeHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
+        let cardHtml = '<div style="padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + '; border-radius: 4px;">';
+        cardHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+        cardHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
+        cardHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
+        cardHtml += '</div>';
+        cardHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
+        cardHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
 
         if (status.nextAction) {
-          activeHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
+          cardHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
         }
 
         // Add standardized progress bar and time remaining
         if (status.progress) {
-          activeHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
+          cardHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
 
           const progressColor = status.progressColor || '#6f6';
           const label = status.progress.label || 'Progress';
 
           // Show progress with formatted values
           if (typeof Beautify !== 'undefined') {
-            activeHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + Beautify(status.progress.current) + ' / ' + Beautify(status.progress.target) + '</div>';
+            cardHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + Beautify(status.progress.current) + ' / ' + Beautify(status.progress.target) + '</div>';
           } else {
-            activeHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + status.progress.percent.toFixed(1) + '%</div>';
+            cardHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + status.progress.percent.toFixed(1) + '%</div>';
           }
 
           // Progress bar
-          activeHtml += this.createProgressBar(status.progress.percent, progressColor);
+          cardHtml += this.createProgressBar(status.progress.percent, progressColor);
 
           // Time remaining
           if (status.timeRemaining) {
-            activeHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(status.timeRemaining) + '</div>';
+            cardHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(status.timeRemaining) + '</div>';
           }
 
-          activeHtml += '</div>';
+          cardHtml += '</div>';
         }
 
         // Show additional details
         if (status.details && Object.keys(status.details).length > 0) {
-          activeHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
+          cardHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
           for (const [key, value] of Object.entries(status.details)) {
             if (key !== 'Price' && key !== 'Available') {
-              activeHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
+              cardHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
             }
           }
-          activeHtml += '</div>';
+          cardHtml += '</div>';
         }
 
-        activeHtml += '</div>';
+        cardHtml += '</div>';
+        return cardHtml;
+      };
+
+      // Render all modules into a single grid
+      let modulesHtml = '';
+      for (const { status } of allModules) {
+        modulesHtml += renderModuleCard(status);
       }
 
-      if (activeHtml === '') {
-        activeHtml = '<div style="color: #888;">No active modules</div>';
+      if (modulesHtml === '') {
+        modulesHtml = '<div style="color: #888; grid-column: 1 / -1;">No modules active</div>';
       }
 
-      // Render waiting/idle modules
-      let waitingHtml = '';
-      for (const { status } of waitingModules) {
-        const color = statusColors[status.status as keyof typeof statusColors] || '#ccc';
-        const icon = status.icon || '📦';
-
-        waitingHtml += '<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + ';">';
-        waitingHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-        waitingHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
-        waitingHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
-        waitingHtml += '</div>';
-        waitingHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
-        waitingHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
-
-        if (status.nextAction) {
-          waitingHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
-        }
-
-        // Add standardized progress bar and time remaining
-        if (status.progress) {
-          waitingHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
-
-          const progressColor = status.progressColor || '#6f6';
-          const label = status.progress.label || 'Progress';
-
-          // Show progress with formatted values
-          if (typeof Beautify !== 'undefined') {
-            waitingHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + Beautify(status.progress.current) + ' / ' + Beautify(status.progress.target) + '</div>';
-          } else {
-            waitingHtml += '<div style="color: #aaa; margin-top: 2px;">' + label + ': ' + status.progress.percent.toFixed(1) + '%</div>';
-          }
-
-          // Progress bar
-          waitingHtml += this.createProgressBar(status.progress.percent, progressColor);
-
-          // Time remaining
-          if (status.timeRemaining) {
-            waitingHtml += '<div style="color: #fc6; font-size: 9px; margin-top: 2px;">⏱ ' + this.formatTimeRemaining(status.timeRemaining) + '</div>';
-          }
-
-          waitingHtml += '</div>';
-        }
-
-        // Show additional details
-        if (status.details && Object.keys(status.details).length > 0) {
-          waitingHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
-          for (const [key, value] of Object.entries(status.details)) {
-            waitingHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
-          }
-          waitingHtml += '</div>';
-        }
-
-        waitingHtml += '</div>';
-      }
-
-      if (waitingHtml === '') {
-        waitingHtml = '<div style="color: #888;">No waiting/idle modules</div>';
-      }
-
-      // Update both columns
-      const activeContent = document.getElementById('dashActiveContent');
-      const waitingContent = document.getElementById('dashWaitingContent');
-      if (activeContent) {
-        activeContent.innerHTML = activeHtml;
-      }
-      if (waitingContent) {
-        waitingContent.innerHTML = waitingHtml;
+      // Update grid
+      const modulesContent = document.getElementById('dashModulesContent');
+      if (modulesContent) {
+        modulesContent.innerHTML = modulesHtml;
       }
     } catch (e) {
       console.error('Module status error:', e);
-      const activeContent = document.getElementById('dashActiveContent');
-      const waitingContent = document.getElementById('dashWaitingContent');
-      if (activeContent) activeContent.innerHTML = '<div style="color: #f66;">Error loading module statuses</div>';
-      if (waitingContent) waitingContent.innerHTML = '<div style="color: #f66;">Error loading module statuses</div>';
+      const modulesContent = document.getElementById('dashModulesContent');
+      if (modulesContent) modulesContent.innerHTML = '<div style="color: #f66; grid-column: 1 / -1;">Error loading module statuses</div>';
     }
   }
 
