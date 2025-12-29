@@ -42,6 +42,7 @@ export default class AutoPlay {
     CheatGolden: number;
     ShowDashboard: number;
     HardcoreMode: number;
+    FPS: number;
     [key: string]: number;
   };
 
@@ -147,7 +148,9 @@ export default class AutoPlay {
   set workingOnSpecialAchievement(value: boolean) { this.state.workingOnSpecialAchievement = value; }
 
   get fpsScale(): number {
-    if (!this.config.fpsScaling) return 1;
+    // Use Dashboard config if available (0=OFF, 1=ON), otherwise fallback to internal config
+    const enabled = (this.Config.FPS !== undefined) ? (this.Config.FPS === 1) : this.config.fpsScaling;
+    if (!enabled) return 1;
     const Game = (globalThis as any).Game;
     if (Game && Game.fps && Game.fps > 0) {
       // Standard FPS is 30. If FPS is higher, scale factor is < 1 (faster)
@@ -276,7 +279,8 @@ export default class AutoPlay {
       CheatLumps: 1,
       CheatGolden: 1,
       ShowDashboard: 1,
-      HardcoreMode: 1
+      HardcoreMode: 1,
+      FPS: 1
     };
 
     // Initialize public achievement arrays
@@ -707,9 +711,9 @@ export default class AutoPlay {
    */
   private scheduleNextRun(): void {
     let delay = 300;
-
-    // Scale delay based on Game.fps if enabled
-    if (this.config.fpsScaling) {
+    // Use Dashboard config if available (0=OFF, 1=ON), otherwise fallback to internal config
+    const fpsEnabled = (this.Config.FPS !== undefined) ? (this.Config.FPS === 1) : this.config.fpsScaling;
+    if (fpsEnabled) {
       const Game = (globalThis as any).Game;
       if (Game && Game.fps && Game.fps > 0) {
         // Standard FPS is 30. If FPS is higher, run faster (lower delay).

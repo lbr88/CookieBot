@@ -91,6 +91,10 @@ export class Dashboard {
       label: ['SKIP', 'AUTO'],
       desc: 'Hardcore/Neverclick achievements: SKIP (ignore them) or AUTO (attempt on first run)'
     };
+    this.configData.FPS = {
+      label: ['OFF', 'ON'],
+      desc: 'Scale timers based on game FPS (smoother at >30fps)'
+    };
     this.configData.CleanLog = {
       label: ['Clean Log'],
       desc: 'Cleaning the log'
@@ -111,6 +115,7 @@ export class Dashboard {
       ClickMode: 1,
       GoldenClickMode: 1,
       SavingStrategy: 1,
+      FPS: 1,
       CheatLumps: 1,
       CheatGolden: 1,
       ShowDashboard: 1,
@@ -250,6 +255,7 @@ export class Dashboard {
     frag.appendChild(listing('ClickMode'));
     frag.appendChild(listing('GoldenClickMode'));
     frag.appendChild(listing('SavingStrategy'));
+    frag.appendChild(listing('FPS'));
     frag.appendChild(listing('HardcoreMode'));
     frag.appendChild(header('Cheating'));
     frag.appendChild(listing('CheatLumps'));

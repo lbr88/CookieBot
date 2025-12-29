@@ -3972,6 +3972,10 @@ class Dashboard {
             label: ['SKIP', 'AUTO'],
             desc: 'Hardcore/Neverclick achievements: SKIP (ignore them) or AUTO (attempt on first run)'
         };
+        this.configData.FPS = {
+            label: ['OFF', 'ON'],
+            desc: 'Scale timers based on game FPS (smoother at >30fps)'
+        };
         this.configData.CleanLog = {
             label: ['Clean Log'],
             desc: 'Cleaning the log'
@@ -3991,6 +3995,7 @@ class Dashboard {
             ClickMode: 1,
             GoldenClickMode: 1,
             SavingStrategy: 1,
+            FPS: 1,
             CheatLumps: 1,
             CheatGolden: 1,
             ShowDashboard: 1,
@@ -4123,6 +4128,7 @@ class Dashboard {
         frag.appendChild(listing('ClickMode'));
         frag.appendChild(listing('GoldenClickMode'));
         frag.appendChild(listing('SavingStrategy'));
+        frag.appendChild(listing('FPS'));
         frag.appendChild(listing('HardcoreMode'));
         frag.appendChild(header('Cheating'));
         frag.appendChild(listing('CheatLumps'));
@@ -6999,7 +7005,9 @@ class AutoPlay_AutoPlay {
     get workingOnSpecialAchievement() { return this.state.workingOnSpecialAchievement; }
     set workingOnSpecialAchievement(value) { this.state.workingOnSpecialAchievement = value; }
     get fpsScale() {
-        if (!this.config.fpsScaling)
+        // Use Dashboard config if available (0=OFF, 1=ON), otherwise fallback to internal config
+        const enabled = (this.Config.FPS !== undefined) ? (this.Config.FPS === 1) : this.config.fpsScaling;
+        if (!enabled)
             return 1;
         const Game = globalThis.Game;
         if (Game && Game.fps && Game.fps > 0) {
@@ -7137,7 +7145,8 @@ class AutoPlay_AutoPlay {
             CheatLumps: 1,
             CheatGolden: 1,
             ShowDashboard: 1,
-            HardcoreMode: 1
+            HardcoreMode: 1,
+            FPS: 1
         };
         // Initialize public achievement arrays
         this.wantedAchievements = [...WANTED_ACHIEVEMENTS];
@@ -7492,8 +7501,9 @@ class AutoPlay_AutoPlay {
      */
     scheduleNextRun() {
         let delay = 300;
-        // Scale delay based on Game.fps if enabled
-        if (this.config.fpsScaling) {
+        // Use Dashboard config if available (0=OFF, 1=ON), otherwise fallback to internal config
+        const fpsEnabled = (this.Config.FPS !== undefined) ? (this.Config.FPS === 1) : this.config.fpsScaling;
+        if (fpsEnabled) {
             const Game = globalThis.Game;
             if (Game && Game.fps && Game.fps > 0) {
                 // Standard FPS is 30. If FPS is higher, run faster (lower delay).

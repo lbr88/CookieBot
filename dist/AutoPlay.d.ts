@@ -16,6 +16,7 @@ export default class AutoPlay {
         CheatGolden: number;
         ShowDashboard: number;
         HardcoreMode: number;
+        FPS: number;
         [key: string]: number;
     };
     private clickManager;

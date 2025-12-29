@@ -365,11 +365,13 @@ const { initializeFullEnvironment } = require('../utils/setup');
 
       // Test Disabled
       bot.config.fpsScaling = false;
+      bot.Config.FPS = 0;
       Game.fps = 60;
       if (bot.fpsScale !== 1) throw new Error(`Expected scale 1 when disabled, got ${bot.fpsScale}`);
 
       // Restore
       bot.config.fpsScaling = true;
+      bot.Config.FPS = 1;
       Game.fps = 30;
     });
 
