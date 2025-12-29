@@ -3,7 +3,7 @@
  */
 import type { AutoPlayConfig, AutoPlayState } from './types/autoplay';
 export default class AutoPlay {
-    static readonly version = "2.052-40";
+    static readonly version = "2.052-41";
     private config;
     private state;
     Config: {
@@ -40,6 +40,12 @@ export default class AutoPlay {
     backupHeight: number;
     giftCode: number | string;
     onAscend: boolean;
+    loggingInfo: string | number;
+    kittens: number[];
+    cursors: number[];
+    maxBuildings: number[];
+    butterBiscuits: number[];
+    expensive: number[];
     get nextAchievement(): number;
     set nextAchievement(value: number);
     get finished(): boolean;
@@ -72,16 +78,44 @@ export default class AutoPlay {
     set statusInfo(value: import("./types/autoplay").StatusInfo | undefined);
     get workingOnSpecialAchievement(): boolean;
     set workingOnSpecialAchievement(value: boolean);
+    get cpsMult(): number;
+    get canUseLumps(): boolean;
+    get poppingWrinklers(): boolean;
+    set poppingWrinklers(value: boolean);
+    get resetTime(): number;
+    get cheatGolden(): number;
+    get wrinklerTime(): number;
+    set wrinklerTime(value: number);
+    get nextWrinkler(): number;
+    set nextWrinkler(value: number);
+    get lumpRelatedAchievements(): number[];
+    get lumpHarvestAchievements(): number[];
     info(message: string): void;
     setMainActivity(activity: string): void;
     addActivity(activity: string): boolean;
     logAction(action: string, details?: string): void;
     logStatus(category: string, message: string, details?: string): void;
     /**
+     * Log game state to localStorage (legacy feature)
+     * Used during ascension to save state
+     */
+    logging(): void;
+    /**
      * Find next achievement to target (delegates to AchievementHandler)
      */
     findNextAchievement(): void;
     constructor();
+    /**
+     * Trigger ascension (delegates to AscensionManager)
+     */
+    triggerAscend(msg: string, bypass?: boolean): void;
+    seasonFinished(season: string): boolean;
+    handleSugarLumps(): void;
+    handleGoldenCookies(): void;
+    activateNightSpirits(): void;
+    deactivateNightSpirits(): void;
+    handleNightTrading(): void;
+    freezeGarden(freeze: boolean): void;
     /**
      * Initialize the bot
      */
@@ -110,7 +144,6 @@ export default class AutoPlay {
      * Check if an upgrade should be avoided
      * (Moved to BuildingManager.shouldAvoidBuy())
      */
-    private avoidBuy;
     /**
      * Handle speed minigames - grimoire spells
      * Runs in high-activity phase
@@ -202,6 +235,11 @@ export default class AutoPlay {
      * Get default state
      */
     private getDefaultState;
+    /**
+     * Reset the bot state and configuration to defaults
+     * Allows re-initialization
+     */
+    reset(): void;
     /**
      * Toggle dashboard visibility
      */

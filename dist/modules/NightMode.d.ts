@@ -10,56 +10,19 @@
  * Night hours: 11pm (23:00) to 7am (07:00)
  * Active hours: 7am to 11pm
  */
-interface NightModeConfig {
-    nightMode: number;
-}
-interface NightModeContext {
-    getNightMode: () => number;
-}
+import type { AutoPlayContext } from '../types/autoplay';
 export declare class NightMode {
     private isNight;
-    private config;
     private context;
-    private addActivity?;
-    private useLumpCallback?;
-    private grindinCheckCallback?;
-    private handleGoldenCookiesCallback?;
-    private pantheonManager?;
-    private stockMarketManager?;
     /**
-     * Constructor - expects config object and context with live getter
-     * @param config NightModeConfig for accessing night mode settings
-     * @param context Context with live config getter
+     * Constructor - expects context object
+     * @param context AutoPlayContext for accessing game state
      */
-    constructor(config: NightModeConfig, context: NightModeContext);
+    constructor(context: AutoPlayContext);
     /**
-     * Get current night mode (from live config or context getter)
+     * Get current night mode (from live config)
      */
     private getNightMode;
-    /**
-     * Set callback for activity logging
-     */
-    setAddActivityCallback(callback: (msg: string) => void): void;
-    /**
-     * Set callback for using sugar lumps
-     */
-    setUseLumpCallback(callback: () => void): void;
-    /**
-     * Set callback for checking if grinding
-     */
-    setGrindingCheckCallback(callback: () => boolean): void;
-    /**
-     * Set callback for handling golden cookies
-     */
-    setHandleGoldenCookiesCallback(callback: () => void): void;
-    /**
-     * Set pantheon manager reference
-     */
-    setPantheonManager(pantheonManager: any): void;
-    /**
-     * Set stock market manager reference
-     */
-    setStockMarketManager(stockMarketManager: any): void;
     /**
      * Log activity message
      */
@@ -89,8 +52,8 @@ export declare class NightMode {
     private deactivateNightFeatures;
     /**
      * Freeze/unfreeze garden during night
+     * @deprecated Use context.freezeGarden instead
      */
-    private activateNightAtGarden;
     /**
      * Get current CPS multiplier from active buffs
      * Simplified version - would need full buff calculation from Game.buffs
@@ -101,14 +64,8 @@ export declare class NightMode {
      */
     isCurrentlySleeping(): boolean;
     /**
-     * Toggle night mode
-     * Note: This method is deprecated - config should be changed via AutoPlay.Config
-     */
-    toggle(): void;
-    /**
      * Get status for dashboard display
      */
     getStatus(): any;
 }
-export {};
 //# sourceMappingURL=NightMode.d.ts.map

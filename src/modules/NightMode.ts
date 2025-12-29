@@ -11,98 +11,35 @@
  * Active hours: 7am to 11pm
  */
 
-interface NightModeConfig {
-  nightMode: number; // 0=OFF, 1=AUTO, 2=ON
-}
+import type { AutoPlayContext } from '../types/autoplay';
 
-interface NightModeContext {
-  getNightMode: () => number; // Live getter for current config value
-}
+declare const Game: any;
 
 export class NightMode {
   private isNight: boolean = false;
-  private config: NightModeConfig;
-  private context: NightModeContext;
-
-  // Optional callbacks for integration with AutoPlay
-  private addActivity?: (msg: string) => void;
-  private useLumpCallback?: () => void;
-  private grindinCheckCallback?: () => boolean;
-  private handleGoldenCookiesCallback?: () => void;
-  private pantheonManager?: any; // PantheonManager reference
-  private stockMarketManager?: any; // StockMarketManager reference
+  private context: AutoPlayContext;
 
   /**
-   * Constructor - expects config object and context with live getter
-   * @param config NightModeConfig for accessing night mode settings
-   * @param context Context with live config getter
+   * Constructor - expects context object
+   * @param context AutoPlayContext for accessing game state
    */
-  constructor(config: NightModeConfig, context: NightModeContext) {
-    this.config = config;
+  constructor(context: AutoPlayContext) {
     this.context = context;
   }
 
   /**
-   * Get current night mode (from live config or context getter)
+   * Get current night mode (from live config)
    */
   private getNightMode(): number {
-    // Prefer context getter if available (live config value)
-    if (this.context?.getNightMode) {
-      return this.context.getNightMode();
-    }
-    // Fallback to config passed at construction
-    return this.config.nightMode;
+    return this.context.Config.NightMode || 0;
   }
 
-  /**
-   * Set callback for activity logging
-   */
-  setAddActivityCallback(callback: (msg: string) => void): void {
-    this.addActivity = callback;
-  }
-
-  /**
-   * Set callback for using sugar lumps
-   */
-  setUseLumpCallback(callback: () => void): void {
-    this.useLumpCallback = callback;
-  }
-
-  /**
-   * Set callback for checking if grinding
-   */
-  setGrindingCheckCallback(callback: () => boolean): void {
-    this.grindinCheckCallback = callback;
-  }
-
-  /**
-   * Set callback for handling golden cookies
-   */
-  setHandleGoldenCookiesCallback(callback: () => void): void {
-    this.handleGoldenCookiesCallback = callback;
-  }
-
-  /**
-   * Set pantheon manager reference
-   */
-  setPantheonManager(pantheonManager: any): void {
-    this.pantheonManager = pantheonManager;
-  }
-
-  /**
-   * Set stock market manager reference
-   */
-  setStockMarketManager(stockMarketManager: any): void {
-    this.stockMarketManager = stockMarketManager;
-  }
 
   /**
    * Log activity message
    */
   private logActivity(msg: string): void {
-    if (this.addActivity) {
-      this.addActivity(msg);
-    }
+    this.context.addActivity(msg);
   }
 
   /**
@@ -136,7 +73,7 @@ export class NightMode {
     if (mode === 0) return false;
 
     // Mode 1: AUTO - don't sleep while grinding for final achievements
-    if (mode === 1 && this.grindinCheckCallback && this.grindinCheckCallback()) {
+    if (mode === 1 && this.context.grinding()) {
       return false;
     }
 
@@ -173,20 +110,16 @@ export class NightMode {
    */
   private prepareForNight(hour: number): void {
     this.logActivity('Preparing for the night.');
-    this.activateNightAtGarden(true);
+    this.context.freezeGarden(true);
 
     // Handle stock market night trading
-    if (this.stockMarketManager) {
-      this.stockMarketManager.handleNightTrading();
-    }
+    this.context.handleNightTrading();
 
     // Handle Golden Switch
     const goldenSwitchOff = Game.Upgrades["Golden switch [off]"];
     if (goldenSwitchOff && goldenSwitchOff.unlocked) {
       // Click any golden cookies before buying Golden Switch
-      if (this.handleGoldenCookiesCallback) {
-        this.handleGoldenCookiesCallback();
-      }
+      this.context.handleGoldenCookies();
 
       this.logActivity('Waiting for good time to buy Golden switch.');
 
@@ -210,9 +143,7 @@ export class NightMode {
     }
 
     // Activate night spirits via PantheonManager
-    if (this.pantheonManager) {
-      this.pantheonManager.activateNightSpirits();
-    }
+    this.context.activateNightSpirits();
   }
 
   /**
@@ -220,9 +151,7 @@ export class NightMode {
    */
   private onWakeUp(): void {
     // Use any accumulated sugar lumps
-    if (this.useLumpCallback) {
-      this.useLumpCallback();
-    }
+    this.context.handleSugarLumps();
   }
 
   /**
@@ -230,9 +159,7 @@ export class NightMode {
    */
   private deactivateNightFeatures(): void {
     // Deactivate night spirits via PantheonManager
-    if (this.pantheonManager) {
-      this.pantheonManager.deactivateNightSpirits();
-    }
+    this.context.deactivateNightSpirits();
 
     // Turn Golden Switch back on
     const goldenSwitchOn = Game.Upgrades["Golden switch [on]"];
@@ -240,25 +167,18 @@ export class NightMode {
       goldenSwitchOn.buy();
     }
 
-    this.activateNightAtGarden(false);
+    this.context.freezeGarden(false);
   }
 
   /**
    * Freeze/unfreeze garden during night
+   * @deprecated Use context.freezeGarden instead
    */
+  /*
   private activateNightAtGarden(activate: boolean): void {
-    if (!Game.isMinigameReady(Game.Objects["Farm"])) return;
-
-    const garden = Game.Objects["Farm"].minigame as any;
-
-    // Toggle freeze if needed
-    if (activate !== garden.freeze) {
-      const freezeButton = document.getElementById('gardenTool-2');
-      if (freezeButton) {
-        freezeButton.click();
-      }
-    }
+    this.context.freezeGarden(activate);
   }
+  */
 
 
   /**
@@ -290,14 +210,6 @@ export class NightMode {
     return this.isNight;
   }
 
-  /**
-   * Toggle night mode
-   * Note: This method is deprecated - config should be changed via AutoPlay.Config
-   */
-  toggle(): void {
-    // This method is deprecated - modules should not modify config directly
-    // User should change AutoPlay.Config.NightMode instead
-  }
 
   /**
    * Get status for dashboard display

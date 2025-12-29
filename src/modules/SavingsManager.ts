@@ -1,30 +1,13 @@
-/**
- * Manages cookie savings and reserves (Lucky, Lucky Frenzy)
- *
- * This module handles the calculation of savings goals based on different strategies:
- * - NONE (0): No savings
- * - AUTO (1): Automatically ramp up savings over time
- * - LUCKY (2): Save for Lucky golden cookie (100 minutes of CPS)
- * - LUCKY_FRENZY (3): Save for Lucky Frenzy (700 minutes of CPS)
- */
+import type { AutoPlayContext } from '../types/autoplay';
 
+declare const Game: any;
 declare const Beautify: (num: number) => string;
-
-interface SavingsManagerConfig {
-  SavingStrategy: number; // 0=NONE, 1=AUTO, 2=LUCKY, 3=LUCKY_FRENZY
-}
-
-interface SavingsManagerContext {
-  getSavingStrategy: () => number; // Live getter for current config value
-}
 
 export class SavingsManager {
   private savingsGoal: number = 0;
   private savingsStart: number = 0;
-  private config: SavingsManagerConfig;
-  private context: SavingsManagerContext;
+  private context: AutoPlayContext;
   private now: number = 0;
-  private logStatus: (type: string, message: string) => void;
 
   // Constants for AUTO savings strategy
   private readonly START_TIME = 30 * 60 * 1000;  // 30 minutes before starting to save
@@ -34,27 +17,16 @@ export class SavingsManager {
   private readonly LUCKY_MULTIPLIER = 100;        // 100 minutes of CPS
   private readonly FRENZY_MULTIPLIER = 7;         // 7x for Lucky Frenzy
 
-  constructor(
-    config: SavingsManagerConfig,
-    context: SavingsManagerContext,
-    logStatus: (type: string, message: string) => void = () => {}
-  ) {
-    this.config = config;
+  constructor(context: AutoPlayContext) {
     this.context = context;
-    this.logStatus = logStatus;
     this.savingsStart = Game.startDate;
   }
 
   /**
-   * Get current saving strategy (from live config or context getter)
+   * Get current saving strategy (from live config)
    */
   private getSavingStrategy(): number {
-    // Prefer context getter if available (live config value)
-    if (this.context?.getSavingStrategy) {
-      return this.context.getSavingStrategy();
-    }
-    // Fallback to config passed at construction
-    return this.config.SavingStrategy ?? 1;
+    return this.context.Config.SavingStrategy ?? 1;
   }
 
   /**
@@ -114,7 +86,7 @@ export class SavingsManager {
     // Still in startup period
     if (elapsedTime < 0) {
       this.savingsGoal = 0;
-      this.logStatus('reserve:startup', 'No reserve yet (startup period)');
+      this.context.logStatus('reserve:startup', 'No reserve yet (startup period)');
       return;
     }
 
@@ -124,7 +96,7 @@ export class SavingsManager {
       this.savingsGoal = Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER;
     } else {
       this.savingsGoal = 0;
-      this.logStatus('reserve:waiting-upgrades', 'Waiting for golden cookie upgrades');
+      this.context.logStatus('reserve:waiting-upgrades', 'Waiting for golden cookie upgrades');
       return;
     }
 
@@ -143,12 +115,12 @@ export class SavingsManager {
       const progressPct = actualProgress.toFixed(0);
 
       // Log progress in 10% increments
-      this.logStatus(
+      this.context.logStatus(
         'reserve:building-' + Math.floor(Number(progressPct) / 10) * 10,
         'Reserve growing: ' + progressPct + '% saved'
       );
     } else {
-      this.logStatus('reserve:maintaining', 'Reserve at max');
+      this.context.logStatus('reserve:maintaining', 'Reserve at max');
     }
 
     // Auto-adjustment: if fallen behind savings plan, reset the start time

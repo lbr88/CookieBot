@@ -5,8 +5,11 @@
  * Dragon levels unlock through various sacrifices and achievements.
  * Dragons provide powerful auras that boost game performance.
  */
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 export declare class DragonManager {
+    private context;
+    constructor(context: AutoPlayContext);
     /**
      * Main handler for all dragon-related activities
      * Should be called periodically from the main AutoPlay loop

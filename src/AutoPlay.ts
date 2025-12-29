@@ -6,7 +6,6 @@ import { ClickManager } from './modules/ClickManager';
 import { GoldenCookieHandler } from './modules/GoldenCookieHandler';
 import { SavingsManager } from './modules/SavingsManager';
 import { PurchaseManager } from './modules/PurchaseManager';
-// import { UpgradeManager } from './modules/UpgradeManager'; // Moved to BuildingManager
 import { SeasonHandler } from './modules/SeasonHandler';
 import { SugarLumpManager } from './modules/SugarLumpManager';
 import { WrinklerManager } from './modules/WrinklerManager';
@@ -20,13 +19,12 @@ import { GrimoireManager } from './modules/GrimoireManager';
 import { GardenManager } from './modules/GardenManager';
 import { StockMarketManager } from './modules/StockMarketManager';
 import type { AutoPlayConfig, AutoPlayState } from './types/autoplay';
-// import type { UpgradeManagerContext } from './modules/UpgradeManager'; // Moved to BuildingManager
 import { WANTED_ACHIEVEMENTS, LUMP_RELATED_ACHIEVEMENTS } from './constants/gameIds';
 import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-40';
+  static readonly version = '2.052-41';
 
   // State
   private config: AutoPlayConfig;
@@ -52,7 +50,6 @@ export default class AutoPlay {
   private goldenCookieHandler: GoldenCookieHandler;
   private savingsManager: SavingsManager;
   private purchaseManager: PurchaseManager;
-  // private upgradeManager: UpgradeManager; // Moved to BuildingManager
   private seasonHandler: SeasonHandler;
   private sugarLumpManager: SugarLumpManager;
   private wrinklerManager: WrinklerManager;
@@ -66,9 +63,6 @@ export default class AutoPlay {
   private gardenManager: GardenManager;
   private stockMarketManager: StockMarketManager;
 
-  // Shared context for upgrade manager (moved to BuildingManager)
-  // private upgradeContext: UpgradeManagerContext;
-
   // Public properties for global AutoPlay access (needed by modules)
   wantedAchievements: number[] = [];
   lateAchievements: number[] = [];
@@ -76,6 +70,25 @@ export default class AutoPlay {
   backupHeight: number = 0;
   giftCode: number | string = 0;
   onAscend: boolean = false; // Flag to prevent duplicate ascension calls
+  loggingInfo: string | number = 0;
+
+  // Permanent slot arrays
+  kittens: number[] = [31, 32, 54, 108, 187, 320, 321, 322, 425, 442, 462, 494, 613, 766, 865];
+  cursors: number[] = [0, 1, 2, 3, 4, 5, 6, 43, 82, 109, 188, 189, 660, 764, 873];
+  maxBuildings: number[] = [826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 858];
+  butterBiscuits: number[] = [334, 335, 336, 337, 400, 477, 478, 479, 497, 659, 699, 767, 862];
+  expensive: number[] = [
+    38, 39, 40, 41, 42, 55, 56, 80, 81, 88, 89, 90, 104, 105, 106, 107,
+    120, 121, 122, 123, 150, 151, 256, 257, 258, 259, 260, 261, 262, 263,
+    338, 339, 340, 341, 342, 343, 350, 351, 352, 403, 404, 405, 406, 407,
+    444, 445, 446, 447, 448, 453, 454, 455, 456, 457, 458, 464, 465, 466, 467, 468, 469,
+    498, 499, 500, 501, 535, 536, 538, 565, 566, 567, 568, 569, 570, 571, 572, 573, 574,
+    575, 576, 577, 578, 579, 580, 581, 582, 583, 584, 585, 586, 587, 588,
+    607, 608, 609, 615, 616, 617, 652, 653, 654, 655, 656, 657, 658,
+    678, 679, 680, 681, 682, 721, 722, 723, 724,
+    807, 808, 809, 810, 811, 812, 813, 814, 815, 816,
+    820, 821, 822, 823, 867, 868, 869, 870, 871, 872
+  ];
 
   // Public accessors for state properties (proxies to this.state)
   get nextAchievement(): number { return this.state.nextAchievement; }
@@ -133,6 +146,45 @@ export default class AutoPlay {
   get workingOnSpecialAchievement(): boolean { return this.state.workingOnSpecialAchievement; }
   set workingOnSpecialAchievement(value: boolean) { this.state.workingOnSpecialAchievement = value; }
 
+  // Public accessors for shared context
+  get cpsMult(): number {
+    const Game = (globalThis as any).Game;
+    return Game.cookiesPs / Game.unbuffedCps;
+  }
+
+  get canUseLumps(): boolean {
+    return this.sugarLumpManager.getCanUseLumps();
+  }
+
+  get poppingWrinklers(): boolean {
+    return this.state.poppingWrinklers;
+  }
+  set poppingWrinklers(value: boolean) {
+    this.state.poppingWrinklers = value;
+  }
+
+  get resetTime(): number {
+    return this.state.resetTime || this.state.now;
+  }
+
+  get cheatGolden(): number {
+    return this.config.cheatGolden;
+  }
+
+  get wrinklerTime(): number { return this.state.wrinklerTime; }
+  set wrinklerTime(value: number) { this.state.wrinklerTime = value; }
+
+  get nextWrinkler(): number { return this.state.nextWrinkler; }
+  set nextWrinkler(value: number) { this.state.nextWrinkler = value; }
+
+  get lumpRelatedAchievements(): number[] {
+    return this.lateAchievements;
+  }
+
+  get lumpHarvestAchievements(): number[] {
+    return this.lateAchievements;
+  }
+
   // Public methods expected by modules
   info(message: string): void {
     console.log(`[CookieBot] ${message}`);
@@ -163,6 +215,24 @@ export default class AutoPlay {
   logStatus(category: string, message: string, details?: string): void {
     if (this.dashboard) {
       this.dashboard.logStatus(category, message, details);
+    }
+  }
+
+  /**
+   * Log game state to localStorage (legacy feature)
+   * Used during ascension to save state
+   */
+  logging(): void {
+    if (!this.loggingInfo) return;
+    try {
+      const Game = (globalThis as any).Game;
+      const before = localStorage.getItem("autoplayLog") || "";
+      const toAdd = "#logging autoplay V" + AutoPlay.version + " with " +
+        this.loggingInfo + "\n" + Game.WriteSave(1) + "\n";
+      this.loggingInfo = 0;
+      localStorage.setItem("autoplayLog", before + toAdd);
+    } catch (e) {
+      console.error('Logging error:', e);
     }
   }
 
@@ -199,7 +269,7 @@ export default class AutoPlay {
     this.lateAchievements = [...LUMP_RELATED_ACHIEVEMENTS];
 
     // Create dashboard FIRST so logging callbacks can use it
-    this.dashboard = new Dashboard();
+    this.dashboard = new Dashboard(this as any);
 
     // Sync Config with Dashboard's config system (Dashboard loads from localStorage)
     // Cast to our Config type since Dashboard's Config interface is just [key: string]: number
@@ -235,92 +305,66 @@ export default class AutoPlay {
 
     // Initialize modules with proper constructor arguments
     // Use this.Config (original structure) instead of this.config (TypeScript structure)
-    this.clickManager = new ClickManager(
-      { clickMode: this.Config.ClickMode },
-      {
-        now: this.state.now,
-        endPhase: () => this.endPhase(),
-        grindingCheat: () => this.grindingCheat(),
-        getClickMode: () => this.Config.ClickMode  // Live getter reads from Config
-      }
-    );
+    this.clickManager = new ClickManager(this as any);
 
-    this.goldenCookieHandler = new GoldenCookieHandler(
-      {
-        GoldenClickMode: this.Config.GoldenClickMode,
-        CheatGolden: this.Config.CheatGolden,
-        getGoldenClickMode: () => this.Config.GoldenClickMode,  // Live getter reads from Config
-        getCheatGolden: () => this.Config.CheatGolden  // Live getter reads from Config
-      },
-      logAction,
-      addActivity,
-      () => this.grindingCheat()
-    );
+    this.goldenCookieHandler = new GoldenCookieHandler(this as any);
 
-    this.savingsManager = new SavingsManager(
-      { SavingStrategy: this.Config.SavingStrategy },
-      { getSavingStrategy: () => this.Config.SavingStrategy },  // Live getter reads from Config
-      logStatus
-    );
+    this.savingsManager = new SavingsManager(this as any);
 
-    this.purchaseManager = new PurchaseManager({
-      logAction,
-      addActivity,
-    });
+    this.purchaseManager = new PurchaseManager(this as any);
 
-    // Create upgrade manager context (moved to BuildingManager)
-    // this.upgradeContext = {
-    //   now: this.state.now,
-    //   savingsGoal: this.config.savingsGoal,
-    //   canUseLumps: false,
-    //   nextAchievement: null,
-    //   nextPurchase: null,
-    //   nextPurchaseType: null,
-    //   nextPurchasePrice: null,
-    //   nextPurchasePP: null,
-    //   hyperActive: false,
-    //   logAction,
-    //   addActivity,
-    // };
-    // this.upgradeManager = new UpgradeManager(this.upgradeContext); // Moved to BuildingManager
-
-    this.seasonHandler = new SeasonHandler();
-    this.sugarLumpManager = new SugarLumpManager(this.state);
-    this.wrinklerManager = new WrinklerManager(this.state);
-    this.achievementHandler = new AchievementHandler();
+    this.seasonHandler = new SeasonHandler(this as any);
+    this.sugarLumpManager = new SugarLumpManager(this as any);
+    this.wrinklerManager = new WrinklerManager(this as any);
+    this.achievementHandler = new AchievementHandler(this as any);
 
     // Pass 'this' as context so AscensionManager can read live properties via getters
     // Cast to any to satisfy the AutoPlayContext interface (this has all required properties)
     this.ascensionManager = new AscensionManager(this as any);
 
-    this.dragonManager = new DragonManager();
+    this.dragonManager = new DragonManager(this as any);
     // Dashboard already created at top of constructor
-    this.nightMode = new NightMode(
-      { nightMode: this.Config.NightMode },
-      { getNightMode: () => this.Config.NightMode }  // Live getter reads from Config
-    );
-    this.pantheonManager = new PantheonManager();
-    this.grimoireManager = new GrimoireManager();
-    this.gardenManager = new GardenManager();
-    this.stockMarketManager = new StockMarketManager();
+    this.nightMode = new NightMode(this as any);
+    this.pantheonManager = new PantheonManager(this as any);
+    this.grimoireManager = new GrimoireManager(this as any);
+    this.gardenManager = new GardenManager(this as any);
+    this.stockMarketManager = new StockMarketManager(this as any);
 
-    // Set up activity callback for modules that need it
-    this.sugarLumpManager.setAddActivity(addActivity);
-    this.nightMode.setAddActivityCallback(addActivity);
-    this.gardenManager.setAddActivity(addActivity);
+  }
 
-    // Set up wrinkler manager dependencies
-    this.wrinklerManager.setDependencies(
-      this.seasonHandler,
-      [...WANTED_ACHIEVEMENTS],
-      this.state.nextAchievement
-    );
+  /**
+   * Trigger ascension (delegates to AscensionManager)
+   */
+  triggerAscend(msg: string, bypass?: boolean): void {
+    this.ascensionManager.triggerAscend(msg, bypass);
+  }
 
-    // Set up pantheon manager reference for night mode
-    this.nightMode.setPantheonManager(this.pantheonManager);
+  seasonFinished(season: string): boolean {
+    return this.seasonHandler.seasonFinished(season);
+  }
 
-    // Set up stock market manager reference for night mode
-    this.nightMode.setStockMarketManager(this.stockMarketManager);
+  handleSugarLumps(): void {
+    this.sugarLumpManager.handleSugarLumps();
+  }
+
+  handleGoldenCookies(): void {
+    this.goldenCookieHandler.handleGoldenCookies();
+  }
+
+  activateNightSpirits(): void {
+    this.pantheonManager.activateNightSpirits();
+  }
+
+  deactivateNightSpirits(): void {
+    this.pantheonManager.deactivateNightSpirits();
+  }
+
+  handleNightTrading(): void {
+    this.stockMarketManager.handleNightTrading();
+  }
+
+  freezeGarden(freeze: boolean): void {
+    this.gardenManager.freezeGarden(freeze);
   }
 
   /**
@@ -353,15 +397,6 @@ export default class AutoPlay {
     this.setupMenuHook();
 
     // Do an initial bestBuy check to populate purchase info for dashboard
-    const Game = (globalThis as any).Game;
-    const cpsMult = Game.cookiesPs / Game.unbuffedCps;
-    this.purchaseManager.setState(
-      this.config.savingsGoal,
-      Date.now(),
-      cpsMult,
-      this.sugarLumpManager.getCanUseLumps(),
-      this.state.nextAchievement
-    );
     this.purchaseManager.bestBuy();
     const purchaseInfo = this.purchaseManager.getPurchaseInfo();
     if (purchaseInfo) {
@@ -431,9 +466,6 @@ export default class AutoPlay {
       return;
     }
 
-    // Calculate CPS multiplier for later use
-    const cpsMult = Game.cookiesPs / Game.unbuffedCps;
-
     // Update finished state - check if all lump-related achievements are complete
     this.state.finished = LUMP_RELATED_ACHIEVEMENTS.every((id) => Game.AchievementsById[id].won);
 
@@ -463,7 +495,7 @@ export default class AutoPlay {
       this.bestBuy();
 
       // Set hyperActive if CPS multiplier is very high
-      if (cpsMult > 100) {
+      if (this.cpsMult > 100) {
         this.state.hyperActive = true;
       }
 
@@ -473,21 +505,13 @@ export default class AutoPlay {
 
     // ===== Phase 6: Frequent ascension checks =====
     // Check ascend often in reborn and during ascend
-    if (Game.ascensionMode === 1 || this.state.onAscend) {
+    if (Game.ascensionMode === 1 || this.onAscend) {
       this.ascensionManager.handleAscend();
-      // Sync state from ascension manager
-      this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
-      this.state.onAscend = (this.ascensionManager as any).state.onAscend;
-      this.onAscend = this.state.onAscend; // Sync public property with internal state
     }
 
     // Check ascend often for lucky payout
     if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
       this.ascensionManager.handleAscend();
-      // Sync state from ascension manager
-      this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
-      this.state.onAscend = (this.ascensionManager as any).state.onAscend;
-      this.onAscend = this.state.onAscend; // Sync public property with internal state
     }
 
     // ===== Phase 7: Deadline check (end of high-activity) =====
@@ -586,16 +610,11 @@ export default class AutoPlay {
 
     // Wrinklers
     if (this.config.autoWrinklers) {
-      this.wrinklerManager.updateState(this.state.nextAchievement);
       this.wrinklerManager.handleWrinklers();
     }
 
     // Ascension
     this.ascensionManager.handleAscend();
-    // Sync state from ascension manager
-    this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
-    this.state.onAscend = (this.ascensionManager as any).state.onAscend;
-    this.onAscend = this.state.onAscend; // Sync public property with internal state
 
     // Minigames (garden, pantheon, stock market)
     this.handleMinigames();
@@ -634,18 +653,6 @@ export default class AutoPlay {
    * Original: lines 471-615 in cookieAutoPlayBeta.js
    */
   private bestBuy(): void {
-    const Game = (globalThis as any).Game;
-
-    // Update BuildingManager state with current context
-    const cpsMult = Game.cookiesPs / Game.unbuffedCps;
-    this.purchaseManager.setState(
-      this.config.savingsGoal,
-      this.state.now,
-      cpsMult,
-      this.sugarLumpManager.getCanUseLumps(),
-      this.state.nextAchievement
-    );
-
     // Delegate to BuildingManager
     this.purchaseManager.bestBuy();
 
@@ -668,52 +675,13 @@ export default class AutoPlay {
    * Check if an upgrade should be avoided
    * (Moved to BuildingManager.shouldAvoidBuy())
    */
-  // @ts-ignore TS6133 - Legacy method, kept for reference
-  private avoidBuy(upgrade: any): boolean {
-    const Game = (globalThis as any).Game;
 
-    switch (upgrade.id) {
-      case 71: // One mind
-      case 73: // Communal brainsweep
-        return Game.Achievements['Elder nap'].won &&
-               Game.Achievements['Grandmapocalypse'].won &&
-               Game.Achievements['Elder slumber'].won &&
-               Game.Achievements['Elder calm'].won;
-
-      case 74: // Elder Pledge
-        return Game.Achievements['Elder nap'].won &&
-               Game.Achievements['Elder slumber'].won &&
-               Game.Upgrades['Elder Covenant'].unlocked;
-
-      case 84: // Elder Covenant
-        return Game.Upgrades['Elder Pledge'].bought ||
-               Game.Achievements['Elder calm'].won;
-
-      case 227: // Chocolate egg
-        return true;
-
-      case 563: // Shimmering veil
-        return this.state.nextAchievement !== 432 ||
-               Game.Achievements['Thick-skinned'].won;
-
-      default:
-        return upgrade.pool === 'toggle';
-    }
-  }
 
   /**
    * Handle speed minigames - grimoire spells
    * Runs in high-activity phase
    */
   private handleSpeedMinigames(): void {
-    const Game = (globalThis as any).Game;
-
-    // Update grimoire state
-    this.grimoireManager.updateState(
-      this.sugarLumpManager.getCanUseLumps(),
-      Game.cookiesPs / Game.unbuffedCps
-    );
-
     // Cast grimoire spells
     this.grimoireManager.handleGrimoires();
   }
@@ -726,42 +694,14 @@ export default class AutoPlay {
     const Game = (globalThis as any).Game;
     if (Game.ascensionMode === 1) return; // No minigames in born again mode
 
-    // Update pantheon state
-    this.pantheonManager.updateState(
-      this.state.now,
-      this.state.poppingWrinklers,
-      this.sugarLumpManager.isCheatLumps()
-    );
-
     // Handle pantheon spirit assignments
     this.pantheonManager.handlePantheon();
-
-    // Update garden state
-    this.gardenManager.updateState({
-      now: this.state.now,
-      cpsMult: Game.cookiesPs / Game.unbuffedCps,
-      wantAscend: this.state.wantAscend,
-      savingsGoal: this.config.savingsGoal,
-      canUseLumps: this.sugarLumpManager.getCanUseLumps(),
-      finished: this.state.finished,
-      lumpRelatedAchievements: [...LUMP_RELATED_ACHIEVEMENTS] as number[],
-      poppingWrinklers: this.state.poppingWrinklers,
-      grindingCheat: this.grindingCheat(),
-      cheatGolden: this.config.cheatGolden,
-    });
 
     // Handle garden planting and harvesting
     this.gardenManager.handleGarden();
 
     // Update plantPending state from garden
     this.state.plantPending = this.gardenManager.isPlantPending();
-
-    // Update stock market state
-    this.stockMarketManager.updateState({
-      resetTime: this.state.resetTime || this.state.now,
-      wantAscend: this.state.wantAscend,
-      plantPending: this.state.plantPending,
-    });
 
     // Handle stock market trading
     this.stockMarketManager.handleStockMarket();
@@ -941,10 +881,6 @@ export default class AutoPlay {
 
     // Handle ascension checks
     this.ascensionManager.handleAscend();
-    // Sync state from ascension manager
-    this.state.wantAscend = (this.ascensionManager as any).context.wantAscend;
-    this.state.onAscend = (this.ascensionManager as any).state.onAscend;
-    this.onAscend = this.state.onAscend; // Sync public property with internal state
 
     // If "You" building exists, we need to start fresh
     const youBuilding = Game.ObjectsById[Game.ObjectsById.length - 1];
@@ -997,10 +933,10 @@ export default class AutoPlay {
 
         if (Math.round(Game.cookiesd) === goal) {
           // Perfect! Ascend with success
-          this.ascensionManager.triggerAscend('Fixed run just right.');
+          this.ascensionManager.triggerAscend('Fixed run just right.', true);
         } else if (cookieDiff < -goal && this.state.now - Game.startDate > 60000) {
           // Too far off after 1 minute - retry
-          this.ascensionManager.triggerAscend('ascend just right did not work, retry.');
+          this.ascensionManager.triggerAscend('ascend just right did not work, retry.', false);
         } else if (cookieDiff < -2000000000) {
           // Way over - buy many cursors to burn cookies
           Game.ObjectsById[0].buy(130 + (this.state.runRightCount || 0));
@@ -1138,7 +1074,6 @@ export default class AutoPlay {
       nextPurchasePP: null,
       nextPurchasePrice: null,
       buy10: false,
-      onAscend: false,
       savingsStart: now,
       savingsFraction: 0,
       mainActivity: 'Doing nothing in particular.',
@@ -1154,6 +1089,17 @@ export default class AutoPlay {
   }
 
   /**
+   * Reset the bot state and configuration to defaults
+   * Allows re-initialization
+   */
+  reset(): void {
+    this.state = this.getDefaultState();
+    this.config = this.getDefaultConfig();
+    this.state.isInitialized = false;
+    console.log('CookieBot reset to default state.');
+  }
+
+  /**
    * Toggle dashboard visibility
    */
   toggleDashboard(): void {
@@ -1165,7 +1111,6 @@ export default class AutoPlay {
    * Toggle night mode
    */
   toggleNightMode(): void {
-    this.nightMode.toggle();
     this.config.nightMode = !this.config.nightMode;
     this.saveConfig();
   }

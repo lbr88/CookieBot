@@ -1,23 +1,20 @@
-/**
- * Manages UI dashboard and menu
- * Migrated from cookieAutoPlayBeta.js lines 2271-3068
- */
-
 import type {
   ConfigData,
   Config,
   ActionHistoryEntry,
   StatusHistoryEntry,
-  ActivityEntry
+  ActivityEntry,
+  AutoPlayContext
 } from '../types/autoplay';
 import type { ModuleStatuses } from '../types/moduleStatus';
 
 declare const Game: any;
-declare const AutoPlay: any;
 declare const Beautify: (num: number) => string;
 declare const CookieMonsterData: any;
 
 export class Dashboard {
+  private context: AutoPlayContext;
+
   // Configuration system
   private config: Config = {};
   private configData: ConfigData = {};
@@ -40,7 +37,8 @@ export class Dashboard {
   private colorTextPre = 'color: ';
   private colorBlue = '#4169E1';
 
-  constructor() {
+  constructor(context: AutoPlayContext) {
+    this.context = context;
     this.initializeConfigData();
     this.setConfigDefaults();
     this.loadConfig();
@@ -276,8 +274,8 @@ export class Dashboard {
   private setBotMode(): void {
     this.toggleConfig('BotMode');
     const modeName = this.configData.BotMode.label[this.config.BotMode];
-    if (typeof AutoPlay !== 'undefined') {
-      AutoPlay.info?.(`The bot has changed mode to ${modeName}`);
+    if (this.context && this.context.info) {
+      this.context.info(`The bot has changed mode to ${modeName}`);
       this.logStatus('mode', `Mode: ${modeName}`);
     }
   }
@@ -477,8 +475,8 @@ export class Dashboard {
     }
 
     try {
-      // Check if AutoPlay is available
-      if (typeof AutoPlay === 'undefined') {
+      // Check if context is available
+      if (!this.context) {
         return;
       }
 
@@ -499,9 +497,9 @@ export class Dashboard {
 
     try {
       // Check if AutoPlay has a deadline
-      if (typeof AutoPlay !== 'undefined' && AutoPlay.deadline) {
+      if (this.context && this.context.deadline) {
         const now = Date.now();
-        const timeUntilUpdate = AutoPlay.deadline - now;
+        const timeUntilUpdate = this.context.deadline - now;
 
         if (timeUntilUpdate > 0) {
           timerElement.textContent = `Next update: ${this.formatTimeRemaining(timeUntilUpdate)}`;
@@ -550,8 +548,8 @@ export class Dashboard {
    * Update both module columns (active and waiting/idle)
    */
   private updateModuleColumns(): void {
-    // Safety check for AutoPlay global
-    if (typeof AutoPlay === 'undefined') {
+    // Safety check for context
+    if (!this.context) {
       const modulesContent = document.getElementById('dashModulesContent');
       if (modulesContent) modulesContent.innerHTML = '<div style="color: #f66; grid-column: 1 / -1;">AutoPlay not initialized...</div>';
       return;
@@ -562,57 +560,57 @@ export class Dashboard {
       const statuses: ModuleStatuses = {};
 
       // Get status from click manager
-      if (AutoPlay.clickManager && typeof AutoPlay.clickManager.getStatus === 'function') {
-        statuses.clicking = AutoPlay.clickManager.getStatus();
+      if (this.context.clickManager && typeof this.context.clickManager.getStatus === 'function') {
+        statuses.clicking = this.context.clickManager.getStatus();
       }
 
       // Get statuses from purchase manager (buildings and upgrades separately)
-      if (AutoPlay.purchaseManager) {
-        if (typeof AutoPlay.purchaseManager.getBuildingStatus === 'function') {
-          statuses.buildings = AutoPlay.purchaseManager.getBuildingStatus();
+      if (this.context.purchaseManager) {
+        if (typeof this.context.purchaseManager.getBuildingStatus === 'function') {
+          statuses.buildings = this.context.purchaseManager.getBuildingStatus();
         }
-        if (typeof AutoPlay.purchaseManager.getUpgradeStatus === 'function') {
-          statuses.upgrades = AutoPlay.purchaseManager.getUpgradeStatus();
+        if (typeof this.context.purchaseManager.getUpgradeStatus === 'function') {
+          statuses.upgrades = this.context.purchaseManager.getUpgradeStatus();
         }
       }
-      if (AutoPlay.gardenManager && typeof AutoPlay.gardenManager.getStatus === 'function') {
-        statuses.garden = AutoPlay.gardenManager.getStatus();
+      if (this.context.gardenManager && typeof this.context.gardenManager.getStatus === 'function') {
+        statuses.garden = this.context.gardenManager.getStatus();
       }
-      if (AutoPlay.wrinklerManager && typeof AutoPlay.wrinklerManager.getStatus === 'function') {
-        statuses.wrinklers = AutoPlay.wrinklerManager.getStatus();
+      if (this.context.wrinklerManager && typeof this.context.wrinklerManager.getStatus === 'function') {
+        statuses.wrinklers = this.context.wrinklerManager.getStatus();
       }
-      if (AutoPlay.goldenCookieHandler && typeof AutoPlay.goldenCookieHandler.getStatus === 'function') {
-        statuses.goldenCookies = AutoPlay.goldenCookieHandler.getStatus();
+      if (this.context.goldenCookieHandler && typeof this.context.goldenCookieHandler.getStatus === 'function') {
+        statuses.goldenCookies = this.context.goldenCookieHandler.getStatus();
       }
-      if (AutoPlay.dragonManager && typeof AutoPlay.dragonManager.getStatus === 'function') {
-        statuses.dragon = AutoPlay.dragonManager.getStatus();
+      if (this.context.dragonManager && typeof this.context.dragonManager.getStatus === 'function') {
+        statuses.dragon = this.context.dragonManager.getStatus();
       }
-      if (AutoPlay.pantheonManager && typeof AutoPlay.pantheonManager.getStatus === 'function') {
-        statuses.pantheon = AutoPlay.pantheonManager.getStatus();
+      if (this.context.pantheonManager && typeof this.context.pantheonManager.getStatus === 'function') {
+        statuses.pantheon = this.context.pantheonManager.getStatus();
       }
-      if (AutoPlay.grimoireManager && typeof AutoPlay.grimoireManager.getStatus === 'function') {
-        statuses.grimoire = AutoPlay.grimoireManager.getStatus();
+      if (this.context.grimoireManager && typeof this.context.grimoireManager.getStatus === 'function') {
+        statuses.grimoire = this.context.grimoireManager.getStatus();
       }
-      if (AutoPlay.stockMarketManager && typeof AutoPlay.stockMarketManager.getStatus === 'function') {
-        statuses.stockMarket = AutoPlay.stockMarketManager.getStatus();
+      if (this.context.stockMarketManager && typeof this.context.stockMarketManager.getStatus === 'function') {
+        statuses.stockMarket = this.context.stockMarketManager.getStatus();
       }
-      if (AutoPlay.sugarLumpManager && typeof AutoPlay.sugarLumpManager.getStatus === 'function') {
-        statuses.sugarLumps = AutoPlay.sugarLumpManager.getStatus();
+      if (this.context.sugarLumpManager && typeof this.context.sugarLumpManager.getStatus === 'function') {
+        statuses.sugarLumps = this.context.sugarLumpManager.getStatus();
       }
-      if (AutoPlay.ascensionManager && typeof AutoPlay.ascensionManager.getStatus === 'function') {
-        statuses.ascension = AutoPlay.ascensionManager.getStatus();
+      if (this.context.ascensionManager && typeof this.context.ascensionManager.getStatus === 'function') {
+        statuses.ascension = this.context.ascensionManager.getStatus();
       }
-      if (AutoPlay.seasonHandler && typeof AutoPlay.seasonHandler.getStatus === 'function') {
-        statuses.season = AutoPlay.seasonHandler.getStatus();
+      if (this.context.seasonHandler && typeof this.context.seasonHandler.getStatus === 'function') {
+        statuses.season = this.context.seasonHandler.getStatus();
       }
-      if (AutoPlay.achievementHandler && typeof AutoPlay.achievementHandler.getStatus === 'function') {
-        statuses.achievements = AutoPlay.achievementHandler.getStatus();
+      if (this.context.achievementHandler && typeof this.context.achievementHandler.getStatus === 'function') {
+        statuses.achievements = this.context.achievementHandler.getStatus();
       }
-      if (AutoPlay.savingsManager && typeof AutoPlay.savingsManager.getStatus === 'function') {
-        statuses.savings = AutoPlay.savingsManager.getStatus();
+      if (this.context.savingsManager && typeof this.context.savingsManager.getStatus === 'function') {
+        statuses.savings = this.context.savingsManager.getStatus();
       }
-      if (AutoPlay.nightMode && typeof AutoPlay.nightMode.getStatus === 'function') {
-        statuses.nightMode = AutoPlay.nightMode.getStatus();
+      if (this.context.nightMode && typeof this.context.nightMode.getStatus === 'function') {
+        statuses.nightMode = this.context.nightMode.getStatus();
       }
 
       // Render module statuses

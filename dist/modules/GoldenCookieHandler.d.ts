@@ -2,36 +2,22 @@
  * Handles Golden Cookies, Reindeer, and other shimmers
  * Migrated from cookieAutoPlayBeta.js "Handle Cookies and Golden Cookies" section
  */
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
-export interface GoldenCookieConfig {
-    GoldenClickMode?: number;
-    CheatGolden?: number;
-    getGoldenClickMode?: () => number;
-    getCheatGolden?: () => number;
-}
 export declare class GoldenCookieHandler {
-    private config;
+    private context;
     private cheatMax;
     private cheatMaxTime;
     private hyperActive;
-    private wantAscend;
-    private now;
-    private logAction;
-    private addActivity;
-    private grindingCheat;
-    constructor(config?: GoldenCookieConfig, logAction?: (action: string, details?: string) => void, addActivity?: (activity: string) => void, grindingCheat?: () => boolean);
+    constructor(context: AutoPlayContext);
     /**
-     * Get current GoldenClickMode (from live config or fallback)
+     * Get current GoldenClickMode (from live config)
      */
     private getGoldenClickMode;
     /**
-     * Get current CheatGolden (from live config or fallback)
+     * Get current CheatGolden (from live config)
      */
     private getCheatGolden;
-    /**
-     * Update runtime state
-     */
-    updateState(now: number, wantAscend: boolean): void;
     /**
      * Returns whether the bot is in hyperactive mode (frequent updates needed)
      */

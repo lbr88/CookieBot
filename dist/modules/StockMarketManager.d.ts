@@ -15,12 +15,11 @@
  * Original implementation: lines 1500-1591 in cookieAutoPlayBeta.js
  */
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 export declare class StockMarketManager {
     private goodsList;
-    private resetTime;
-    private wantAscend;
-    private plantPending;
-    private doAscend?;
+    private context;
+    constructor(context: AutoPlayContext);
     /**
      * Main handler - called periodically (every 15 seconds)
      */
@@ -54,18 +53,6 @@ export declare class StockMarketManager {
      * Trade goods based on price movements and thresholds
      */
     private tradeGoods;
-    /**
-     * Update state from AutoPlay
-     */
-    updateState(state: {
-        resetTime: number;
-        wantAscend: boolean;
-        plantPending: boolean;
-    }): void;
-    /**
-     * Set ascension callback
-     */
-    setDoAscendCallback(callback: (reason: string) => void): void;
     /**
      * Get current stock market manager status
      */

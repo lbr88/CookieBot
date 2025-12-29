@@ -13,19 +13,17 @@
  * - Use lump refill when we have 100+ lumps and canUseLumps
  */
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 export declare class GrimoireManager {
-    private canUseLumps;
-    private cpsMult;
+    private context;
+    constructor(context: AutoPlayContext);
     /**
      * Main handler - called in high-activity phase (when hyperActive or deadline reached)
      * Casts grimoire spells when beneficial
      */
     handleGrimoires(): void;
     /**
-     * Update state from AutoPlay
-     */
-    updateState(canUseLumps: boolean, cpsMult: number): void;
-    /**
+  
      * Get current grimoire manager status
      */
     getStatus(): ModuleStatus;

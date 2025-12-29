@@ -4,41 +4,24 @@
  * Original: AutoPlay.handleClicking (lines 360-384)
  */
 
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 
 declare const Game: any;
 declare const Beautify: (num: number) => string;
 
-interface ClickManagerConfig {
-  clickMode: number; // 0=off, 1=normal, 2+=aggressive
-}
-
-interface ClickManagerContext {
-  now: number;
-  endPhase: () => boolean;
-  grindingCheat: () => boolean;
-  getClickMode: () => number; // Live getter for current config value
-}
-
 export class ClickManager {
-  private config: ClickManagerConfig;
-  private context: ClickManagerContext;
+  private context: AutoPlayContext;
 
-  constructor(config: ClickManagerConfig, context: ClickManagerContext) {
-    this.config = config;
+  constructor(context: AutoPlayContext) {
     this.context = context;
   }
 
   /**
-   * Get current click mode (from live config or context getter)
+   * Get current click mode (from live config)
    */
   private getClickMode(): number {
-    // Prefer context getter if available (live config value)
-    if (this.context.getClickMode) {
-      return this.context.getClickMode();
-    }
-    // Fallback to config passed at construction
-    return this.config.clickMode;
+    return this.context.Config.ClickMode || 0;
   }
 
   /**

@@ -4,55 +4,14 @@
 
 declare const Game: any;
 declare const Beautify: (num: number) => string;
-declare const AutoPlay: any;
-
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 
 interface AscensionState {
   ascendLimit: number;
-  onAscend: boolean;
   loggedAchievements: { [key: number]: boolean };
   neverclickWarn: boolean;
   resetTime: number;
-}
-
-interface AutoPlayContext {
-  now: number;
-  nextAchievement: number;
-  wantedAchievements: number[];
-  lumpHarvestAchievements: number[];
-  wantAscend: boolean;
-  Config: {
-    HardcoreMode?: number;
-    NightMode?: number;
-  };
-  mainActivity: string;
-  activities: string;
-  hyperActive: boolean;
-  workingOnSpecialAchievement: boolean;
-  plantPending: boolean;
-  delay: number;
-  finished: boolean;
-
-  // Permanent slot arrays
-  kittens: number[];
-  maxBuildings: number[];
-  cursors: number[];
-  butterBiscuits: number[];
-  expensive: number[];
-
-  // Methods that need to be called
-  info: (message: string) => void;
-  logAction: (action: string, details?: string) => void;
-  logStatus: (type: string, message: string, details?: string) => void;
-  addActivity: (activity: string) => void;
-  setMainActivity: (activity: string) => void;
-  setDeadline: (time: number) => void;
-  findNextAchievement: () => void;
-  endPhase: () => boolean;
-  preNightMode: () => boolean;
-  mustRebornAscend: () => boolean;
-  assignSpirit: (slot: number, spirit: string, force: number) => void;
 }
 
 // Priority upgrades for heavenly cookie purchases
@@ -66,7 +25,6 @@ export class AscensionManager {
     this.context = context;
     this.state = {
       ascendLimit: 0.9 * Math.floor(2 * (1 - Game.ascendMeterPercent)),
-      onAscend: false,
       loggedAchievements: {},
       neverclickWarn: true,
       resetTime: Date.now()
@@ -87,17 +45,13 @@ export class AscensionManager {
       this.context.findNextAchievement();
       this.context.setDeadline(0); // reactivate all activities
       this.context.now = Date.now();
-      this.state.onAscend = false;
-      // Sync with global AutoPlay object
-      if (typeof AutoPlay !== 'undefined') {
-        AutoPlay.onAscend = false;
-      }
+      this.context.onAscend = false;
       this.state.loggedAchievements = {}; // Reset achievement tracking for new run
       return;
     }
 
     // Continue ascension process if timer is ready
-    if (this.state.onAscend && Game.AscendTimer === 0) {
+    if (this.context.onAscend && Game.AscendTimer === 0) {
       Game.Ascend(true);
     }
 
@@ -114,7 +68,7 @@ export class AscensionManager {
 
     // Check if reborn mode failed
     if (Game.ascensionMode === 1 && !this.canContinue() && !Game.AchievementsById[this.context.nextAchievement].won) {
-      this.doAscend("reborn mode did not work, retry.");
+      this.doAscend("reborn mode did not work, retry.", false);
       return;
     }
 
@@ -146,7 +100,7 @@ export class AscensionManager {
     // Check for season switcher
     if (!Game.Upgrades["Season switcher"].bought &&
         this.context.nextAchievement === 108 && Game.ascendMeterLevel > 1111) {
-      this.doAscend("getting season switcher.");
+      this.doAscend("getting season switcher.", true);
       return;
     }
   }
@@ -202,7 +156,8 @@ export class AscensionManager {
 
     this.doAscend(
       "have achievement: " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '') +
-      " after " + legacyTime + "(total: " + fullTime + ")"
+      " after " + legacyTime + "(total: " + fullTime + ")",
+      true
     );
   }
 
@@ -219,7 +174,7 @@ export class AscensionManager {
       this.context.wantAscend = true; // avoid buying plants
 
       if (Game.ascendMeterLevel > 0) {
-        this.doAscend("go for 1000 ascends");
+        this.doAscend("go for 1000 ascends", false);
         return true;
       }
     }
@@ -239,7 +194,7 @@ export class AscensionManager {
 
       if (Game.ascendMeterLevel > 0 &&
           this.state.ascendLimit < Game.ascendMeterLevel * Game.ascendMeterPercent) {
-        this.doAscend("go for 100 ascends");
+        this.doAscend("go for 100 ascends", false);
         return true;
       }
     }
@@ -277,7 +232,7 @@ export class AscensionManager {
 
       if (x < 9) {
         this.doAscend("ascend after " + Math.floor(daysInRun) +
-          " days just while waiting for next achievement.");
+          " days just while waiting for next achievement.", true);
         return true;
       }
     }
@@ -293,7 +248,7 @@ export class AscensionManager {
     if (!Game.Upgrades["Lucky digit"].bought && Game.heavenlyChips > 777 &&
         Game.ascendMeterLevel > 0 && Game.ascendMeterLevel < 20 &&
         ((Game.prestige + Game.ascendMeterLevel) % 10 === 7)) {
-      this.doAscend("ascend for heavenly upgrade lucky digit.");
+      this.doAscend("ascend for heavenly upgrade lucky digit.", false);
       return true;
     }
 
@@ -301,7 +256,7 @@ export class AscensionManager {
     if (!Game.Upgrades["Lucky number"].bought && Game.heavenlyChips > 77777 &&
         Game.ascendMeterLevel > 0 && Game.ascendMeterLevel < 200 &&
         ((Game.prestige + Game.ascendMeterLevel) % 1000 === 777)) {
-      this.doAscend("ascend for heavenly upgrade lucky number.");
+      this.doAscend("ascend for heavenly upgrade lucky number.", false);
       return true;
     }
 
@@ -314,7 +269,7 @@ export class AscensionManager {
 
       const sevenCount = (newPrestige + '').split('7').length - 1;
       if (Math.ceil(sevenCount) >= 4) {
-        this.doAscend("ascend for heavenly upgrade lucky payout.");
+        this.doAscend("ascend for heavenly upgrade lucky payout.", false);
         return true;
       }
     }
@@ -412,16 +367,16 @@ export class AscensionManager {
    * Public method to trigger ascension with a reason
    * Used by special achievement logic like runJustRight()
    */
-  triggerAscend(reason: string): void {
-    this.doAscend(reason);
+  triggerAscend(reason: string, log: boolean = false): void {
+    this.doAscend(reason, log);
   }
 
   /**
    * Perform the actual ascension
    */
-  private doAscend(reason: string): void {
+  private doAscend(reason: string, log: boolean = false): void {
     if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0) return;
-    if (this.state.onAscend || Game.OnAscend) return;
+    if (this.context.onAscend || Game.OnAscend) return;
 
     this.context.logStatus('ascend', reason);
     this.context.wantAscend = this.context.plantPending;
@@ -485,16 +440,18 @@ export class AscensionManager {
       }
 
       this.context.delay = 15;
+
+      // Set logging info if requested
+      if (log) {
+        this.context.loggingInfo = reason;
+      }
+
       // Call logging before ascension if available
-      if (typeof (AutoPlay as any).logging === 'function') {
-        (AutoPlay as any).logging();
+      if (typeof this.context.logging === 'function') {
+        this.context.logging();
       }
       Game.Ascend(true);
-      this.state.onAscend = true;
-      // Sync with global AutoPlay object
-      if (typeof AutoPlay !== 'undefined') {
-        AutoPlay.onAscend = true;
-      }
+      this.context.onAscend = true;
     }
   }
 
@@ -502,7 +459,7 @@ export class AscensionManager {
    * Handle reincarnation (after ascending)
    */
   private doReincarnate(): void {
-    this.state.onAscend = false;
+    this.context.onAscend = false;
     this.context.delay = 10;
     this.buyHeavenlyUpgrades();
 
@@ -582,6 +539,12 @@ export class AscensionManager {
     // Check if slot is unlocked (base ID is 264)
     if (!Game.UpgradesById[264 + slot].bought) return;
 
+    // Safety check for options
+    if (!options || !Array.isArray(options)) {
+      this.context.info(`Warning: No options provided for permanent slot ${slot}`);
+      return;
+    }
+
     Game.AssignPermanentSlot(slot);
 
     // Try to assign the best available upgrade from options (highest priority last)
@@ -624,7 +587,7 @@ export class AscensionManager {
     }
 
     // Check if ascending
-    if (this.state.onAscend) {
+    if (this.context.onAscend) {
       return {
         module: 'Ascension',
         status: 'active',

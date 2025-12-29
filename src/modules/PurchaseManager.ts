@@ -6,6 +6,7 @@
  * - Handle Upgrades (line 617)
  */
 
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 
 declare const Game: any;
@@ -29,22 +30,10 @@ export interface PurchaseManagerState {
 
 export class PurchaseManager {
   private state: PurchaseManagerState;
-  private savingsGoal: number = 0;
-  private now: number = 0;
-  private cpsMult: number = 1;
-  private canUseLumps: boolean = false;
-  private nextAchievement: number = 0;
-  private logAction: (action: string, details: string) => void = () => {};
-  private addActivity: (activity: string) => void = () => {};
-  private setHyperActive: (() => void) | null = null;
-  private setDeadline: ((deadline: number) => void) | null = null;
+  private context: AutoPlayContext;
 
-  constructor(callbacks?: {
-    logAction?: (action: string, details: string) => void;
-    addActivity?: (activity: string) => void;
-    setHyperActive?: () => void;
-    setDeadline?: (deadline: number) => void;
-  }) {
+  constructor(context: AutoPlayContext) {
+    this.context = context;
     this.state = {
       nextPurchase: null,
       nextPurchaseType: null,
@@ -52,31 +41,8 @@ export class PurchaseManager {
       nextPurchasePrice: null,
       buy10: false,
     };
-
-    if (callbacks?.logAction) {
-      this.logAction = callbacks.logAction;
-    }
-    if (callbacks?.addActivity) {
-      this.addActivity = callbacks.addActivity;
-    }
-    if (callbacks?.setHyperActive) {
-      this.setHyperActive = callbacks.setHyperActive;
-    }
-    if (callbacks?.setDeadline) {
-      this.setDeadline = callbacks.setDeadline;
-    }
   }
 
-  /**
-   * Update state values before processing
-   */
-  setState(savingsGoal: number, now: number, cpsMult: number, canUseLumps: boolean = false, nextAchievement: number = 0): void {
-    this.savingsGoal = savingsGoal;
-    this.now = now;
-    this.cpsMult = cpsMult;
-    this.canUseLumps = canUseLumps;
-    this.nextAchievement = nextAchievement;
-  }
 
   /**
    * Get current purchase info for dashboard
@@ -105,7 +71,7 @@ export class PurchaseManager {
     }
 
     // This happens with cursed finger
-    if (this.cpsMult === 0) {
+    if (this.context.cpsMult === 0) {
       // Clear purchase tracking during cursed finger
       this.clearPurchaseTracking();
       return false;
@@ -182,7 +148,7 @@ export class PurchaseManager {
     if ((Game.resets && Game.ascensionMode !== 1 &&
          Game.isMinigameReady(Game.Objects?.["Temple"]) &&
          Game.Objects?.["Temple"]?.minigame?.slot?.[0] === 10 && // Rigidel is in slot 0
-         Game.BuildingsOwned % 10 === 0 && (this.now - Game.startDate) > 2 * 60 * 1000)
+      Game.BuildingsOwned % 10 === 0 && (this.context.now - Game.startDate) > 2 * 60 * 1000)
         || this.state.buy10) {
       // if owned % 10 != 0, will just buy one
       buy_amt = 10;
@@ -252,20 +218,20 @@ export class PurchaseManager {
     }
 
     // Sugar frenzy check (original lines 602-605)
-    if (this.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
+    if (this.context.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
         !Game.Upgrades["Sugar frenzy"].bought &&
-        (this.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
+      (this.context.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
       Game.Upgrades["Sugar frenzy"].buy();
     }
 
     // Nothing bought, within first 10 minutes, have neverclick
     if (!haveBought) {
-      if ((this.now - Game.startDate) < 10 * 60 * 1000 &&
+      if ((this.context.now - Game.startDate) < 10 * 60 * 1000 &&
           Game.Achievements['Neverclick'].won) {
         // Wait five seconds before next step
-        if (this.setDeadline) this.setDeadline(this.now + 5000);
+        this.context.setDeadline(this.context.now + 5000);
       }
-      this.addActivity('Waiting to buy ' + best);
+      this.context.addActivity('Waiting to buy ' + best);
     }
 
     return haveBought;
@@ -284,12 +250,12 @@ export class PurchaseManager {
       Game.storeBulkButton(0);
     }
 
-    if ((this.now - Game.startDate) > 10 * 60 * 1000) {
+    if ((this.context.now - Game.startDate) > 10 * 60 * 1000) {
       buyAmount = 1; // buy single after 10 minutes
       const maxBuilding = Game.ObjectsById[Game.ObjectsById.length - 1];
-      if (maxBuilding.getSumPrice(100) < Game.cookies - this.savingsGoal) {
+      if (maxBuilding.getSumPrice(100) < Game.cookies - this.context.savingsGoal) {
         buyAmount = 100;
-      } else if (maxBuilding.getSumPrice(10) < Game.cookies - this.savingsGoal) {
+      } else if (maxBuilding.getSumPrice(10) < Game.cookies - this.context.savingsGoal) {
         buyAmount = 10;
       }
     }
@@ -297,7 +263,7 @@ export class PurchaseManager {
     if (Game.resets && Game.ascensionMode !== 1 &&
         Game.isMinigameReady(Game.Objects["Temple"]) &&
         Game.Objects["Temple"].minigame.slot[0] === 10 && // Rigidel is in slot 0
-        Game.BuildingsOwned % 10 === 0 && (this.now - Game.startDate) > 2 * 60 * 1000) {
+      Game.BuildingsOwned % 10 === 0 && (this.context.now - Game.startDate) > 2 * 60 * 1000) {
       buyAmount = checkAmount = 10;
     }
 
@@ -374,13 +340,13 @@ export class PurchaseManager {
     if (!building) return false;
 
     const price = building.getSumPrice(checkAmount);
-    if (price < Game.cookies - this.savingsGoal) {
+    if (price < Game.cookies - this.context.savingsGoal) {
       building.buy(buyAmount);
-      this.logAction(
+      this.context.logAction(
         'Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''),
         Beautify(price) + ' cookies'
       );
-      if (this.setHyperActive) this.setHyperActive(); // might buy more soon
+      this.context.hyperActive = true; // might buy more soon
       return true;
     }
     return false;
@@ -510,11 +476,11 @@ export class PurchaseManager {
    * @returns true if purchase was made
    */
   buyUpgrade(upgrade: Upgrade, bypass: boolean = true): boolean {
-    if (upgrade.getPrice() < Game.cookies - this.savingsGoal) {
+    if (upgrade.getPrice() < Game.cookies - this.context.savingsGoal) {
       const price = upgrade.getPrice();
       upgrade.buy(bypass);
-      this.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
-      if (this.setHyperActive) this.setHyperActive(); // might buy more soon
+      this.context.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
+      this.context.hyperActive = true; // might buy more soon
       return true;
     }
     return false;
@@ -553,7 +519,7 @@ export class PurchaseManager {
 
       // Shimmering veil - avoid unless working on specific achievement
       case 563: // Shimmering veil
-        return this.nextAchievement !== 432 || // "Thick-skinned" achievement ID
+        return this.context.nextAchievement !== 432 || // "Thick-skinned" achievement ID
                !!Game.Achievements["Thick-skinned"].won;
 
       // Avoid all toggle-pool upgrades by default
@@ -586,9 +552,9 @@ export class PurchaseManager {
     }
 
     // Sugar frenzy check (original lines 637-640)
-    if (this.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
+    if (this.context.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
         !Game.Upgrades["Sugar frenzy"].bought &&
-        (this.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
+      (this.context.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
       Game.Upgrades["Sugar frenzy"].buy();
     }
   }
@@ -602,7 +568,7 @@ export class PurchaseManager {
     // Buildings are always purchasable - Hardcore achievement only restricts upgrades, not buildings
 
     // Check if in cursed finger mode
-    if (this.cpsMult === 0) {
+    if (this.context.cpsMult === 0) {
       return {
         module: 'Buildings',
         status: 'waiting',
@@ -618,7 +584,7 @@ export class PurchaseManager {
     // Check if next purchase is a building
     if (this.state.nextPurchase && this.state.nextPurchaseType === 'building') {
       const price = this.state.nextPurchasePrice || 0;
-      const available = Game.cookies - this.savingsGoal;
+      const available = Game.cookies - this.context.savingsGoal;
       const canAfford = price < available;
 
       // Calculate progress
@@ -630,7 +596,7 @@ export class PurchaseManager {
       if (!canAfford && Game.cookiesPs > 0) {
         if (hasCookieMonster && CookieMonsterData?.Cache) {
           // Use CookieMonster's calculation: account for wrinkler cookies
-          const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.savingsGoal;
+          const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.context.savingsGoal;
           const shortfall = Math.max(price - totalAvailable, 0);
           timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
         } else {
@@ -713,7 +679,7 @@ export class PurchaseManager {
     }
 
     // Check if in cursed finger mode
-    if (this.cpsMult === 0) {
+    if (this.context.cpsMult === 0) {
       return {
         module: 'Upgrades',
         status: 'waiting',
@@ -729,7 +695,7 @@ export class PurchaseManager {
     // Check if next purchase is an upgrade
     if (this.state.nextPurchase && this.state.nextPurchaseType === 'upgrade') {
       const price = this.state.nextPurchasePrice || 0;
-      const available = Game.cookies - this.savingsGoal;
+      const available = Game.cookies - this.context.savingsGoal;
       const canAfford = price < available;
 
       // Calculate progress
@@ -741,7 +707,7 @@ export class PurchaseManager {
       if (!canAfford && Game.cookiesPs > 0) {
         if (hasCookieMonster && CookieMonsterData?.Cache) {
           // Use CookieMonster's calculation: account for wrinkler cookies
-          const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.savingsGoal;
+          const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.context.savingsGoal;
           const shortfall = Math.max(price - totalAvailable, 0);
           timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
         } else {
@@ -771,7 +737,7 @@ export class PurchaseManager {
           'Next Upgrade': this.state.nextPurchase,
           'Price': typeof Beautify !== 'undefined' ? Beautify(price) : price,
           'Available': typeof Beautify !== 'undefined' ? Beautify(available) : available,
-          'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.savingsGoal) : this.savingsGoal
+          'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.context.savingsGoal) : this.context.savingsGoal
         }
       };
     }

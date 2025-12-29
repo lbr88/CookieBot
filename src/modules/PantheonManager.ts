@@ -15,12 +15,15 @@
 declare const Game: any;
 
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 
 export class PantheonManager {
   // Injected dependencies
-  private now: number = Date.now();
-  private poppingWrinklers: boolean = false;
-  private cheatLumps: boolean = false;
+  private context: AutoPlayContext;
+
+  constructor(context: AutoPlayContext) {
+    this.context = context;
+  }
 
   /**
    * Main handler - called periodically (every 15 seconds)
@@ -29,19 +32,19 @@ export class PantheonManager {
   handlePantheon(): void {
     if (!Game.isMinigameReady(Game.Objects['Temple'])) return;
 
-    const age = this.now - Game.lumpT;
+    const age = this.context.now - Game.lumpT;
 
     // Slot 0 (Diamond) - Most important slot
-    if (this.poppingWrinklers) {
+    if (this.context.poppingWrinklers) {
       // Scorn: Wrinklers give +15% more cookies
       this.assignSpirit(0, 'scorn', 0);
-    } else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !this.cheatLumps) {
+    } else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !(this.context.Config.CheatLumps > 0)) {
       // Order: Sugar lumps ripen 1 hour sooner (use when < 61 min from harvest)
       this.assignSpirit(0, 'order', 0);
-    } else if (this.preNightMode() &&
+    } else if (this.context.preNightMode() &&
                Game.lumpOverripeAge - age < 9 * 60 * 60000 &&
                (new Date()).getMinutes() === 59 &&
-               !this.cheatLumps) {
+      !(this.context.Config.CheatLumps > 0)) {
       // Order: Also use at 59 minutes before midnight if lump about to over-ripen
       this.assignSpirit(0, 'order', 0);
     } else {
@@ -122,23 +125,7 @@ export class PantheonManager {
   }
 
   /**
-   * Check if it's pre-night mode (after 10pm)
-   */
-  private preNightMode(): boolean {
-    const hour = new Date().getHours();
-    return hour >= 22;
-  }
 
-  /**
-   * Update state from AutoPlay
-   */
-  updateState(now: number, poppingWrinklers: boolean, cheatLumps: boolean): void {
-    this.now = now;
-    this.poppingWrinklers = poppingWrinklers;
-    this.cheatLumps = cheatLumps;
-  }
-
-  /**
    * Get current pantheon manager status
    */
   getStatus(): ModuleStatus {
@@ -178,12 +165,12 @@ export class PantheonManager {
     const spirit2 = getGodName(slot2);
 
     // Determine reason based on current setup
-    const age = this.now - Game.lumpT;
+    const age = this.context.now - Game.lumpT;
     let reason = '';
 
-    if (this.poppingWrinklers) {
+    if (this.context.poppingWrinklers) {
       reason = 'Scorn for wrinkler bonus';
-    } else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !this.cheatLumps) {
+    } else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !(this.context.Config.CheatLumps > 0)) {
       reason = 'Order for faster lump ripening';
     } else {
       reason = 'Mother for CpS boost (default)';
@@ -205,7 +192,7 @@ export class PantheonManager {
         'Ruby': spirit1,
         'Jade': spirit2,
         'Swaps': swapsAvailable,
-        'Strategy': this.poppingWrinklers ? 'Wrinkler boost' : 'Default'
+        'Strategy': this.context.poppingWrinklers ? 'Wrinkler boost' : 'Default'
       }
     };
   }

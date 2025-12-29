@@ -10,20 +10,14 @@
  * Original: AutoPlay.handleClicking (lines 360-384)
  */
 class ClickManager {
-    constructor(config, context) {
-        this.config = config;
+    constructor(context) {
         this.context = context;
     }
     /**
-     * Get current click mode (from live config or context getter)
+     * Get current click mode (from live config)
      */
     getClickMode() {
-        // Prefer context getter if available (live config value)
-        if (this.context.getClickMode) {
-            return this.context.getClickMode();
-        }
-        // Fallback to config passed at construction
-        return this.config.clickMode;
+        return this.context.Config.ClickMode || 0;
     }
     /**
      * Handle clicking - respects Neverclick/True Neverclick achievements
@@ -167,41 +161,23 @@ class ClickManager {
  * Migrated from cookieAutoPlayBeta.js "Handle Cookies and Golden Cookies" section
  */
 class GoldenCookieHandler {
-    constructor(config, logAction, addActivity, grindingCheat) {
+    constructor(context) {
         this.cheatMax = 0;
         this.cheatMaxTime = Date.now();
         this.hyperActive = false;
-        this.wantAscend = false;
-        this.now = Date.now();
-        this.config = config || { GoldenClickMode: 0, CheatGolden: 0 };
-        this.logAction = logAction || (() => { });
-        this.addActivity = addActivity || (() => { });
-        this.grindingCheat = grindingCheat || (() => false);
+        this.context = context;
     }
     /**
-     * Get current GoldenClickMode (from live config or fallback)
+     * Get current GoldenClickMode (from live config)
      */
     getGoldenClickMode() {
-        if (this.config.getGoldenClickMode) {
-            return this.config.getGoldenClickMode();
-        }
-        return this.config.GoldenClickMode || 0;
+        return this.context.Config.GoldenClickMode || 0;
     }
     /**
-     * Get current CheatGolden (from live config or fallback)
+     * Get current CheatGolden (from live config)
      */
     getCheatGolden() {
-        if (this.config.getCheatGolden) {
-            return this.config.getCheatGolden();
-        }
-        return this.config.CheatGolden || 0;
-    }
-    /**
-     * Update runtime state
-     */
-    updateState(now, wantAscend) {
-        this.now = now;
-        this.wantAscend = wantAscend;
+        return this.context.Config.CheatGolden || 0;
     }
     /**
      * Returns whether the bot is in hyperactive mode (frequent updates needed)
@@ -243,7 +219,7 @@ class GoldenCookieHandler {
             // Handle cookie storm drops (aggressive mode only)
             if (s.force === 'cookie storm drop' && goldenClickMode === 2) {
                 s.pop();
-                this.logAction('Clicked cookie storm drop', s.type);
+                this.context.logAction('Clicked cookie storm drop', s.type);
             }
             // Click non-golden shimmers, or golden cookies that are about to expire
             if (s.type !== 'golden' ||
@@ -275,16 +251,16 @@ class GoldenCookieHandler {
             const bonusType = shimmer.force || 'fading luck';
             // Lucky and Lucky Frenzy both have "lucky" in their force name
             if (bonusType.toLowerCase().includes('lucky')) {
-                this.logAction(`Clicked ${bonusType} golden cookie`, `💰 +${Beautify(cookiesGained)} cookies`);
+                this.context.logAction(`Clicked ${bonusType} golden cookie`, `💰 +${Beautify(cookiesGained)} cookies`);
                 return;
             }
         }
         // Log regular shimmer click
         if (shimmer.type === 'golden') {
-            this.logAction('Clicked golden cookie', shimmer.force || 'fading luck');
+            this.context.logAction('Clicked golden cookie', shimmer.force || 'fading luck');
         }
         else {
-            this.logAction(`Clicked ${shimmer.type}`, shimmer.force || 'shimmer');
+            this.context.logAction(`Clicked ${shimmer.type}`, shimmer.force || 'shimmer');
         }
     }
     /**
@@ -301,26 +277,26 @@ class GoldenCookieHandler {
         let level = 10 + 30 * (cheatGolden - 1);
         if (cheatGolden === 1) {
             // Auto cheat mode
-            if (this.wantAscend)
+            if (this.context.wantAscend)
                 return; // already cheated enough
-            if (!this.grindingCheat())
+            if (!this.context.grindingCheat())
                 return; // only cheat in grinding
-            const daysInRun = (this.now - Game.startDate) / 1000 / 60 / 60 / 24;
+            const daysInRun = (this.context.now - Game.startDate) / 1000 / 60 / 60 / 24;
             if (daysInRun < 20)
                 return; // cheat only after 20 days
             level = ((3 * daysInRun) << 0) - 20;
             if (level > 100)
                 level = 100;
             const timeToNextLevel = (2 * 60 * 60 * 1000) / ((level - this.cheatMax + 8) / 10);
-            if (this.now - this.cheatMaxTime >= timeToNextLevel) {
-                this.cheatMaxTime = this.now;
+            if (this.context.now - this.cheatMaxTime >= timeToNextLevel) {
+                this.cheatMaxTime = this.context.now;
                 this.cheatMax++;
             }
             if (level > this.cheatMax)
                 level = this.cheatMax;
             this.cheatMax = level;
         }
-        this.addActivity(`Cheating golden cookies at level ${level}.`);
+        this.context.addActivity(`Cheating golden cookies at level ${level}.`);
         const levelTime = (Game.shimmerTypes.golden.maxTime * level) / 140;
         if (Game.shimmerTypes.golden.time < levelTime) {
             Game.shimmerTypes.golden.time = levelTime;
@@ -442,7 +418,7 @@ class GoldenCookieHandler {
             reason: goldenClickMode === 2 ? 'Aggressive mode' : 'Normal mode',
             icon: '✨',
             details: {
-                'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+                'Mode': this.context.Config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
                 'Golden Cookies': goldenCount,
                 'Active Buff': activeBuff || 'None'
             }
@@ -471,17 +447,8 @@ class GoldenCookieHandler {
 }
 
 ;// ./src/modules/SavingsManager.ts
-/**
- * Manages cookie savings and reserves (Lucky, Lucky Frenzy)
- *
- * This module handles the calculation of savings goals based on different strategies:
- * - NONE (0): No savings
- * - AUTO (1): Automatically ramp up savings over time
- * - LUCKY (2): Save for Lucky golden cookie (100 minutes of CPS)
- * - LUCKY_FRENZY (3): Save for Lucky Frenzy (700 minutes of CPS)
- */
 class SavingsManager {
-    constructor(config, context, logStatus = () => { }) {
+    constructor(context) {
         this.savingsGoal = 0;
         this.savingsStart = 0;
         this.now = 0;
@@ -491,21 +458,14 @@ class SavingsManager {
         // Reserve multipliers
         this.LUCKY_MULTIPLIER = 100; // 100 minutes of CPS
         this.FRENZY_MULTIPLIER = 7; // 7x for Lucky Frenzy
-        this.config = config;
         this.context = context;
-        this.logStatus = logStatus;
         this.savingsStart = Game.startDate;
     }
     /**
-     * Get current saving strategy (from live config or context getter)
+     * Get current saving strategy (from live config)
      */
     getSavingStrategy() {
-        // Prefer context getter if available (live config value)
-        if (this.context?.getSavingStrategy) {
-            return this.context.getSavingStrategy();
-        }
-        // Fallback to config passed at construction
-        return this.config.SavingStrategy ?? 1;
+        return this.context.Config.SavingStrategy ?? 1;
     }
     /**
      * Initialize savings tracking (called on ascension)
@@ -555,7 +515,7 @@ class SavingsManager {
         // Still in startup period
         if (elapsedTime < 0) {
             this.savingsGoal = 0;
-            this.logStatus('reserve:startup', 'No reserve yet (startup period)');
+            this.context.logStatus('reserve:startup', 'No reserve yet (startup period)');
             return;
         }
         // Wait for golden cookie upgrades before saving
@@ -565,7 +525,7 @@ class SavingsManager {
         }
         else {
             this.savingsGoal = 0;
-            this.logStatus('reserve:waiting-upgrades', 'Waiting for golden cookie upgrades');
+            this.context.logStatus('reserve:waiting-upgrades', 'Waiting for golden cookie upgrades');
             return;
         }
         // Upgrade to Lucky Frenzy if "Get lucky" upgrade is bought
@@ -580,10 +540,10 @@ class SavingsManager {
             const actualProgress = Math.min(100, (Game.cookies / this.savingsGoal) * 100);
             const progressPct = actualProgress.toFixed(0);
             // Log progress in 10% increments
-            this.logStatus('reserve:building-' + Math.floor(Number(progressPct) / 10) * 10, 'Reserve growing: ' + progressPct + '% saved');
+            this.context.logStatus('reserve:building-' + Math.floor(Number(progressPct) / 10) * 10, 'Reserve growing: ' + progressPct + '% saved');
         }
         else {
-            this.logStatus('reserve:maintaining', 'Reserve at max');
+            this.context.logStatus('reserve:maintaining', 'Reserve at max');
         }
         // Auto-adjustment: if fallen behind savings plan, reset the start time
         // This handles cases where the bot was stopped or a big purchase was made
@@ -703,16 +663,8 @@ class SavingsManager {
  * - Handle Upgrades (line 617)
  */
 class PurchaseManager {
-    constructor(callbacks) {
-        this.savingsGoal = 0;
-        this.now = 0;
-        this.cpsMult = 1;
-        this.canUseLumps = false;
-        this.nextAchievement = 0;
-        this.logAction = () => { };
-        this.addActivity = () => { };
-        this.setHyperActive = null;
-        this.setDeadline = null;
+    constructor(context) {
+        this.context = context;
         this.state = {
             nextPurchase: null,
             nextPurchaseType: null,
@@ -720,28 +672,6 @@ class PurchaseManager {
             nextPurchasePrice: null,
             buy10: false,
         };
-        if (callbacks?.logAction) {
-            this.logAction = callbacks.logAction;
-        }
-        if (callbacks?.addActivity) {
-            this.addActivity = callbacks.addActivity;
-        }
-        if (callbacks?.setHyperActive) {
-            this.setHyperActive = callbacks.setHyperActive;
-        }
-        if (callbacks?.setDeadline) {
-            this.setDeadline = callbacks.setDeadline;
-        }
-    }
-    /**
-     * Update state values before processing
-     */
-    setState(savingsGoal, now, cpsMult, canUseLumps = false, nextAchievement = 0) {
-        this.savingsGoal = savingsGoal;
-        this.now = now;
-        this.cpsMult = cpsMult;
-        this.canUseLumps = canUseLumps;
-        this.nextAchievement = nextAchievement;
     }
     /**
      * Get current purchase info for dashboard
@@ -768,7 +698,7 @@ class PurchaseManager {
             return false;
         }
         // This happens with cursed finger
-        if (this.cpsMult === 0) {
+        if (this.context.cpsMult === 0) {
             // Clear purchase tracking during cursed finger
             this.clearPurchaseTracking();
             return false;
@@ -838,7 +768,7 @@ class PurchaseManager {
         if ((Game.resets && Game.ascensionMode !== 1 &&
             Game.isMinigameReady(Game.Objects?.["Temple"]) &&
             Game.Objects?.["Temple"]?.minigame?.slot?.[0] === 10 && // Rigidel is in slot 0
-            Game.BuildingsOwned % 10 === 0 && (this.now - Game.startDate) > 2 * 60 * 1000)
+            Game.BuildingsOwned % 10 === 0 && (this.context.now - Game.startDate) > 2 * 60 * 1000)
             || this.state.buy10) {
             // if owned % 10 != 0, will just buy one
             buy_amt = 10;
@@ -905,20 +835,19 @@ class PurchaseManager {
             }
         }
         // Sugar frenzy check (original lines 602-605)
-        if (this.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
+        if (this.context.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
             !Game.Upgrades["Sugar frenzy"].bought &&
-            (this.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
+            (this.context.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
             Game.Upgrades["Sugar frenzy"].buy();
         }
         // Nothing bought, within first 10 minutes, have neverclick
         if (!haveBought) {
-            if ((this.now - Game.startDate) < 10 * 60 * 1000 &&
+            if ((this.context.now - Game.startDate) < 10 * 60 * 1000 &&
                 Game.Achievements['Neverclick'].won) {
                 // Wait five seconds before next step
-                if (this.setDeadline)
-                    this.setDeadline(this.now + 5000);
+                this.context.setDeadline(this.context.now + 5000);
             }
-            this.addActivity('Waiting to buy ' + best);
+            this.context.addActivity('Waiting to buy ' + best);
         }
         return haveBought;
     }
@@ -933,20 +862,20 @@ class PurchaseManager {
         if (Game.buyMode === -1 && (!Game.onMenu || Game.onMenu === '')) {
             Game.storeBulkButton(0);
         }
-        if ((this.now - Game.startDate) > 10 * 60 * 1000) {
+        if ((this.context.now - Game.startDate) > 10 * 60 * 1000) {
             buyAmount = 1; // buy single after 10 minutes
             const maxBuilding = Game.ObjectsById[Game.ObjectsById.length - 1];
-            if (maxBuilding.getSumPrice(100) < Game.cookies - this.savingsGoal) {
+            if (maxBuilding.getSumPrice(100) < Game.cookies - this.context.savingsGoal) {
                 buyAmount = 100;
             }
-            else if (maxBuilding.getSumPrice(10) < Game.cookies - this.savingsGoal) {
+            else if (maxBuilding.getSumPrice(10) < Game.cookies - this.context.savingsGoal) {
                 buyAmount = 10;
             }
         }
         if (Game.resets && Game.ascensionMode !== 1 &&
             Game.isMinigameReady(Game.Objects["Temple"]) &&
             Game.Objects["Temple"].minigame.slot[0] === 10 && // Rigidel is in slot 0
-            Game.BuildingsOwned % 10 === 0 && (this.now - Game.startDate) > 2 * 60 * 1000) {
+            Game.BuildingsOwned % 10 === 0 && (this.context.now - Game.startDate) > 2 * 60 * 1000) {
             buyAmount = checkAmount = 10;
         }
         // Calculate relative strength of cookie production (CPC = cookies per cookie)
@@ -1025,11 +954,10 @@ class PurchaseManager {
         if (!building)
             return false;
         const price = building.getSumPrice(checkAmount);
-        if (price < Game.cookies - this.savingsGoal) {
+        if (price < Game.cookies - this.context.savingsGoal) {
             building.buy(buyAmount);
-            this.logAction('Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''), Beautify(price) + ' cookies');
-            if (this.setHyperActive)
-                this.setHyperActive(); // might buy more soon
+            this.context.logAction('Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''), Beautify(price) + ' cookies');
+            this.context.hyperActive = true; // might buy more soon
             return true;
         }
         return false;
@@ -1139,12 +1067,11 @@ class PurchaseManager {
      * @returns true if purchase was made
      */
     buyUpgrade(upgrade, bypass = true) {
-        if (upgrade.getPrice() < Game.cookies - this.savingsGoal) {
+        if (upgrade.getPrice() < Game.cookies - this.context.savingsGoal) {
             const price = upgrade.getPrice();
             upgrade.buy(bypass);
-            this.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
-            if (this.setHyperActive)
-                this.setHyperActive(); // might buy more soon
+            this.context.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
+            this.context.hyperActive = true; // might buy more soon
             return true;
         }
         return false;
@@ -1178,7 +1105,7 @@ class PurchaseManager {
                 return true;
             // Shimmering veil - avoid unless working on specific achievement
             case 563: // Shimmering veil
-                return this.nextAchievement !== 432 || // "Thick-skinned" achievement ID
+                return this.context.nextAchievement !== 432 || // "Thick-skinned" achievement ID
                     !!Game.Achievements["Thick-skinned"].won;
             // Avoid all toggle-pool upgrades by default
             default:
@@ -1208,9 +1135,9 @@ class PurchaseManager {
             }
         }
         // Sugar frenzy check (original lines 637-640)
-        if (this.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
+        if (this.context.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
             !Game.Upgrades["Sugar frenzy"].bought &&
-            (this.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
+            (this.context.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
             Game.Upgrades["Sugar frenzy"].buy();
         }
     }
@@ -1221,7 +1148,7 @@ class PurchaseManager {
         const hasCookieMonster = typeof CookieMonsterData !== 'undefined';
         // Buildings are always purchasable - Hardcore achievement only restricts upgrades, not buildings
         // Check if in cursed finger mode
-        if (this.cpsMult === 0) {
+        if (this.context.cpsMult === 0) {
             return {
                 module: 'Buildings',
                 status: 'waiting',
@@ -1236,7 +1163,7 @@ class PurchaseManager {
         // Check if next purchase is a building
         if (this.state.nextPurchase && this.state.nextPurchaseType === 'building') {
             const price = this.state.nextPurchasePrice || 0;
-            const available = Game.cookies - this.savingsGoal;
+            const available = Game.cookies - this.context.savingsGoal;
             const canAfford = price < available;
             // Calculate progress
             const progressPercent = Math.min(100, (available / price) * 100);
@@ -1246,7 +1173,7 @@ class PurchaseManager {
             if (!canAfford && Game.cookiesPs > 0) {
                 if (hasCookieMonster && CookieMonsterData?.Cache) {
                     // Use CookieMonster's calculation: account for wrinkler cookies
-                    const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.savingsGoal;
+                    const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.context.savingsGoal;
                     const shortfall = Math.max(price - totalAvailable, 0);
                     timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
                 }
@@ -1324,7 +1251,7 @@ class PurchaseManager {
             };
         }
         // Check if in cursed finger mode
-        if (this.cpsMult === 0) {
+        if (this.context.cpsMult === 0) {
             return {
                 module: 'Upgrades',
                 status: 'waiting',
@@ -1339,7 +1266,7 @@ class PurchaseManager {
         // Check if next purchase is an upgrade
         if (this.state.nextPurchase && this.state.nextPurchaseType === 'upgrade') {
             const price = this.state.nextPurchasePrice || 0;
-            const available = Game.cookies - this.savingsGoal;
+            const available = Game.cookies - this.context.savingsGoal;
             const canAfford = price < available;
             // Calculate progress
             const progressPercent = Math.min(100, (available / price) * 100);
@@ -1349,7 +1276,7 @@ class PurchaseManager {
             if (!canAfford && Game.cookiesPs > 0) {
                 if (hasCookieMonster && CookieMonsterData?.Cache) {
                     // Use CookieMonster's calculation: account for wrinkler cookies
-                    const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.savingsGoal;
+                    const totalAvailable = Game.cookies + CookieMonsterData.Cache.WrinklersTotal - this.context.savingsGoal;
                     const shortfall = Math.max(price - totalAvailable, 0);
                     timeRemaining = (shortfall / Game.cookiesPs) * 1000; // Convert to milliseconds
                 }
@@ -1379,7 +1306,7 @@ class PurchaseManager {
                     'Next Upgrade': this.state.nextPurchase,
                     'Price': typeof Beautify !== 'undefined' ? Beautify(price) : price,
                     'Available': typeof Beautify !== 'undefined' ? Beautify(available) : available,
-                    'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.savingsGoal) : this.savingsGoal
+                    'Savings Goal': typeof Beautify !== 'undefined' ? Beautify(this.context.savingsGoal) : this.context.savingsGoal
                 }
             };
         }
@@ -1398,89 +1325,10 @@ class PurchaseManager {
     }
 }
 
-;// ./src/utils/Logger.ts
-/**
- * Centralized logging system for CookieBot
- * Provides unified activity logging and status logging across all modules
- */
-/**
- * Singleton logger instance
- * Provides centralized logging for all modules
- */
-class LoggerService {
-    constructor() { }
-    /**
-     * Get singleton instance
-     */
-    static getInstance() {
-        if (!LoggerService.instance) {
-            LoggerService.instance = new LoggerService();
-        }
-        return LoggerService.instance;
-    }
-    /**
-     * Initialize logger with callbacks from AutoPlay
-     * Should be called once during AutoPlay construction
-     */
-    initialize(callbacks) {
-        this.callbacks = callbacks;
-    }
-    /**
-     * Log an action with optional details
-     * @param action - Action description
-     * @param details - Optional details (e.g., price, count)
-     */
-    logAction(action, details) {
-        if (this.callbacks?.logAction) {
-            this.callbacks.logAction(action, details);
-        }
-        else {
-            console.log(`[Action] ${action}${details ? ': ' + details : ''}`);
-        }
-    }
-    /**
-     * Log a status update
-     * @param type - Status type (e.g., 'wrinkler', 'dragon', 'ascend')
-     * @param message - Status message
-     * @param details - Optional details
-     */
-    logStatus(type, message, details) {
-        if (this.callbacks?.logStatus) {
-            this.callbacks.logStatus(type, message, details);
-        }
-        else {
-            console.log(`[${type}] ${message}${details ? ': ' + details : ''}`);
-        }
-    }
-    /**
-     * Add an activity message to the activity log
-     * @param activity - Activity description
-     * @returns true if activity was added, false if it already existed
-     */
-    addActivity(activity) {
-        if (this.callbacks?.addActivity) {
-            return this.callbacks.addActivity(activity);
-        }
-        else {
-            console.log(`[Activity] ${activity}`);
-            return true;
-        }
-    }
-    /**
-     * Check if logger is initialized
-     */
-    isInitialized() {
-        return !!this.callbacks;
-    }
-}
-// Export singleton instance
-const Logger = LoggerService.getInstance();
-
 ;// ./src/modules/SeasonHandler.ts
 /**
  * Handles seasonal events and upgrades
  */
-
 /**
  * Helper function to create a range of numbers (inclusive)
  */
@@ -1492,13 +1340,14 @@ function range(start, end) {
     return result;
 }
 class SeasonHandler {
-    constructor() {
+    constructor(context) {
         // Season upgrade IDs
         this.valentineUpgrades = range(169, 174).concat([645]);
         this.christmasUpgrades = [168]; // just wait for dominion
         this.easterUpgrades = range(210, 229);
         this.halloweenUpgrades = range(134, 140);
         this.elfClickTimeout = null;
+        this.context = context;
         this.allSeasonUpgrades = this.valentineUpgrades
             .concat(this.christmasUpgrades)
             .concat(this.easterUpgrades)
@@ -1602,7 +1451,7 @@ class SeasonHandler {
         }
         else if (!this.allUnlocked(this.allSeasonUpgrades)) {
             // Still waiting for upgrades in current season
-            Logger.addActivity(`Waiting for all results in ${Game.season}.`);
+            this.context.addActivity(`Waiting for all results in ${Game.season}.`);
         }
     }
     /**
@@ -1801,25 +1650,23 @@ const LUMP_RELATED_ACHIEVEMENTS = [
 ];
 class SugarLumpManager {
     /**
-     * Constructor - expects 1 argument: state object
-     * @param state AutoPlayState for accessing game state
+     * Constructor - expects 1 argument: context object
+     * @param context AutoPlayContext for accessing game state
      */
-    constructor(state) {
+    constructor(context) {
         this.minLumpsOK = false;
         this.cheatLumps = false;
         this.canUseLumps = false;
         // Extended config for sugar lumps
         this.cheatLumpsLevel = 0;
-        this.state = state;
-        // Default activity logger - should be overridden via setAddActivity if needed
-        this.addActivity = (msg) => console.log(`[SugarLumps] ${msg}`);
+        this.context = context;
     }
     /**
      * Set the activity logging callback
      * @param addActivity Callback to log activities
      */
-    setAddActivity(addActivity) {
-        this.addActivity = addActivity;
+    setAddActivity(_addActivity) {
+        // Deprecated: context has addActivity
     }
     /**
      * Set the cheat lumps level
@@ -1838,7 +1685,7 @@ class SugarLumpManager {
             return; // Do not work with sugar lumps before enabled
         if (Game.ascensionMode === 1)
             return; // No sugar lumps in born again mode
-        const now = this.state.now;
+        const now = this.context.now;
         const age = now - game.lumpT;
         // Hand-pick normal lumps when mature for "Hand-picked" achievement
         if (age >= game.lumpMatureAge &&
@@ -1876,25 +1723,21 @@ class SugarLumpManager {
         // Level 1: Only cheat during endgame for lump achievements
         if (this.cheatLumpsLevel === 1) {
             // Check if we're in end phase and not finished
-            if (typeof AutoPlay !== 'undefined') {
-                if (AutoPlay.finished)
-                    return;
-                if (typeof AutoPlay.endPhase === 'function' && !AutoPlay.endPhase())
-                    return;
-            }
+            if (this.context.finished)
+                return;
+            if (!this.context.endPhase())
+                return;
             // If all lump achievements are done, no need to cheat
             if (LUMP_RELATED_ACHIEVEMENTS.every((a) => Game.AchievementsById[a].won)) {
                 return;
             }
             // Apply 625x speedup when targeting lump achievements
-            if (typeof AutoPlay !== 'undefined' && 'nextAchievement' in AutoPlay) {
-                if (LUMP_RELATED_ACHIEVEMENTS.includes(AutoPlay.nextAchievement)) {
-                    cheatReduction *= 25; // 25 * 25 = 625x total speedup
-                }
+            if (LUMP_RELATED_ACHIEVEMENTS.includes(this.context.nextAchievement)) {
+                cheatReduction *= 25; // 25 * 25 = 625x total speedup
             }
         }
         this.cheatLumps = true;
-        this.addActivity('Cheating sugar lumps.');
+        this.context.addActivity('Cheating sugar lumps.');
         // Set cheat reduction based on level
         if (this.cheatLumpsLevel === 2)
             cheatReduction = 25;
@@ -1962,9 +1805,7 @@ class SugarLumpManager {
         // After Garden is level 9, we have minimum lumps OK
         this.minLumpsOK = true;
         // Keep reserve lumps before endgame
-        const endPhase = (typeof AutoPlay !== 'undefined' && typeof AutoPlay.endPhase === 'function')
-            ? AutoPlay.endPhase()
-            : false;
+        const endPhase = this.context.endPhase();
         const lumpLimit = endPhase ? 0 : 100;
         // Step 3: Bring Cursor (Stock Market) to level 12
         const cursor = Game.Objects["Cursor"];
@@ -2049,7 +1890,7 @@ class SugarLumpManager {
                 }
             };
         }
-        const now = this.state.now;
+        const now = this.context.now;
         const age = now - game.lumpT;
         const matureAge = game.lumpMatureAge;
         const ripeAge = game.lumpRipeAge;
@@ -2151,6 +1992,84 @@ class SugarLumpManager {
     }
 }
 
+;// ./src/utils/Logger.ts
+/**
+ * Centralized logging system for CookieBot
+ * Provides unified activity logging and status logging across all modules
+ */
+/**
+ * Singleton logger instance
+ * Provides centralized logging for all modules
+ */
+class LoggerService {
+    constructor() { }
+    /**
+     * Get singleton instance
+     */
+    static getInstance() {
+        if (!LoggerService.instance) {
+            LoggerService.instance = new LoggerService();
+        }
+        return LoggerService.instance;
+    }
+    /**
+     * Initialize logger with callbacks from AutoPlay
+     * Should be called once during AutoPlay construction
+     */
+    initialize(callbacks) {
+        this.callbacks = callbacks;
+    }
+    /**
+     * Log an action with optional details
+     * @param action - Action description
+     * @param details - Optional details (e.g., price, count)
+     */
+    logAction(action, details) {
+        if (this.callbacks?.logAction) {
+            this.callbacks.logAction(action, details);
+        }
+        else {
+            console.log(`[Action] ${action}${details ? ': ' + details : ''}`);
+        }
+    }
+    /**
+     * Log a status update
+     * @param type - Status type (e.g., 'wrinkler', 'dragon', 'ascend')
+     * @param message - Status message
+     * @param details - Optional details
+     */
+    logStatus(type, message, details) {
+        if (this.callbacks?.logStatus) {
+            this.callbacks.logStatus(type, message, details);
+        }
+        else {
+            console.log(`[${type}] ${message}${details ? ': ' + details : ''}`);
+        }
+    }
+    /**
+     * Add an activity message to the activity log
+     * @param activity - Activity description
+     * @returns true if activity was added, false if it already existed
+     */
+    addActivity(activity) {
+        if (this.callbacks?.addActivity) {
+            return this.callbacks.addActivity(activity);
+        }
+        else {
+            console.log(`[Activity] ${activity}`);
+            return true;
+        }
+    }
+    /**
+     * Check if logger is initialized
+     */
+    isInitialized() {
+        return !!this.callbacks;
+    }
+}
+// Export singleton instance
+const Logger = LoggerService.getInstance();
+
 ;// ./src/modules/WrinklerManager.ts
 /**
  * Manages wrinkler popping strategy
@@ -2164,31 +2083,15 @@ class SugarLumpManager {
  */
 
 class WrinklerManager {
-    constructor(state) {
-        this.wantedAchievements = [];
-        this.nextAchievement = 0;
-        this.state = state;
-    }
-    /**
-     * Set dependencies (called after construction to avoid circular dependencies)
-     */
-    setDependencies(seasonHandler, wantedAchievements, nextAchievement) {
-        this.seasonHandler = seasonHandler;
-        this.wantedAchievements = wantedAchievements;
-        this.nextAchievement = nextAchievement;
-    }
-    /**
-     * Update state (called periodically from AutoPlay)
-     */
-    updateState(nextAchievement) {
-        this.nextAchievement = nextAchievement;
+    constructor(context) {
+        this.context = context;
     }
     /**
      * Main wrinkler handling logic
      * Runs periodically to manage wrinkler popping strategy
      */
     handleWrinklers() {
-        this.state.poppingWrinklers = false;
+        this.context.poppingWrinklers = false;
         // Don't handle wrinklers until One mind is bought (unlocks wrinklers)
         if (!Game.Upgrades["One mind"].bought) {
             return;
@@ -2226,8 +2129,8 @@ class WrinklerManager {
      * Pop all attached wrinklers
      */
     popAllWrinklers() {
-        this.state.poppingWrinklers = true;
-        this.state.wrinklerTime = this.state.now;
+        this.context.poppingWrinklers = true;
+        this.context.wrinklerTime = this.context.now;
         Logger.addActivity("Popping wrinklers for droppings and/or achievements.");
         Logger.logStatus('wrinkler', 'Popping all wrinklers');
         // Pop all attached wrinklers (close === 1)
@@ -2250,14 +2153,14 @@ class WrinklerManager {
         // Find the next wrinkler to pop (highest sucked value)
         this.findNextWrinkler();
         // Calculate time since last pop
-        const minutesSinceLastPop = Math.floor((this.state.now - this.state.wrinklerTime) / 1000 / 60);
+        const minutesSinceLastPop = Math.floor((this.context.now - this.context.wrinklerTime) / 1000 / 60);
         Logger.addActivity(`Popping one wrinkler per two hours, last ${minutesSinceLastPop} minutes ago.`);
         // Pop the selected wrinkler if it's time (2 hours = 2*60*60*1000 ms)
-        if (this.state.nextWrinkler !== -1) {
+        if (this.context.nextWrinkler !== -1) {
             const twoHoursInMs = 2 * 60 * 60 * 1000;
-            if (this.state.now - this.state.wrinklerTime >= twoHoursInMs) {
-                Game.wrinklers[this.state.nextWrinkler].hp = 0; // Pop the wrinkler
-                this.state.wrinklerTime = this.state.now;
+            if (this.context.now - this.context.wrinklerTime >= twoHoursInMs) {
+                Game.wrinklers[this.context.nextWrinkler].hp = 0; // Pop the wrinkler
+                this.context.wrinklerTime = this.context.now;
                 Logger.logStatus('wrinkler', 'Popped single wrinkler');
             }
         }
@@ -2274,7 +2177,7 @@ class WrinklerManager {
             // Check if there's an empty spot (not attached, but within max wrinklers)
             if (w.close === 0 && w.id < Game.getWrinklersMax()) {
                 // Empty spot found - don't pop any wrinkler, let it fill up
-                this.state.nextWrinkler = -1;
+                this.context.nextWrinkler = -1;
                 return;
             }
             // Track wrinkler with most cookies sucked
@@ -2283,7 +2186,7 @@ class WrinklerManager {
                 nextId = w.id;
             }
         }
-        this.state.nextWrinkler = nextId;
+        this.context.nextWrinkler = nextId;
     }
     /**
      * Check if a wrinkler is shiny
@@ -2337,11 +2240,7 @@ class WrinklerManager {
      * Delegates to SeasonHandler
      */
     seasonFinished() {
-        if (!this.seasonHandler) {
-            // Fallback if dependencies not set yet
-            return false;
-        }
-        return this.seasonHandler.seasonFinished(Game.season);
+        return this.context.seasonFinished(Game.season);
     }
     /**
      * Check if we're in the end phase (all achievements collected)
@@ -2349,7 +2248,7 @@ class WrinklerManager {
      * (meaning we've completed all wanted achievements and moved to the end phase)
      */
     isEndPhase() {
-        return this.wantedAchievements.indexOf(this.nextAchievement) < 0;
+        return this.context.wantedAchievements.indexOf(this.context.nextAchievement) < 0;
     }
     /**
      * Get current wrinkler manager status
@@ -2373,7 +2272,7 @@ class WrinklerManager {
         const totalValue = this.getTotalWrinklerValue();
         const maxWrinklers = Game.getWrinklersMax();
         // Check if popping all wrinklers
-        if (this.state.poppingWrinklers) {
+        if (this.context.poppingWrinklers) {
             return {
                 module: 'Wrinklers',
                 status: 'active',
@@ -2407,9 +2306,9 @@ class WrinklerManager {
             };
         }
         // Regular rotation mode
-        const minutesSinceLastPop = Math.floor((this.state.now - this.state.wrinklerTime) / 1000 / 60);
+        const minutesSinceLastPop = Math.floor((this.context.now - this.context.wrinklerTime) / 1000 / 60);
         const minutesUntilNext = 120 - minutesSinceLastPop;
-        if (this.state.nextWrinkler === -1) {
+        if (this.context.nextWrinkler === -1) {
             return {
                 module: 'Wrinklers',
                 status: 'waiting',
@@ -2446,6 +2345,9 @@ class WrinklerManager {
  * Handles achievement hunting (small achievements, ascension-related)
  */
 class AchievementHandler {
+    constructor(context) {
+        this.context = context;
+    }
     /**
      * Handle small achievements that can be obtained through simple interactions
      */
@@ -2476,18 +2378,18 @@ class AchievementHandler {
         }
         // What's in a name - add robot name to bakery name
         if (!Game.Achievements["What's in a name"].won) {
-            Game.bakeryName = AutoPlay.robotName + bakeryName;
+            Game.bakeryName = this.context.robotName + bakeryName;
             Game.bakeryNamePrompt();
             Game.ConfirmPrompt();
         }
         // Remove robot name if it's still there
-        if (Game.bakeryName.slice(0, AutoPlay.robotName.length) === AutoPlay.robotName) {
-            Game.bakeryName = Game.bakeryName.slice(AutoPlay.robotName.length);
+        if (Game.bakeryName.slice(0, this.context.robotName.length) === this.context.robotName) {
+            Game.bakeryName = Game.bakeryName.slice(this.context.robotName.length);
             Game.bakeryNamePrompt();
             Game.ConfirmPrompt();
         }
         // Cheated cookies taste awful - get this after all other achievements
-        if (AutoPlay.endPhase() && !Game.Achievements['Cheated cookies taste awful'].won) {
+        if (this.context.endPhase() && !Game.Achievements['Cheated cookies taste awful'].won) {
             Game.Win('Cheated cookies taste awful');
         }
         // Third-party - using a third-party tool
@@ -2506,16 +2408,16 @@ class AchievementHandler {
                 Game.tickerL.scrollIntoView();
             }
             Game.ShowMenu(currentMenu);
-            AutoPlay.info('found the forgotten madeleine at the very bottom of the "Info" menu');
+            this.context.info('found the forgotten madeleine at the very bottom of the "Info" menu');
         }
         // Cookie-dunker - dunk the cookie in milk
         if (!Game.Achievements['Cookie-dunker'].won && Game.milkProgress > 1 && Game.milkHd > 0.34) {
-            if (AutoPlay.backupHeight) {
-                Game.LeftBackground.canvas.height = AutoPlay.backupHeight;
-                AutoPlay.backupHeight = 0;
+            if (this.context.backupHeight) {
+                Game.LeftBackground.canvas.height = this.context.backupHeight;
+                this.context.backupHeight = 0;
             }
             else {
-                AutoPlay.backupHeight = Game.LeftBackground.canvas.height;
+                this.context.backupHeight = Game.LeftBackground.canvas.height;
                 Game.LeftBackground.canvas.height = 400;
                 setTimeout(() => this.undunkCookie(), 20 * 1000);
             }
@@ -2530,7 +2432,7 @@ class AchievementHandler {
         // No time like the present - send and redeem a gift
         if (!Game.Achievements['No time like the present'].won &&
             Game.Has('Wrapping paper') && !Game.hasBuff('Gifted out')) {
-            if (!AutoPlay.giftCode) {
+            if (!this.context.giftCode) {
                 Game.promptGiftSend();
                 const giftAmountEl = l('giftAmount');
                 const giftMessageEl = l('giftMessage');
@@ -2540,9 +2442,9 @@ class AchievementHandler {
                     giftAmountEl.value = '42';
                     giftMessageEl.value = 'A gift for myself';
                     confirmBtn.click();
-                    AutoPlay.giftCode = giftCodeEl.value;
+                    this.context.giftCode = giftCodeEl.value;
                     confirmBtn.click();
-                    AutoPlay.info('Created present with code ' + AutoPlay.giftCode);
+                    this.context.info('Created present with code ' + this.context.giftCode);
                     setTimeout(() => this.redeemPresent(), 61 * 60 * 1000); // wait an hour
                 }
             }
@@ -2551,8 +2453,8 @@ class AchievementHandler {
                 const giftCodeEl = l('giftCode');
                 const confirmBtn = l('promptOption0');
                 if (giftCodeEl && confirmBtn) {
-                    giftCodeEl.value = String(AutoPlay.giftCode);
-                    AutoPlay.giftCode = 0;
+                    giftCodeEl.value = String(this.context.giftCode);
+                    this.context.giftCode = 0;
                     confirmBtn.click();
                 }
             }
@@ -2573,70 +2475,37 @@ class AchievementHandler {
             setTimeout(() => this.undunkCookie(), 20 * 1000);
             return;
         }
-        Game.LeftBackground.canvas.height = AutoPlay.backupHeight;
-        AutoPlay.backupHeight = 0;
+        Game.LeftBackground.canvas.height = this.context.backupHeight;
+        this.context.backupHeight = 0;
     }
     /**
      * Redeem a previously sent gift
      */
     redeemPresent() {
-        AutoPlay.info('Redeeming present with code ' + AutoPlay.giftCode);
-        if (AutoPlay.giftCode) {
+        this.context.info('Redeeming present with code ' + this.context.giftCode);
+        if (this.context.giftCode) {
             Game.promptGiftRedeem();
             const giftCodeEl = l('giftCode');
             const confirmBtn = l('promptOption0');
             if (giftCodeEl && confirmBtn) {
-                giftCodeEl.value = String(AutoPlay.giftCode);
-                AutoPlay.giftCode = 0;
+                giftCodeEl.value = String(this.context.giftCode);
+                this.context.giftCode = 0;
                 confirmBtn.click(); // redeem
                 confirmBtn.click(); // close window
             }
         }
     }
     /**
-     * Check if we're in the end phase of achievement hunting
-     */
-    endPhase() {
-        return AutoPlay.wantedAchievements.indexOf(AutoPlay.nextAchievement) < 0;
-    }
-    /**
-     * Check if we're in grinding mode (hunting last 10 achievements)
-     */
-    grinding() {
-        const grindingStart = AutoPlay.wantedAchievements[AutoPlay.wantedAchievements.length - 10];
-        if (Game.AchievementsById[grindingStart].won) {
-            // Grind for the last 7 big achievements
-            if (!this.endPhase()) {
-                AutoPlay.addActivity('Grinding cookies - do not sleep at night.');
-                return true;
-            }
-        }
-        return false;
-    }
-    /**
-     * Check if we should use cheats during grinding (last 8 achievements)
-     */
-    grindingCheat() {
-        if (!this.grinding())
-            return false;
-        const cheatingStart = AutoPlay.wantedAchievements[AutoPlay.wantedAchievements.length - 8];
-        if (Game.AchievementsById[cheatingStart].won) {
-            // Cheat for the last 5 big achievements
-            return true;
-        }
-        return false;
-    }
-    /**
      * Find the next achievement to pursue
      */
     findNextAchievement() {
-        AutoPlay.wantAscend = false;
+        this.context.wantAscend = false;
         this.handleSmallAchievements();
-        for (let i = 0; i < AutoPlay.wantedAchievements.length; i++) {
-            if (!Game.AchievementsById[AutoPlay.wantedAchievements[i]].won) {
-                AutoPlay.nextAchievement = AutoPlay.wantedAchievements[i];
-                AutoPlay.setMainActivity('Trying to get achievement: ' +
-                    Game.AchievementsById[AutoPlay.nextAchievement].ddesc.replace(/<q>.*?<\/q>/ig, ''));
+        for (let i = 0; i < this.context.wantedAchievements.length; i++) {
+            if (!Game.AchievementsById[this.context.wantedAchievements[i]].won) {
+                this.context.nextAchievement = this.context.wantedAchievements[i];
+                this.context.setMainActivity('Trying to get achievement: ' +
+                    Game.AchievementsById[this.context.nextAchievement].ddesc.replace(/<q>.*?<\/q>/ig, ''));
                 return;
             }
         }
@@ -2652,22 +2521,22 @@ class AchievementHandler {
             if (!achievement.won &&
                 achievement.pool !== 'dungeon' &&
                 achievement.id !== 367 &&
-                !AutoPlay.lateAchievements.includes(achievement.id)) {
-                AutoPlay.setMainActivity('Missing achievement #' + achievement.id + ': ' +
+                !this.context.lateAchievements.includes(achievement.id)) {
+                this.context.setMainActivity('Missing achievement #' + achievement.id + ': ' +
                     achievement.ddesc.replace(/<q>.*?<\/q>/ig, '') +
                     ', try to get it now.');
-                AutoPlay.nextAchievement = achievement.id;
+                this.context.nextAchievement = achievement.id;
                 return false;
             }
         }
         // Check late achievements
-        for (const achievementId of AutoPlay.lateAchievements) {
+        for (const achievementId of this.context.lateAchievements) {
             const achievement = Game.AchievementsById[achievementId];
             if (!achievement.won && achievement.pool !== 'dungeon' && achievement.id !== 367) {
-                AutoPlay.setMainActivity('Missing achievement #' + achievement.id + ': ' +
+                this.context.setMainActivity('Missing achievement #' + achievement.id + ': ' +
                     achievement.ddesc.replace(/<q>.*?<\/q>/ig, '') +
                     ', try to get it now.');
-                AutoPlay.nextAchievement = achievement.id;
+                this.context.nextAchievement = achievement.id;
                 return false;
             }
         }
@@ -2675,24 +2544,24 @@ class AchievementHandler {
         for (const key in Game.Upgrades) {
             const upgrade = Game.Upgrades[key];
             if (upgrade.pool === 'prestige' && !upgrade.bought) {
-                AutoPlay.nextAchievement = 99; // Follow the white rabbit (from dungeons)
-                AutoPlay.setMainActivity('Prestige upgrade ' + upgrade.name + ' is missing, waiting to buy it.');
+                this.context.nextAchievement = 99; // Follow the white rabbit (from dungeons)
+                this.context.setMainActivity('Prestige upgrade ' + upgrade.name + ' is missing, waiting to buy it.');
                 return false;
             }
         }
         // Wait for one-year legacy achievement
         if (!Game.Achievements['So much to do so much to see'].won) {
             const achievement = Game.Achievements['So much to do so much to see'];
-            AutoPlay.setMainActivity('Missing achievement #' + achievement.id + ': ' +
+            this.context.setMainActivity('Missing achievement #' + achievement.id + ': ' +
                 achievement.ddesc.replace(/<q>.*?<\/q>/ig, '') +
                 ', try to get it now.');
-            AutoPlay.nextAchievement = achievement.id;
+            this.context.nextAchievement = achievement.id;
             return false;
         }
         // All achievements complete!
-        AutoPlay.finished = true;
-        AutoPlay.setMainActivity('My job is done here, have a nice day. I am still idling along.');
-        AutoPlay.nextAchievement = 99; // Follow the white rabbit (from dungeons)
+        this.context.finished = true;
+        this.context.setMainActivity('My job is done here, have a nice day. I am still idling along.');
+        this.context.nextAchievement = 99; // Follow the white rabbit (from dungeons)
         return true;
     }
     /**
@@ -2700,7 +2569,7 @@ class AchievementHandler {
      */
     handleAchievements() {
         // Find next achievement if current one is complete
-        if (Game.AchievementsById[AutoPlay.nextAchievement].won) {
+        if (Game.AchievementsById[this.context.nextAchievement].won) {
             this.findNextAchievement();
         }
     }
@@ -2708,7 +2577,7 @@ class AchievementHandler {
      * Get achievement handler status
      */
     getStatus() {
-        if (AutoPlay.finished) {
+        if (this.context.finished) {
             return {
                 module: 'Achievements',
                 status: 'idle',
@@ -2720,7 +2589,7 @@ class AchievementHandler {
                 }
             };
         }
-        const achievement = Game.AchievementsById[AutoPlay.nextAchievement];
+        const achievement = Game.AchievementsById[this.context.nextAchievement];
         if (!achievement) {
             return {
                 module: 'Achievements',
@@ -3009,7 +2878,7 @@ class AchievementHandler {
             status: 'active',
             currentAction: `Working on: ${achievement.name}`,
             reason: achievement.ddesc.replace(/<q>.*?<\/q>/ig, '').substring(0, 50),
-            nextAction: this.grinding() ? 'Grinding mode (no sleep)' : undefined,
+            nextAction: this.context.grinding() ? 'Grinding mode (no sleep)' : undefined,
             icon: '🏆',
             progress,
             timeRemaining,
@@ -3017,8 +2886,8 @@ class AchievementHandler {
             details: {
                 'Current': achievement.name,
                 'Progress': `${wonCount}/${totalAchievements}`,
-                'Grinding': this.grinding(),
-                'Cheating': this.grindingCheat()
+                'Grinding': this.context.grinding(),
+                'Cheating': this.context.grindingCheat()
             }
         };
     }
@@ -3035,7 +2904,6 @@ class AscensionManager {
         this.context = context;
         this.state = {
             ascendLimit: 0.9 * Math.floor(2 * (1 - Game.ascendMeterPercent)),
-            onAscend: false,
             loggedAchievements: {},
             neverclickWarn: true,
             resetTime: Date.now()
@@ -3054,16 +2922,12 @@ class AscensionManager {
             this.context.findNextAchievement();
             this.context.setDeadline(0); // reactivate all activities
             this.context.now = Date.now();
-            this.state.onAscend = false;
-            // Sync with global AutoPlay object
-            if (typeof AutoPlay !== 'undefined') {
-                AutoPlay.onAscend = false;
-            }
+            this.context.onAscend = false;
             this.state.loggedAchievements = {}; // Reset achievement tracking for new run
             return;
         }
         // Continue ascension process if timer is ready
-        if (this.state.onAscend && Game.AscendTimer === 0) {
+        if (this.context.onAscend && Game.AscendTimer === 0) {
             Game.Ascend(true);
         }
         // Update achievement goals for first run
@@ -3077,7 +2941,7 @@ class AscensionManager {
         }
         // Check if reborn mode failed
         if (Game.ascensionMode === 1 && !this.canContinue() && !Game.AchievementsById[this.context.nextAchievement].won) {
-            this.doAscend("reborn mode did not work, retry.");
+            this.doAscend("reborn mode did not work, retry.", false);
             return;
         }
         // Don't ascend right before night
@@ -3103,7 +2967,7 @@ class AscensionManager {
         // Check for season switcher
         if (!Game.Upgrades["Season switcher"].bought &&
             this.context.nextAchievement === 108 && Game.ascendMeterLevel > 1111) {
-            this.doAscend("getting season switcher.");
+            this.doAscend("getting season switcher.", true);
             return;
         }
     }
@@ -3149,7 +3013,7 @@ class AscensionManager {
         date.setTime(this.context.now - Game.fullDate);
         const fullTime = Game.sayTime(date.getTime() / 1000 * Game.fps, -1);
         this.doAscend("have achievement: " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '') +
-            " after " + legacyTime + "(total: " + fullTime + ")");
+            " after " + legacyTime + "(total: " + fullTime + ")", true);
     }
     /**
      * Check for endless cycle achievement (1000 ascends)
@@ -3163,7 +3027,7 @@ class AscensionManager {
             this.context.hyperActive = true; // full activity
             this.context.wantAscend = true; // avoid buying plants
             if (Game.ascendMeterLevel > 0) {
-                this.doAscend("go for 1000 ascends");
+                this.doAscend("go for 1000 ascends", false);
                 return true;
             }
         }
@@ -3181,7 +3045,7 @@ class AscensionManager {
             this.context.wantAscend = true; // avoid buying plants
             if (Game.ascendMeterLevel > 0 &&
                 this.state.ascendLimit < Game.ascendMeterLevel * Game.ascendMeterPercent) {
-                this.doAscend("go for 100 ascends");
+                this.doAscend("go for 100 ascends", false);
                 return true;
             }
         }
@@ -3211,7 +3075,7 @@ class AscensionManager {
                 x /= 10;
             if (x < 9) {
                 this.doAscend("ascend after " + Math.floor(daysInRun) +
-                    " days just while waiting for next achievement.");
+                    " days just while waiting for next achievement.", true);
                 return true;
             }
         }
@@ -3225,14 +3089,14 @@ class AscensionManager {
         if (!Game.Upgrades["Lucky digit"].bought && Game.heavenlyChips > 777 &&
             Game.ascendMeterLevel > 0 && Game.ascendMeterLevel < 20 &&
             ((Game.prestige + Game.ascendMeterLevel) % 10 === 7)) {
-            this.doAscend("ascend for heavenly upgrade lucky digit.");
+            this.doAscend("ascend for heavenly upgrade lucky digit.", false);
             return true;
         }
         // Lucky number (prestige % 1000 == 777)
         if (!Game.Upgrades["Lucky number"].bought && Game.heavenlyChips > 77777 &&
             Game.ascendMeterLevel > 0 && Game.ascendMeterLevel < 200 &&
             ((Game.prestige + Game.ascendMeterLevel) % 1000 === 777)) {
-            this.doAscend("ascend for heavenly upgrade lucky number.");
+            this.doAscend("ascend for heavenly upgrade lucky number.", false);
             return true;
         }
         // Lucky payout (need six 7s in prestige)
@@ -3243,7 +3107,7 @@ class AscensionManager {
             this.context.addActivity("Trying to get heavenly upgrade Lucky Payout.");
             const sevenCount = (newPrestige + '').split('7').length - 1;
             if (Math.ceil(sevenCount) >= 4) {
-                this.doAscend("ascend for heavenly upgrade lucky payout.");
+                this.doAscend("ascend for heavenly upgrade lucky payout.", false);
                 return true;
             }
         }
@@ -3333,16 +3197,16 @@ class AscensionManager {
      * Public method to trigger ascension with a reason
      * Used by special achievement logic like runJustRight()
      */
-    triggerAscend(reason) {
-        this.doAscend(reason);
+    triggerAscend(reason, log = false) {
+        this.doAscend(reason, log);
     }
     /**
      * Perform the actual ascension
      */
-    doAscend(reason) {
+    doAscend(reason, log = false) {
         if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0)
             return;
-        if (this.state.onAscend || Game.OnAscend)
+        if (this.context.onAscend || Game.OnAscend)
             return;
         this.context.logStatus('ascend', reason);
         this.context.wantAscend = this.context.plantPending;
@@ -3401,23 +3265,23 @@ class AscensionManager {
                 this.context.logAction('Ascending', reason);
             }
             this.context.delay = 15;
+            // Set logging info if requested
+            if (log) {
+                this.context.loggingInfo = reason;
+            }
             // Call logging before ascension if available
-            if (typeof AutoPlay.logging === 'function') {
-                AutoPlay.logging();
+            if (typeof this.context.logging === 'function') {
+                this.context.logging();
             }
             Game.Ascend(true);
-            this.state.onAscend = true;
-            // Sync with global AutoPlay object
-            if (typeof AutoPlay !== 'undefined') {
-                AutoPlay.onAscend = true;
-            }
+            this.context.onAscend = true;
         }
     }
     /**
      * Handle reincarnation (after ascending)
      */
     doReincarnate() {
-        this.state.onAscend = false;
+        this.context.onAscend = false;
         this.context.delay = 10;
         this.buyHeavenlyUpgrades();
         // Choose ascension mode
@@ -3523,7 +3387,7 @@ class AscensionManager {
             };
         }
         // Check if ascending
-        if (this.state.onAscend) {
+        if (this.context.onAscend) {
             return {
                 module: 'Ascension',
                 status: 'active',
@@ -3665,7 +3529,6 @@ class AscensionManager {
  * Dragon levels unlock through various sacrifices and achievements.
  * Dragons provide powerful auras that boost game performance.
  */
-
 /**
  * Dragon aura indices
  */
@@ -3721,6 +3584,9 @@ const AURA_NAMES = {
     17: "Dragon's Curve"
 };
 class DragonManager {
+    constructor(context) {
+        this.context = context;
+    }
     /**
      * Main handler for all dragon-related activities
      * Should be called periodically from the main AutoPlay loop
@@ -3836,7 +3702,7 @@ class DragonManager {
             Game.ConfirmPrompt();
             Game.ToggleSpecialMenu(0);
             const auraName = AURA_NAMES[desiredAura] || 'Unknown';
-            Logger.logStatus('dragon', `Dragon aura 1: ${auraName}`);
+            this.context.logStatus('dragon', `Dragon aura 1: ${auraName}`);
         }
     }
     /**
@@ -3851,7 +3717,7 @@ class DragonManager {
             Game.SetDragonAura(desiredAura, 1);
             Game.ConfirmPrompt();
             Game.ToggleSpecialMenu(0);
-            Logger.logStatus('dragon', 'Dragon aura 2: Breath of Milk');
+            this.context.logStatus('dragon', 'Dragon aura 2: Breath of Milk');
         }
     }
     /**
@@ -3867,7 +3733,7 @@ class DragonManager {
         for (const drop of DRAGON_DROPS) {
             if (!Game.Has(drop) && !Game.HasUnlocked(drop)) {
                 // Still have drops to collect
-                Logger.addActivity('Petting the dragon.');
+                this.context.addActivity('Petting the dragon.');
                 Game.specialTab = 'dragon';
                 Game.ToggleSpecialMenu(1);
                 Game.ClickSpecialPic();
@@ -3919,10 +3785,7 @@ class DragonManager {
     isHuntingLumpAchievement() {
         // Lump harvest achievements: IDs 266-272 and 396
         // These require harvesting lumps at specific maturity levels
-        if (typeof AutoPlay !== 'undefined' && 'nextAchievement' in AutoPlay) {
-            return LUMP_HARVEST_ACHIEVEMENTS.includes(AutoPlay.nextAchievement);
-        }
-        return false;
+        return LUMP_HARVEST_ACHIEVEMENTS.includes(this.context.nextAchievement);
     }
     /**
      * Get current dragon manager status
@@ -4032,12 +3895,8 @@ class DragonManager {
 }
 
 ;// ./src/modules/Dashboard.ts
-/**
- * Manages UI dashboard and menu
- * Migrated from cookieAutoPlayBeta.js lines 2271-3068
- */
 class Dashboard {
-    constructor() {
+    constructor(context) {
         // Configuration system
         this.config = {};
         this.configData = {};
@@ -4056,6 +3915,7 @@ class Dashboard {
         // Display utilities
         this.colorTextPre = 'color: ';
         this.colorBlue = '#4169E1';
+        this.context = context;
         this.initializeConfigData();
         this.setConfigDefaults();
         this.loadConfig();
@@ -4279,8 +4139,8 @@ class Dashboard {
     setBotMode() {
         this.toggleConfig('BotMode');
         const modeName = this.configData.BotMode.label[this.config.BotMode];
-        if (typeof AutoPlay !== 'undefined') {
-            AutoPlay.info?.(`The bot has changed mode to ${modeName}`);
+        if (this.context && this.context.info) {
+            this.context.info(`The bot has changed mode to ${modeName}`);
             this.logStatus('mode', `Mode: ${modeName}`);
         }
     }
@@ -4460,8 +4320,8 @@ class Dashboard {
             return;
         }
         try {
-            // Check if AutoPlay is available
-            if (typeof AutoPlay === 'undefined') {
+            // Check if context is available
+            if (!this.context) {
                 return;
             }
             this.updateNextUpdateTimer();
@@ -4481,9 +4341,9 @@ class Dashboard {
             return;
         try {
             // Check if AutoPlay has a deadline
-            if (typeof AutoPlay !== 'undefined' && AutoPlay.deadline) {
+            if (this.context && this.context.deadline) {
                 const now = Date.now();
-                const timeUntilUpdate = AutoPlay.deadline - now;
+                const timeUntilUpdate = this.context.deadline - now;
                 if (timeUntilUpdate > 0) {
                     timerElement.textContent = `Next update: ${this.formatTimeRemaining(timeUntilUpdate)}`;
                     timerElement.style.color = '#9cf';
@@ -4534,8 +4394,8 @@ class Dashboard {
      * Update both module columns (active and waiting/idle)
      */
     updateModuleColumns() {
-        // Safety check for AutoPlay global
-        if (typeof AutoPlay === 'undefined') {
+        // Safety check for context
+        if (!this.context) {
             const modulesContent = document.getElementById('dashModulesContent');
             if (modulesContent)
                 modulesContent.innerHTML = '<div style="color: #f66; grid-column: 1 / -1;">AutoPlay not initialized...</div>';
@@ -4545,56 +4405,56 @@ class Dashboard {
             // Collect statuses from all managers
             const statuses = {};
             // Get status from click manager
-            if (AutoPlay.clickManager && typeof AutoPlay.clickManager.getStatus === 'function') {
-                statuses.clicking = AutoPlay.clickManager.getStatus();
+            if (this.context.clickManager && typeof this.context.clickManager.getStatus === 'function') {
+                statuses.clicking = this.context.clickManager.getStatus();
             }
             // Get statuses from purchase manager (buildings and upgrades separately)
-            if (AutoPlay.purchaseManager) {
-                if (typeof AutoPlay.purchaseManager.getBuildingStatus === 'function') {
-                    statuses.buildings = AutoPlay.purchaseManager.getBuildingStatus();
+            if (this.context.purchaseManager) {
+                if (typeof this.context.purchaseManager.getBuildingStatus === 'function') {
+                    statuses.buildings = this.context.purchaseManager.getBuildingStatus();
                 }
-                if (typeof AutoPlay.purchaseManager.getUpgradeStatus === 'function') {
-                    statuses.upgrades = AutoPlay.purchaseManager.getUpgradeStatus();
+                if (typeof this.context.purchaseManager.getUpgradeStatus === 'function') {
+                    statuses.upgrades = this.context.purchaseManager.getUpgradeStatus();
                 }
             }
-            if (AutoPlay.gardenManager && typeof AutoPlay.gardenManager.getStatus === 'function') {
-                statuses.garden = AutoPlay.gardenManager.getStatus();
+            if (this.context.gardenManager && typeof this.context.gardenManager.getStatus === 'function') {
+                statuses.garden = this.context.gardenManager.getStatus();
             }
-            if (AutoPlay.wrinklerManager && typeof AutoPlay.wrinklerManager.getStatus === 'function') {
-                statuses.wrinklers = AutoPlay.wrinklerManager.getStatus();
+            if (this.context.wrinklerManager && typeof this.context.wrinklerManager.getStatus === 'function') {
+                statuses.wrinklers = this.context.wrinklerManager.getStatus();
             }
-            if (AutoPlay.goldenCookieHandler && typeof AutoPlay.goldenCookieHandler.getStatus === 'function') {
-                statuses.goldenCookies = AutoPlay.goldenCookieHandler.getStatus();
+            if (this.context.goldenCookieHandler && typeof this.context.goldenCookieHandler.getStatus === 'function') {
+                statuses.goldenCookies = this.context.goldenCookieHandler.getStatus();
             }
-            if (AutoPlay.dragonManager && typeof AutoPlay.dragonManager.getStatus === 'function') {
-                statuses.dragon = AutoPlay.dragonManager.getStatus();
+            if (this.context.dragonManager && typeof this.context.dragonManager.getStatus === 'function') {
+                statuses.dragon = this.context.dragonManager.getStatus();
             }
-            if (AutoPlay.pantheonManager && typeof AutoPlay.pantheonManager.getStatus === 'function') {
-                statuses.pantheon = AutoPlay.pantheonManager.getStatus();
+            if (this.context.pantheonManager && typeof this.context.pantheonManager.getStatus === 'function') {
+                statuses.pantheon = this.context.pantheonManager.getStatus();
             }
-            if (AutoPlay.grimoireManager && typeof AutoPlay.grimoireManager.getStatus === 'function') {
-                statuses.grimoire = AutoPlay.grimoireManager.getStatus();
+            if (this.context.grimoireManager && typeof this.context.grimoireManager.getStatus === 'function') {
+                statuses.grimoire = this.context.grimoireManager.getStatus();
             }
-            if (AutoPlay.stockMarketManager && typeof AutoPlay.stockMarketManager.getStatus === 'function') {
-                statuses.stockMarket = AutoPlay.stockMarketManager.getStatus();
+            if (this.context.stockMarketManager && typeof this.context.stockMarketManager.getStatus === 'function') {
+                statuses.stockMarket = this.context.stockMarketManager.getStatus();
             }
-            if (AutoPlay.sugarLumpManager && typeof AutoPlay.sugarLumpManager.getStatus === 'function') {
-                statuses.sugarLumps = AutoPlay.sugarLumpManager.getStatus();
+            if (this.context.sugarLumpManager && typeof this.context.sugarLumpManager.getStatus === 'function') {
+                statuses.sugarLumps = this.context.sugarLumpManager.getStatus();
             }
-            if (AutoPlay.ascensionManager && typeof AutoPlay.ascensionManager.getStatus === 'function') {
-                statuses.ascension = AutoPlay.ascensionManager.getStatus();
+            if (this.context.ascensionManager && typeof this.context.ascensionManager.getStatus === 'function') {
+                statuses.ascension = this.context.ascensionManager.getStatus();
             }
-            if (AutoPlay.seasonHandler && typeof AutoPlay.seasonHandler.getStatus === 'function') {
-                statuses.season = AutoPlay.seasonHandler.getStatus();
+            if (this.context.seasonHandler && typeof this.context.seasonHandler.getStatus === 'function') {
+                statuses.season = this.context.seasonHandler.getStatus();
             }
-            if (AutoPlay.achievementHandler && typeof AutoPlay.achievementHandler.getStatus === 'function') {
-                statuses.achievements = AutoPlay.achievementHandler.getStatus();
+            if (this.context.achievementHandler && typeof this.context.achievementHandler.getStatus === 'function') {
+                statuses.achievements = this.context.achievementHandler.getStatus();
             }
-            if (AutoPlay.savingsManager && typeof AutoPlay.savingsManager.getStatus === 'function') {
-                statuses.savings = AutoPlay.savingsManager.getStatus();
+            if (this.context.savingsManager && typeof this.context.savingsManager.getStatus === 'function') {
+                statuses.savings = this.context.savingsManager.getStatus();
             }
-            if (AutoPlay.nightMode && typeof AutoPlay.nightMode.getStatus === 'function') {
-                statuses.nightMode = AutoPlay.nightMode.getStatus();
+            if (this.context.nightMode && typeof this.context.nightMode.getStatus === 'function') {
+                statuses.nightMode = this.context.nightMode.getStatus();
             }
             // Render module statuses
             const moduleOrder = [
@@ -4930,69 +4790,24 @@ class Dashboard {
  */
 class NightMode {
     /**
-     * Constructor - expects config object and context with live getter
-     * @param config NightModeConfig for accessing night mode settings
-     * @param context Context with live config getter
+     * Constructor - expects context object
+     * @param context AutoPlayContext for accessing game state
      */
-    constructor(config, context) {
+    constructor(context) {
         this.isNight = false;
-        this.config = config;
         this.context = context;
     }
     /**
-     * Get current night mode (from live config or context getter)
+     * Get current night mode (from live config)
      */
     getNightMode() {
-        // Prefer context getter if available (live config value)
-        if (this.context?.getNightMode) {
-            return this.context.getNightMode();
-        }
-        // Fallback to config passed at construction
-        return this.config.nightMode;
-    }
-    /**
-     * Set callback for activity logging
-     */
-    setAddActivityCallback(callback) {
-        this.addActivity = callback;
-    }
-    /**
-     * Set callback for using sugar lumps
-     */
-    setUseLumpCallback(callback) {
-        this.useLumpCallback = callback;
-    }
-    /**
-     * Set callback for checking if grinding
-     */
-    setGrindingCheckCallback(callback) {
-        this.grindinCheckCallback = callback;
-    }
-    /**
-     * Set callback for handling golden cookies
-     */
-    setHandleGoldenCookiesCallback(callback) {
-        this.handleGoldenCookiesCallback = callback;
-    }
-    /**
-     * Set pantheon manager reference
-     */
-    setPantheonManager(pantheonManager) {
-        this.pantheonManager = pantheonManager;
-    }
-    /**
-     * Set stock market manager reference
-     */
-    setStockMarketManager(stockMarketManager) {
-        this.stockMarketManager = stockMarketManager;
+        return this.context.Config.NightMode || 0;
     }
     /**
      * Log activity message
      */
     logActivity(msg) {
-        if (this.addActivity) {
-            this.addActivity(msg);
-        }
+        this.context.addActivity(msg);
     }
     /**
      * Check if it's currently nighttime (after 10pm)
@@ -5022,7 +4837,7 @@ class NightMode {
         if (mode === 0)
             return false;
         // Mode 1: AUTO - don't sleep while grinding for final achievements
-        if (mode === 1 && this.grindinCheckCallback && this.grindinCheckCallback()) {
+        if (mode === 1 && this.context.grinding()) {
             return false;
         }
         // Mode 2: ON - always sleep during night hours (no grinding check)
@@ -5053,18 +4868,14 @@ class NightMode {
      */
     prepareForNight(hour) {
         this.logActivity('Preparing for the night.');
-        this.activateNightAtGarden(true);
+        this.context.freezeGarden(true);
         // Handle stock market night trading
-        if (this.stockMarketManager) {
-            this.stockMarketManager.handleNightTrading();
-        }
+        this.context.handleNightTrading();
         // Handle Golden Switch
         const goldenSwitchOff = Game.Upgrades["Golden switch [off]"];
         if (goldenSwitchOff && goldenSwitchOff.unlocked) {
             // Click any golden cookies before buying Golden Switch
-            if (this.handleGoldenCookiesCallback) {
-                this.handleGoldenCookiesCallback();
-            }
+            this.context.handleGoldenCookies();
             this.logActivity('Waiting for good time to buy Golden switch.');
             // Check for good time to buy golden switch
             // Wait if CPS multiplier is high or it's still early
@@ -5085,49 +4896,37 @@ class NightMode {
                 return;
         }
         // Activate night spirits via PantheonManager
-        if (this.pantheonManager) {
-            this.pantheonManager.activateNightSpirits();
-        }
+        this.context.activateNightSpirits();
     }
     /**
      * Wake up from night mode
      */
     onWakeUp() {
         // Use any accumulated sugar lumps
-        if (this.useLumpCallback) {
-            this.useLumpCallback();
-        }
+        this.context.handleSugarLumps();
     }
     /**
      * Deactivate night features when day starts
      */
     deactivateNightFeatures() {
         // Deactivate night spirits via PantheonManager
-        if (this.pantheonManager) {
-            this.pantheonManager.deactivateNightSpirits();
-        }
+        this.context.deactivateNightSpirits();
         // Turn Golden Switch back on
         const goldenSwitchOn = Game.Upgrades["Golden switch [on]"];
         if (goldenSwitchOn && goldenSwitchOn.unlocked) {
             goldenSwitchOn.buy();
         }
-        this.activateNightAtGarden(false);
+        this.context.freezeGarden(false);
     }
     /**
      * Freeze/unfreeze garden during night
+     * @deprecated Use context.freezeGarden instead
      */
-    activateNightAtGarden(activate) {
-        if (!Game.isMinigameReady(Game.Objects["Farm"]))
-            return;
-        const garden = Game.Objects["Farm"].minigame;
-        // Toggle freeze if needed
-        if (activate !== garden.freeze) {
-            const freezeButton = document.getElementById('gardenTool-2');
-            if (freezeButton) {
-                freezeButton.click();
-            }
-        }
+    /*
+    private activateNightAtGarden(activate: boolean): void {
+      this.context.freezeGarden(activate);
     }
+    */
     /**
      * Get current CPS multiplier from active buffs
      * Simplified version - would need full buff calculation from Game.buffs
@@ -5154,14 +4953,6 @@ class NightMode {
      */
     isCurrentlySleeping() {
         return this.isNight;
-    }
-    /**
-     * Toggle night mode
-     * Note: This method is deprecated - config should be changed via AutoPlay.Config
-     */
-    toggle() {
-        // This method is deprecated - modules should not modify config directly
-        // User should change AutoPlay.Config.NightMode instead
     }
     /**
      * Get status for dashboard display
@@ -5239,11 +5030,8 @@ class NightMode {
  * - Slot 2: Labor (buildings +5%) during day, Industry (buildings +10%) at night
  */
 class PantheonManager {
-    constructor() {
-        // Injected dependencies
-        this.now = Date.now();
-        this.poppingWrinklers = false;
-        this.cheatLumps = false;
+    constructor(context) {
+        this.context = context;
     }
     /**
      * Main handler - called periodically (every 15 seconds)
@@ -5252,20 +5040,20 @@ class PantheonManager {
     handlePantheon() {
         if (!Game.isMinigameReady(Game.Objects['Temple']))
             return;
-        const age = this.now - Game.lumpT;
+        const age = this.context.now - Game.lumpT;
         // Slot 0 (Diamond) - Most important slot
-        if (this.poppingWrinklers) {
+        if (this.context.poppingWrinklers) {
             // Scorn: Wrinklers give +15% more cookies
             this.assignSpirit(0, 'scorn', 0);
         }
-        else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !this.cheatLumps) {
+        else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !(this.context.Config.CheatLumps > 0)) {
             // Order: Sugar lumps ripen 1 hour sooner (use when < 61 min from harvest)
             this.assignSpirit(0, 'order', 0);
         }
-        else if (this.preNightMode() &&
+        else if (this.context.preNightMode() &&
             Game.lumpOverripeAge - age < 9 * 60 * 60000 &&
             (new Date()).getMinutes() === 59 &&
-            !this.cheatLumps) {
+            !(this.context.Config.CheatLumps > 0)) {
             // Order: Also use at 59 minutes before midnight if lump about to over-ripen
             this.assignSpirit(0, 'order', 0);
         }
@@ -5337,21 +5125,7 @@ class PantheonManager {
         pantheon.dropGod();
     }
     /**
-     * Check if it's pre-night mode (after 10pm)
-     */
-    preNightMode() {
-        const hour = new Date().getHours();
-        return hour >= 22;
-    }
-    /**
-     * Update state from AutoPlay
-     */
-    updateState(now, poppingWrinklers, cheatLumps) {
-        this.now = now;
-        this.poppingWrinklers = poppingWrinklers;
-        this.cheatLumps = cheatLumps;
-    }
-    /**
+  
      * Get current pantheon manager status
      */
     getStatus() {
@@ -5388,12 +5162,12 @@ class PantheonManager {
         const spirit1 = getGodName(slot1);
         const spirit2 = getGodName(slot2);
         // Determine reason based on current setup
-        const age = this.now - Game.lumpT;
+        const age = this.context.now - Game.lumpT;
         let reason = '';
-        if (this.poppingWrinklers) {
+        if (this.context.poppingWrinklers) {
             reason = 'Scorn for wrinkler bonus';
         }
-        else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !this.cheatLumps) {
+        else if (Game.lumpRipeAge - age < 61 * 60 * 1000 && !(this.context.Config.CheatLumps > 0)) {
             reason = 'Order for faster lump ripening';
         }
         else {
@@ -5414,7 +5188,7 @@ class PantheonManager {
                 'Ruby': spirit1,
                 'Jade': spirit2,
                 'Swaps': swapsAvailable,
-                'Strategy': this.poppingWrinklers ? 'Wrinkler boost' : 'Default'
+                'Strategy': this.context.poppingWrinklers ? 'Wrinkler boost' : 'Default'
             }
         };
     }
@@ -5436,10 +5210,8 @@ class PantheonManager {
  * - Use lump refill when we have 100+ lumps and canUseLumps
  */
 class GrimoireManager {
-    constructor() {
-        // State tracking
-        this.canUseLumps = false;
-        this.cpsMult = 1.0;
+    constructor(context) {
+        this.context = context;
     }
     /**
      * Main handler - called in high-activity phase (when hyperActive or deadline reached)
@@ -5478,7 +5250,7 @@ class GrimoireManager {
             grimoire.castSpell(handOfFate);
         }
         // High CpS multiplier (>100x) - cast spells for maximum value
-        if (this.cpsMult > 100) {
+        if (this.context.cpsMult > 100) {
             // Cast Hand of Fate to get more golden cookies
             if (grimoire.magic >= grimoire.getSpellCost(handOfFate)) {
                 grimoire.castSpell(handOfFate);
@@ -5491,19 +5263,13 @@ class GrimoireManager {
                 return;
             }
             // Refill magic with sugar lump if we have plenty
-            if (this.canUseLumps && Game.lumps > 100) {
+            if (this.context.canUseLumps && Game.lumps > 100) {
                 grimoire.lumpRefill.click();
             }
         }
     }
     /**
-     * Update state from AutoPlay
-     */
-    updateState(canUseLumps, cpsMult) {
-        this.canUseLumps = canUseLumps;
-        this.cpsMult = cpsMult;
-    }
-    /**
+  
      * Get current grimoire manager status
      */
     getStatus() {
@@ -5558,24 +5324,24 @@ class GrimoireManager {
                 icon: '🔮',
                 details: {
                     'Magic': `${magicPercent}%`,
-                    'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+                    'CpS Multiplier': `${this.context.cpsMult.toFixed(1)}x`,
                     'Strategy': 'Backfire farming'
                 }
             };
         }
         // Check for high CpS multiplier (>100x)
-        if (this.cpsMult > 100) {
+        if (this.context.cpsMult > 100) {
             return {
                 module: 'Grimoire',
                 status: canCastHand ? 'active' : 'waiting',
                 currentAction: canCastHand ? 'Casting spells' : 'Waiting for magic',
-                reason: `High CpS multiplier (${this.cpsMult.toFixed(0)}x)`,
+                reason: `High CpS multiplier (${this.context.cpsMult.toFixed(0)}x)`,
                 nextAction: canCastHand ? 'Casting Hand of Fate & Conjure Baked Goods' : 'Recharging magic',
                 icon: '🔮',
                 details: {
                     'Magic': `${magicPercent}%`,
-                    'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
-                    'Can Use Lumps': this.canUseLumps && Game.lumps > 100,
+                    'CpS Multiplier': `${this.context.cpsMult.toFixed(1)}x`,
+                    'Can Use Lumps': this.context.canUseLumps && Game.lumps > 100,
                     'Sugar Lumps': Game.lumps
                 }
             };
@@ -5590,7 +5356,7 @@ class GrimoireManager {
             icon: '🔮',
             details: {
                 'Magic': `${magicPercent}%`,
-                'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+                'CpS Multiplier': `${this.context.cpsMult.toFixed(1)}x`,
                 'Threshold': '100x'
             }
         };
@@ -5965,7 +5731,7 @@ const GARDEN_UPGRADES = [...GARDEN_UPGRADE_IDS];
 // @ts-ignore - Will be used when full planting logic is implemented
 const _PLANT_DEPS = PLANT_DEPENDENCIES.map((dep) => [dep[0], dep[1], dep[2]]);
 class GardenManager {
-    constructor() {
+    constructor(context) {
         // State tracking
         this.plantList = [0, 0, 0, 0]; // Current plant goals for each sector
         this.plantPending = false; // Waiting for plant to mature
@@ -5973,19 +5739,23 @@ class GardenManager {
         this.plantsMissing = true; // Still unlocked plants?
         this.plantCookies = false; // Harvest cookie-dropping plants?
         this.wantGardenSacrifice = false; // Want to sacrifice garden?
-        // Injected state
-        this.now = Date.now();
-        this.cpsMult = 1.0;
-        this.wantAscend = false;
-        this.savingsGoal = 0;
-        this.canUseLumps = false;
-        this.finished = false;
-        this.lumpRelatedAchievements = [];
-        this.poppingWrinklers = false;
-        // @ts-ignore - Will be used in plantSeed
-        this._grindingCheat = false;
-        // @ts-ignore - Will be used in plantSeed
-        this._cheatGolden = 0;
+        this.context = context;
+    }
+    /**
+     * Freeze or unfreeze the garden
+     * @param freeze true to freeze, false to unfreeze
+     */
+    freezeGarden(freeze) {
+        if (!Game.isMinigameReady(Game.Objects['Farm']))
+            return;
+        const garden = Game.Objects['Farm'].minigame;
+        // Toggle freeze if needed
+        if (freeze !== garden.freeze) {
+            const freezeButton = document.getElementById('gardenTool-2');
+            if (freezeButton) {
+                freezeButton.click();
+            }
+        }
     }
     /**
      * Main handler - called periodically (every 15 seconds)
@@ -6007,11 +5777,11 @@ class GardenManager {
             return;
         }
         // Convert garden for sugar lumps when endgame and all plants unlocked
-        if (!this.canUseLumps &&
+        if (!this.context.canUseLumps &&
             this.gardenReady(garden) &&
-            !this.finished &&
+            !this.context.finished &&
             !this.harvestPlant &&
-            !this.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
+            !this.context.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
             this.plantCookies = false;
             garden.askConvert();
             Game.ConfirmPrompt();
@@ -6048,7 +5818,7 @@ class GardenManager {
                     this.logActivity(`Waiting to harvest ${plant.name}.`);
                     if (garden.plantsUnlockedN === garden.plantsN && tile[1] >= plant.mature) {
                         // Harvest when CPS multiplier is high enough
-                        if (this.cpsMult > 300) {
+                        if (this.context.cpsMult > 300) {
                             garden.harvest(x, y);
                         }
                     }
@@ -6073,7 +5843,7 @@ class GardenManager {
      * Original: AutoPlay.seedCalendar (lines 1329-1393)
      */
     seedCalendar(garden, sector) {
-        if (this.wantAscend || this.wantGardenSacrifice)
+        if (this.context.wantAscend || this.wantGardenSacrifice)
             return 'bakerWheat';
         if (sector === 0)
             this.plantsMissing = false;
@@ -6131,12 +5901,12 @@ class GardenManager {
         // All cookie upgrades unlocked - use garden for CPS and sugar lumps
         this.plantCookies = false;
         this.switchSoil(garden, sector, this.plantPending ? 'fertilizer' : 'clay');
-        if (this.poppingWrinklers && garden.plants['wrinklegill']?.unlocked) {
+        if (this.context.poppingWrinklers && garden.plants['wrinklegill']?.unlocked) {
             return 'wrinklegill'; // faster wrinklers
         }
         // Use bakeberry if all lump achievements are done (1% CPS + harvest 30 mins)
         if (garden.plants['bakeberry']?.unlocked &&
-            this.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
+            this.context.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
             return 'bakeberry';
         }
         // Whiskerbloom gives ~1.5% CPS
@@ -6169,9 +5939,9 @@ class GardenManager {
      */
     plantSeeds(garden, targets) {
         // Don't plant when CPS multiplier is too high (expensive)
-        const grindingCheat = this._grindingCheat ? 1 : 0;
-        const cheatGolden = this._cheatGolden > 1 ? 1 : 0;
-        if (this.cpsMult > 1 + 10 * (grindingCheat + cheatGolden)) {
+        const grindingCheat = this.context.grindingCheat() ? 1 : 0;
+        const cheatGolden = this.context.cheatGolden > 1 ? 1 : 0;
+        if (this.context.cpsMult > 1 + 10 * (grindingCheat + cheatGolden)) {
             this.logActivity('Do not buy plants now - it is too expensive.');
             return;
         }
@@ -6212,7 +5982,7 @@ class GardenManager {
         }
         // Cost is in minutes of current CPS
         cost *= 60 * Game.cookiesPs;
-        if (cost > Game.cookies - this.savingsGoal)
+        if (cost > Game.cookies - this.context.savingsGoal)
             return;
         // Plant all seeds
         for (const target of toPlant) {
@@ -6333,7 +6103,7 @@ class GardenManager {
      * Original: AutoPlay.findPlants (lines 1119-1157)
      */
     findPlants(garden, idx) {
-        if (this.wantAscend)
+        if (this.context.wantAscend)
             return false; // do not plant before ascend
         let couldPlant = 0;
         // Check if already assigned a plant to this sector
@@ -6572,9 +6342,9 @@ class GardenManager {
      */
     plantSeed(garden, seed, whereX, whereY) {
         // Don't plant when CPS multiplier is too high (expensive)
-        const grindingCheat = this._grindingCheat ? 1 : 0;
-        const cheatGolden = this._cheatGolden > 1 ? 1 : 0;
-        if (this.cpsMult > 1 + 10 * (grindingCheat + cheatGolden)) {
+        const grindingCheat = this.context.grindingCheat() ? 1 : 0;
+        const cheatGolden = this.context.cheatGolden > 1 ? 1 : 0;
+        if (this.context.cpsMult > 1 + 10 * (grindingCheat + cheatGolden)) {
             this.logActivity('Do not buy plants now - it is too expensive.');
             return;
         }
@@ -6592,7 +6362,7 @@ class GardenManager {
             return;
         // Check if we can afford (cost is in minutes of current CPS)
         const cost = garden.plants[seed].cost * 60 * Game.cookiesPs;
-        if (cost > Game.cookies - this.savingsGoal)
+        if (cost > Game.cookies - this.context.savingsGoal)
             return;
         garden.useTool(garden.plants[seed].id, whereX, whereY);
     }
@@ -6631,7 +6401,7 @@ class GardenManager {
     switchSoil(garden, sector, which) {
         if (sector)
             return; // Only switch for sector 0 (global soil)
-        if (garden.nextSoil > this.now)
+        if (garden.nextSoil > this.context.now)
             return; // Soil change on cooldown
         const soil = garden.soils[which];
         if (!soil)
@@ -6655,30 +6425,7 @@ class GardenManager {
      * Log activity message
      */
     logActivity(msg) {
-        if (this.addActivity) {
-            this.addActivity(msg);
-        }
-    }
-    /**
-     * Update state from AutoPlay
-     */
-    updateState(state) {
-        this.now = state.now;
-        this.cpsMult = state.cpsMult;
-        this.wantAscend = state.wantAscend;
-        this.savingsGoal = state.savingsGoal;
-        this.canUseLumps = state.canUseLumps;
-        this.finished = state.finished;
-        this.lumpRelatedAchievements = state.lumpRelatedAchievements;
-        this.poppingWrinklers = state.poppingWrinklers;
-        this._grindingCheat = state.grindingCheat;
-        this._cheatGolden = state.cheatGolden;
-    }
-    /**
-     * Set activity logging callback
-     */
-    setAddActivity(callback) {
-        this.addActivity = callback;
+        this.context.addActivity(msg);
     }
     /**
      * Get plant pending status (for AutoPlay.plantPending)
@@ -6706,7 +6453,7 @@ class GardenManager {
         }
         const garden = Game.Objects['Farm'].minigame;
         // Check if ascending soon
-        if (this.wantAscend) {
+        if (this.context.wantAscend) {
             return {
                 module: 'Garden',
                 status: 'waiting',
@@ -6827,22 +6574,20 @@ class GardenManager {
  * Original implementation: lines 1500-1591 in cookieAutoPlayBeta.js
  */
 class StockMarketManager {
-    constructor() {
+    constructor(context) {
         this.goodsList = new Map();
-        this.resetTime = Date.now();
-        this.wantAscend = false;
-        this.plantPending = false;
+        this.context = context;
     }
     /**
      * Main handler - called periodically (every 15 seconds)
      */
     handleStockMarket() {
         // Wait 1 hour after reset/reincarnation before trading
-        if (Date.now() < this.resetTime + 3600000)
+        if (Date.now() < this.context.resetTime + 3600000)
             return;
         if (!Game.isMinigameReady(Game.Objects['Bank']))
             return;
-        if (this.wantAscend)
+        if (this.context.wantAscend)
             return; // Don't trade before ascending
         const market = Game.Objects['Bank'].minigame;
         // Buy brokers to increase stock limits
@@ -6938,15 +6683,13 @@ class StockMarketManager {
      * Try to get "Debt evasion" achievement by ascending with loan
      */
     tryDebtEvasion() {
-        if (!Game.Achievements['Debt evasion'].won && !this.plantPending) {
+        if (!Game.Achievements['Debt evasion'].won && !this.context.plantPending) {
             const loanButton = document.getElementById('bankLoan2');
             if (loanButton) {
                 loanButton.click();
                 // Wait 30 seconds then ascend
                 setTimeout(() => {
-                    if (this.doAscend) {
-                        this.doAscend('trying debt evasion');
-                    }
+                    this.context.triggerAscend('trying debt evasion');
                 }, 30 * 1000);
             }
         }
@@ -7033,25 +6776,11 @@ class StockMarketManager {
         }
     }
     /**
-     * Update state from AutoPlay
-     */
-    updateState(state) {
-        this.resetTime = state.resetTime;
-        this.wantAscend = state.wantAscend;
-        this.plantPending = state.plantPending;
-    }
-    /**
-     * Set ascension callback
-     */
-    setDoAscendCallback(callback) {
-        this.doAscend = callback;
-    }
-    /**
      * Get current stock market manager status
      */
     getStatus() {
         // Check for cooldown period after reset
-        const cooldownRemaining = Math.floor((this.resetTime + 3600000 - Date.now()) / 1000 / 60);
+        const cooldownRemaining = Math.floor((this.context.resetTime + 3600000 - Date.now()) / 1000 / 60);
         if (cooldownRemaining > 0) {
             return {
                 module: 'Stock Market',
@@ -7080,7 +6809,7 @@ class StockMarketManager {
             };
         }
         // Don't trade before ascending
-        if (this.wantAscend) {
+        if (this.context.wantAscend) {
             return {
                 module: 'Stock Market',
                 status: 'waiting',
@@ -7179,7 +6908,6 @@ class StockMarketManager {
 
 
 
-// import { UpgradeManager } from './modules/UpgradeManager'; // Moved to BuildingManager
 
 
 
@@ -7192,7 +6920,6 @@ class StockMarketManager {
 
 
 
-// import type { UpgradeManagerContext } from './modules/UpgradeManager'; // Moved to BuildingManager
 
 
 class AutoPlay_AutoPlay {
@@ -7236,6 +6963,36 @@ class AutoPlay_AutoPlay {
     set statusInfo(value) { this.state.statusInfo = value; }
     get workingOnSpecialAchievement() { return this.state.workingOnSpecialAchievement; }
     set workingOnSpecialAchievement(value) { this.state.workingOnSpecialAchievement = value; }
+    // Public accessors for shared context
+    get cpsMult() {
+        const Game = globalThis.Game;
+        return Game.cookiesPs / Game.unbuffedCps;
+    }
+    get canUseLumps() {
+        return this.sugarLumpManager.getCanUseLumps();
+    }
+    get poppingWrinklers() {
+        return this.state.poppingWrinklers;
+    }
+    set poppingWrinklers(value) {
+        this.state.poppingWrinklers = value;
+    }
+    get resetTime() {
+        return this.state.resetTime || this.state.now;
+    }
+    get cheatGolden() {
+        return this.config.cheatGolden;
+    }
+    get wrinklerTime() { return this.state.wrinklerTime; }
+    set wrinklerTime(value) { this.state.wrinklerTime = value; }
+    get nextWrinkler() { return this.state.nextWrinkler; }
+    set nextWrinkler(value) { this.state.nextWrinkler = value; }
+    get lumpRelatedAchievements() {
+        return this.lateAchievements;
+    }
+    get lumpHarvestAchievements() {
+        return this.lateAchievements;
+    }
     // Public methods expected by modules
     info(message) {
         console.log(`[CookieBot] ${message}`);
@@ -7265,6 +7022,25 @@ class AutoPlay_AutoPlay {
         }
     }
     /**
+     * Log game state to localStorage (legacy feature)
+     * Used during ascension to save state
+     */
+    logging() {
+        if (!this.loggingInfo)
+            return;
+        try {
+            const Game = globalThis.Game;
+            const before = localStorage.getItem("autoplayLog") || "";
+            const toAdd = "#logging autoplay V" + AutoPlay_AutoPlay.version + " with " +
+                this.loggingInfo + "\n" + Game.WriteSave(1) + "\n";
+            this.loggingInfo = 0;
+            localStorage.setItem("autoplayLog", before + toAdd);
+        }
+        catch (e) {
+            console.error('Logging error:', e);
+        }
+    }
+    /**
      * Find next achievement to target (delegates to AchievementHandler)
      */
     findNextAchievement() {
@@ -7273,8 +7049,6 @@ class AutoPlay_AutoPlay {
         }
     }
     constructor() {
-        // Shared context for upgrade manager (moved to BuildingManager)
-        // private upgradeContext: UpgradeManagerContext;
         // Public properties for global AutoPlay access (needed by modules)
         this.wantedAchievements = [];
         this.lateAchievements = [];
@@ -7282,6 +7056,24 @@ class AutoPlay_AutoPlay {
         this.backupHeight = 0;
         this.giftCode = 0;
         this.onAscend = false; // Flag to prevent duplicate ascension calls
+        this.loggingInfo = 0;
+        // Permanent slot arrays
+        this.kittens = [31, 32, 54, 108, 187, 320, 321, 322, 425, 442, 462, 494, 613, 766, 865];
+        this.cursors = [0, 1, 2, 3, 4, 5, 6, 43, 82, 109, 188, 189, 660, 764, 873];
+        this.maxBuildings = [826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 858];
+        this.butterBiscuits = [334, 335, 336, 337, 400, 477, 478, 479, 497, 659, 699, 767, 862];
+        this.expensive = [
+            38, 39, 40, 41, 42, 55, 56, 80, 81, 88, 89, 90, 104, 105, 106, 107,
+            120, 121, 122, 123, 150, 151, 256, 257, 258, 259, 260, 261, 262, 263,
+            338, 339, 340, 341, 342, 343, 350, 351, 352, 403, 404, 405, 406, 407,
+            444, 445, 446, 447, 448, 453, 454, 455, 456, 457, 458, 464, 465, 466, 467, 468, 469,
+            498, 499, 500, 501, 535, 536, 538, 565, 566, 567, 568, 569, 570, 571, 572, 573, 574,
+            575, 576, 577, 578, 579, 580, 581, 582, 583, 584, 585, 586, 587, 588,
+            607, 608, 609, 615, 616, 617, 652, 653, 654, 655, 656, 657, 658,
+            678, 679, 680, 681, 682, 721, 722, 723, 724,
+            807, 808, 809, 810, 811, 812, 813, 814, 815, 816,
+            820, 821, 822, 823, 867, 868, 869, 870, 871, 872
+        ];
         // Initialize default configuration
         this.config = this.getDefaultConfig();
         this.state = this.getDefaultState();
@@ -7302,7 +7094,7 @@ class AutoPlay_AutoPlay {
         this.wantedAchievements = [...WANTED_ACHIEVEMENTS];
         this.lateAchievements = [...gameIds_LUMP_RELATED_ACHIEVEMENTS];
         // Create dashboard FIRST so logging callbacks can use it
-        this.dashboard = new Dashboard();
+        this.dashboard = new Dashboard(this);
         // Sync Config with Dashboard's config system (Dashboard loads from localStorage)
         // Cast to our Config type since Dashboard's Config interface is just [key: string]: number
         this.Config = this.dashboard.getConfig();
@@ -7332,64 +7124,51 @@ class AutoPlay_AutoPlay {
         });
         // Initialize modules with proper constructor arguments
         // Use this.Config (original structure) instead of this.config (TypeScript structure)
-        this.clickManager = new ClickManager({ clickMode: this.Config.ClickMode }, {
-            now: this.state.now,
-            endPhase: () => this.endPhase(),
-            grindingCheat: () => this.grindingCheat(),
-            getClickMode: () => this.Config.ClickMode // Live getter reads from Config
-        });
-        this.goldenCookieHandler = new GoldenCookieHandler({
-            GoldenClickMode: this.Config.GoldenClickMode,
-            CheatGolden: this.Config.CheatGolden,
-            getGoldenClickMode: () => this.Config.GoldenClickMode, // Live getter reads from Config
-            getCheatGolden: () => this.Config.CheatGolden // Live getter reads from Config
-        }, logAction, addActivity, () => this.grindingCheat());
-        this.savingsManager = new SavingsManager({ SavingStrategy: this.Config.SavingStrategy }, { getSavingStrategy: () => this.Config.SavingStrategy }, // Live getter reads from Config
-        logStatus);
-        this.purchaseManager = new PurchaseManager({
-            logAction,
-            addActivity,
-        });
-        // Create upgrade manager context (moved to BuildingManager)
-        // this.upgradeContext = {
-        //   now: this.state.now,
-        //   savingsGoal: this.config.savingsGoal,
-        //   canUseLumps: false,
-        //   nextAchievement: null,
-        //   nextPurchase: null,
-        //   nextPurchaseType: null,
-        //   nextPurchasePrice: null,
-        //   nextPurchasePP: null,
-        //   hyperActive: false,
-        //   logAction,
-        //   addActivity,
-        // };
-        // this.upgradeManager = new UpgradeManager(this.upgradeContext); // Moved to BuildingManager
-        this.seasonHandler = new SeasonHandler();
-        this.sugarLumpManager = new SugarLumpManager(this.state);
-        this.wrinklerManager = new WrinklerManager(this.state);
-        this.achievementHandler = new AchievementHandler();
+        this.clickManager = new ClickManager(this);
+        this.goldenCookieHandler = new GoldenCookieHandler(this);
+        this.savingsManager = new SavingsManager(this);
+        this.purchaseManager = new PurchaseManager(this);
+        this.seasonHandler = new SeasonHandler(this);
+        this.sugarLumpManager = new SugarLumpManager(this);
+        this.wrinklerManager = new WrinklerManager(this);
+        this.achievementHandler = new AchievementHandler(this);
         // Pass 'this' as context so AscensionManager can read live properties via getters
         // Cast to any to satisfy the AutoPlayContext interface (this has all required properties)
         this.ascensionManager = new AscensionManager(this);
-        this.dragonManager = new DragonManager();
+        this.dragonManager = new DragonManager(this);
         // Dashboard already created at top of constructor
-        this.nightMode = new NightMode({ nightMode: this.Config.NightMode }, { getNightMode: () => this.Config.NightMode } // Live getter reads from Config
-        );
-        this.pantheonManager = new PantheonManager();
-        this.grimoireManager = new GrimoireManager();
-        this.gardenManager = new GardenManager();
-        this.stockMarketManager = new StockMarketManager();
-        // Set up activity callback for modules that need it
-        this.sugarLumpManager.setAddActivity(addActivity);
-        this.nightMode.setAddActivityCallback(addActivity);
-        this.gardenManager.setAddActivity(addActivity);
-        // Set up wrinkler manager dependencies
-        this.wrinklerManager.setDependencies(this.seasonHandler, [...WANTED_ACHIEVEMENTS], this.state.nextAchievement);
-        // Set up pantheon manager reference for night mode
-        this.nightMode.setPantheonManager(this.pantheonManager);
-        // Set up stock market manager reference for night mode
-        this.nightMode.setStockMarketManager(this.stockMarketManager);
+        this.nightMode = new NightMode(this);
+        this.pantheonManager = new PantheonManager(this);
+        this.grimoireManager = new GrimoireManager(this);
+        this.gardenManager = new GardenManager(this);
+        this.stockMarketManager = new StockMarketManager(this);
+    }
+    /**
+     * Trigger ascension (delegates to AscensionManager)
+     */
+    triggerAscend(msg, bypass) {
+        this.ascensionManager.triggerAscend(msg, bypass);
+    }
+    seasonFinished(season) {
+        return this.seasonHandler.seasonFinished(season);
+    }
+    handleSugarLumps() {
+        this.sugarLumpManager.handleSugarLumps();
+    }
+    handleGoldenCookies() {
+        this.goldenCookieHandler.handleGoldenCookies();
+    }
+    activateNightSpirits() {
+        this.pantheonManager.activateNightSpirits();
+    }
+    deactivateNightSpirits() {
+        this.pantheonManager.deactivateNightSpirits();
+    }
+    handleNightTrading() {
+        this.stockMarketManager.handleNightTrading();
+    }
+    freezeGarden(freeze) {
+        this.gardenManager.freezeGarden(freeze);
     }
     /**
      * Initialize the bot
@@ -7414,9 +7193,6 @@ class AutoPlay_AutoPlay {
         // Hook into Game.UpdateMenu to add config options to preferences
         this.setupMenuHook();
         // Do an initial bestBuy check to populate purchase info for dashboard
-        const Game = globalThis.Game;
-        const cpsMult = Game.cookiesPs / Game.unbuffedCps;
-        this.purchaseManager.setState(this.config.savingsGoal, Date.now(), cpsMult, this.sugarLumpManager.getCanUseLumps(), this.state.nextAchievement);
         this.purchaseManager.bestBuy();
         const purchaseInfo = this.purchaseManager.getPurchaseInfo();
         if (purchaseInfo) {
@@ -7474,8 +7250,6 @@ class AutoPlay_AutoPlay {
             this.runJustRight();
             return;
         }
-        // Calculate CPS multiplier for later use
-        const cpsMult = Game.cookiesPs / Game.unbuffedCps;
         // Update finished state - check if all lump-related achievements are complete
         this.state.finished = gameIds_LUMP_RELATED_ACHIEVEMENTS.every((id) => Game.AchievementsById[id].won);
         // ===== Phase 3: Night mode =====
@@ -7499,7 +7273,7 @@ class AutoPlay_AutoPlay {
             // Unified bestBuy logic (compares buildings and upgrades by PP)
             this.bestBuy();
             // Set hyperActive if CPS multiplier is very high
-            if (cpsMult > 100) {
+            if (this.cpsMult > 100) {
                 this.state.hyperActive = true;
             }
             // Handle speed minigames (grimoire spells)
@@ -7507,20 +7281,12 @@ class AutoPlay_AutoPlay {
         }
         // ===== Phase 6: Frequent ascension checks =====
         // Check ascend often in reborn and during ascend
-        if (Game.ascensionMode === 1 || this.state.onAscend) {
+        if (Game.ascensionMode === 1 || this.onAscend) {
             this.ascensionManager.handleAscend();
-            // Sync state from ascension manager
-            this.state.wantAscend = this.ascensionManager.context.wantAscend;
-            this.state.onAscend = this.ascensionManager.state.onAscend;
-            this.onAscend = this.state.onAscend; // Sync public property with internal state
         }
         // Check ascend often for lucky payout
         if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
             this.ascensionManager.handleAscend();
-            // Sync state from ascension manager
-            this.state.wantAscend = this.ascensionManager.context.wantAscend;
-            this.state.onAscend = this.ascensionManager.state.onAscend;
-            this.onAscend = this.state.onAscend; // Sync public property with internal state
         }
         // ===== Phase 7: Deadline check (end of high-activity) =====
         if (this.state.now < this.state.deadline) {
@@ -7603,15 +7369,10 @@ class AutoPlay_AutoPlay {
         this.achievementHandler.handleSmallAchievements();
         // Wrinklers
         if (this.config.autoWrinklers) {
-            this.wrinklerManager.updateState(this.state.nextAchievement);
             this.wrinklerManager.handleWrinklers();
         }
         // Ascension
         this.ascensionManager.handleAscend();
-        // Sync state from ascension manager
-        this.state.wantAscend = this.ascensionManager.context.wantAscend;
-        this.state.onAscend = this.ascensionManager.state.onAscend;
-        this.onAscend = this.state.onAscend; // Sync public property with internal state
         // Minigames (garden, pantheon, stock market)
         this.handleMinigames();
         // Handle notes
@@ -7643,10 +7404,6 @@ class AutoPlay_AutoPlay {
      * Original: lines 471-615 in cookieAutoPlayBeta.js
      */
     bestBuy() {
-        const Game = globalThis.Game;
-        // Update BuildingManager state with current context
-        const cpsMult = Game.cookiesPs / Game.unbuffedCps;
-        this.purchaseManager.setState(this.config.savingsGoal, this.state.now, cpsMult, this.sugarLumpManager.getCanUseLumps(), this.state.nextAchievement);
         // Delegate to BuildingManager
         this.purchaseManager.bestBuy();
         // Sync purchase info from BuildingManager to AutoPlay state
@@ -7668,40 +7425,11 @@ class AutoPlay_AutoPlay {
      * Check if an upgrade should be avoided
      * (Moved to BuildingManager.shouldAvoidBuy())
      */
-    // @ts-ignore TS6133 - Legacy method, kept for reference
-    avoidBuy(upgrade) {
-        const Game = globalThis.Game;
-        switch (upgrade.id) {
-            case 71: // One mind
-            case 73: // Communal brainsweep
-                return Game.Achievements['Elder nap'].won &&
-                    Game.Achievements['Grandmapocalypse'].won &&
-                    Game.Achievements['Elder slumber'].won &&
-                    Game.Achievements['Elder calm'].won;
-            case 74: // Elder Pledge
-                return Game.Achievements['Elder nap'].won &&
-                    Game.Achievements['Elder slumber'].won &&
-                    Game.Upgrades['Elder Covenant'].unlocked;
-            case 84: // Elder Covenant
-                return Game.Upgrades['Elder Pledge'].bought ||
-                    Game.Achievements['Elder calm'].won;
-            case 227: // Chocolate egg
-                return true;
-            case 563: // Shimmering veil
-                return this.state.nextAchievement !== 432 ||
-                    Game.Achievements['Thick-skinned'].won;
-            default:
-                return upgrade.pool === 'toggle';
-        }
-    }
     /**
      * Handle speed minigames - grimoire spells
      * Runs in high-activity phase
      */
     handleSpeedMinigames() {
-        const Game = globalThis.Game;
-        // Update grimoire state
-        this.grimoireManager.updateState(this.sugarLumpManager.getCanUseLumps(), Game.cookiesPs / Game.unbuffedCps);
         // Cast grimoire spells
         this.grimoireManager.handleGrimoires();
     }
@@ -7713,33 +7441,12 @@ class AutoPlay_AutoPlay {
         const Game = globalThis.Game;
         if (Game.ascensionMode === 1)
             return; // No minigames in born again mode
-        // Update pantheon state
-        this.pantheonManager.updateState(this.state.now, this.state.poppingWrinklers, this.sugarLumpManager.isCheatLumps());
         // Handle pantheon spirit assignments
         this.pantheonManager.handlePantheon();
-        // Update garden state
-        this.gardenManager.updateState({
-            now: this.state.now,
-            cpsMult: Game.cookiesPs / Game.unbuffedCps,
-            wantAscend: this.state.wantAscend,
-            savingsGoal: this.config.savingsGoal,
-            canUseLumps: this.sugarLumpManager.getCanUseLumps(),
-            finished: this.state.finished,
-            lumpRelatedAchievements: [...gameIds_LUMP_RELATED_ACHIEVEMENTS],
-            poppingWrinklers: this.state.poppingWrinklers,
-            grindingCheat: this.grindingCheat(),
-            cheatGolden: this.config.cheatGolden,
-        });
         // Handle garden planting and harvesting
         this.gardenManager.handleGarden();
         // Update plantPending state from garden
         this.state.plantPending = this.gardenManager.isPlantPending();
-        // Update stock market state
-        this.stockMarketManager.updateState({
-            resetTime: this.state.resetTime || this.state.now,
-            wantAscend: this.state.wantAscend,
-            plantPending: this.state.plantPending,
-        });
         // Handle stock market trading
         this.stockMarketManager.handleStockMarket();
     }
@@ -7904,10 +7611,6 @@ class AutoPlay_AutoPlay {
         Logger.addActivity('Running just right.');
         // Handle ascension checks
         this.ascensionManager.handleAscend();
-        // Sync state from ascension manager
-        this.state.wantAscend = this.ascensionManager.context.wantAscend;
-        this.state.onAscend = this.ascensionManager.state.onAscend;
-        this.onAscend = this.state.onAscend; // Sync public property with internal state
         // If "You" building exists, we need to start fresh
         const youBuilding = Game.ObjectsById[Game.ObjectsById.length - 1];
         if (youBuilding && youBuilding.amount) {
@@ -7953,11 +7656,11 @@ class AutoPlay_AutoPlay {
                 }
                 if (Math.round(Game.cookiesd) === goal) {
                     // Perfect! Ascend with success
-                    this.ascensionManager.triggerAscend('Fixed run just right.');
+                    this.ascensionManager.triggerAscend('Fixed run just right.', true);
                 }
                 else if (cookieDiff < -goal && this.state.now - Game.startDate > 60000) {
                     // Too far off after 1 minute - retry
-                    this.ascensionManager.triggerAscend('ascend just right did not work, retry.');
+                    this.ascensionManager.triggerAscend('ascend just right did not work, retry.', false);
                 }
                 else if (cookieDiff < -2000000000) {
                     // Way over - buy many cursors to burn cookies
@@ -8098,7 +7801,6 @@ class AutoPlay_AutoPlay {
             nextPurchasePP: null,
             nextPurchasePrice: null,
             buy10: false,
-            onAscend: false,
             savingsStart: now,
             savingsFraction: 0,
             mainActivity: 'Doing nothing in particular.',
@@ -8123,7 +7825,6 @@ class AutoPlay_AutoPlay {
      * Toggle night mode
      */
     toggleNightMode() {
-        this.nightMode.toggle();
         this.config.nightMode = !this.config.nightMode;
         this.saveConfig();
     }

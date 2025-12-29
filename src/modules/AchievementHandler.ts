@@ -2,38 +2,19 @@
  * Handles achievement hunting (small achievements, ascension-related)
  */
 
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 
 declare const Game: any;
-
-// AutoPlay global state (defined in cookieAutoPlayBeta.js)
-declare const AutoPlay: {
-  robotName: string;
-  backupHeight: number;
-  giftCode: number | string;
-  wantedAchievements: number[];
-  nextAchievement: number;
-  lateAchievements: number[];
-  mainActivity: string;
-  activities: string;
-  finished: boolean;
-  wantAscend: boolean;
-
-  // Methods
-  info: (message: string) => void;
-  endPhase: () => boolean;
-  grinding: () => boolean;
-  grindingCheat: () => boolean;
-  setMainActivity: (activity: string) => void;
-  addActivity: (activity: string) => void;
-  unDunk: () => void;
-  redeemPresent: () => void;
-  logAction: (action: string, details: string) => void;
-  logStatus: (category: string, message: string) => void;
-  logging?: () => void;
-};
+declare const l: (id: string) => HTMLElement | null;
 
 export class AchievementHandler {
+  private context: AutoPlayContext;
+
+  constructor(context: AutoPlayContext) {
+    this.context = context;
+  }
+
   /**
    * Handle small achievements that can be obtained through simple interactions
    */
@@ -68,20 +49,20 @@ export class AchievementHandler {
 
     // What's in a name - add robot name to bakery name
     if (!Game.Achievements["What's in a name"].won) {
-      Game.bakeryName = AutoPlay.robotName + bakeryName;
+      Game.bakeryName = this.context.robotName + bakeryName;
       Game.bakeryNamePrompt();
       Game.ConfirmPrompt();
     }
 
     // Remove robot name if it's still there
-    if (Game.bakeryName.slice(0, AutoPlay.robotName.length) === AutoPlay.robotName) {
-      Game.bakeryName = Game.bakeryName.slice(AutoPlay.robotName.length);
+    if (Game.bakeryName.slice(0, this.context.robotName.length) === this.context.robotName) {
+      Game.bakeryName = Game.bakeryName.slice(this.context.robotName.length);
       Game.bakeryNamePrompt();
       Game.ConfirmPrompt();
     }
 
     // Cheated cookies taste awful - get this after all other achievements
-    if (AutoPlay.endPhase() && !Game.Achievements['Cheated cookies taste awful'].won) {
+    if (this.context.endPhase() && !Game.Achievements['Cheated cookies taste awful'].won) {
       Game.Win('Cheated cookies taste awful');
     }
 
@@ -102,16 +83,16 @@ export class AchievementHandler {
         Game.tickerL.scrollIntoView();
       }
       Game.ShowMenu(currentMenu);
-      AutoPlay.info('found the forgotten madeleine at the very bottom of the "Info" menu');
+      this.context.info('found the forgotten madeleine at the very bottom of the "Info" menu');
     }
 
     // Cookie-dunker - dunk the cookie in milk
     if (!Game.Achievements['Cookie-dunker'].won && Game.milkProgress > 1 && Game.milkHd > 0.34) {
-      if (AutoPlay.backupHeight) {
-        Game.LeftBackground.canvas.height = AutoPlay.backupHeight;
-        AutoPlay.backupHeight = 0;
+      if (this.context.backupHeight) {
+        Game.LeftBackground.canvas.height = this.context.backupHeight;
+        this.context.backupHeight = 0;
       } else {
-        AutoPlay.backupHeight = Game.LeftBackground.canvas.height;
+        this.context.backupHeight = Game.LeftBackground.canvas.height;
         Game.LeftBackground.canvas.height = 400;
         setTimeout(() => this.undunkCookie(), 20 * 1000);
       }
@@ -128,7 +109,7 @@ export class AchievementHandler {
     // No time like the present - send and redeem a gift
     if (!Game.Achievements['No time like the present'].won &&
         Game.Has('Wrapping paper') && !Game.hasBuff('Gifted out')) {
-      if (!AutoPlay.giftCode) {
+      if (!this.context.giftCode) {
         Game.promptGiftSend();
         const giftAmountEl = l('giftAmount') as HTMLInputElement;
         const giftMessageEl = l('giftMessage') as HTMLTextAreaElement;
@@ -139,9 +120,9 @@ export class AchievementHandler {
           giftAmountEl.value = '42';
           giftMessageEl.value = 'A gift for myself';
           confirmBtn.click();
-          AutoPlay.giftCode = giftCodeEl.value;
+          this.context.giftCode = giftCodeEl.value;
           confirmBtn.click();
-          AutoPlay.info('Created present with code ' + AutoPlay.giftCode);
+          this.context.info('Created present with code ' + this.context.giftCode);
           setTimeout(() => this.redeemPresent(), 61 * 60 * 1000); // wait an hour
         }
       } else {
@@ -150,8 +131,8 @@ export class AchievementHandler {
         const confirmBtn = l('promptOption0');
 
         if (giftCodeEl && confirmBtn) {
-          giftCodeEl.value = String(AutoPlay.giftCode);
-          AutoPlay.giftCode = 0;
+          giftCodeEl.value = String(this.context.giftCode);
+          this.context.giftCode = 0;
           confirmBtn.click();
         }
       }
@@ -174,23 +155,23 @@ export class AchievementHandler {
       setTimeout(() => this.undunkCookie(), 20 * 1000);
       return;
     }
-    Game.LeftBackground.canvas.height = AutoPlay.backupHeight;
-    AutoPlay.backupHeight = 0;
+    Game.LeftBackground.canvas.height = this.context.backupHeight;
+    this.context.backupHeight = 0;
   }
 
   /**
    * Redeem a previously sent gift
    */
   private redeemPresent(): void {
-    AutoPlay.info('Redeeming present with code ' + AutoPlay.giftCode);
-    if (AutoPlay.giftCode) {
+    this.context.info('Redeeming present with code ' + this.context.giftCode);
+    if (this.context.giftCode) {
       Game.promptGiftRedeem();
       const giftCodeEl = l('giftCode') as HTMLInputElement;
       const confirmBtn = l('promptOption0');
 
       if (giftCodeEl && confirmBtn) {
-        giftCodeEl.value = String(AutoPlay.giftCode);
-        AutoPlay.giftCode = 0;
+        giftCodeEl.value = String(this.context.giftCode);
+        this.context.giftCode = 0;
         confirmBtn.click(); // redeem
         confirmBtn.click(); // close window
       }
@@ -198,53 +179,18 @@ export class AchievementHandler {
   }
 
   /**
-   * Check if we're in the end phase of achievement hunting
-   */
-  endPhase(): boolean {
-    return AutoPlay.wantedAchievements.indexOf(AutoPlay.nextAchievement) < 0;
-  }
-
-  /**
-   * Check if we're in grinding mode (hunting last 10 achievements)
-   */
-  grinding(): boolean {
-    const grindingStart = AutoPlay.wantedAchievements[AutoPlay.wantedAchievements.length - 10];
-    if (Game.AchievementsById[grindingStart].won) {
-      // Grind for the last 7 big achievements
-      if (!this.endPhase()) {
-        AutoPlay.addActivity('Grinding cookies - do not sleep at night.');
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Check if we should use cheats during grinding (last 8 achievements)
-   */
-  grindingCheat(): boolean {
-    if (!this.grinding()) return false;
-    const cheatingStart = AutoPlay.wantedAchievements[AutoPlay.wantedAchievements.length - 8];
-    if (Game.AchievementsById[cheatingStart].won) {
-      // Cheat for the last 5 big achievements
-      return true;
-    }
-    return false;
-  }
-
-  /**
    * Find the next achievement to pursue
    */
   findNextAchievement(): void {
-    AutoPlay.wantAscend = false;
+    this.context.wantAscend = false;
     this.handleSmallAchievements();
 
-    for (let i = 0; i < AutoPlay.wantedAchievements.length; i++) {
-      if (!Game.AchievementsById[AutoPlay.wantedAchievements[i]].won) {
-        AutoPlay.nextAchievement = AutoPlay.wantedAchievements[i];
-        AutoPlay.setMainActivity(
+    for (let i = 0; i < this.context.wantedAchievements.length; i++) {
+      if (!Game.AchievementsById[this.context.wantedAchievements[i]].won) {
+        this.context.nextAchievement = this.context.wantedAchievements[i];
+        this.context.setMainActivity(
           'Trying to get achievement: ' +
-          Game.AchievementsById[AutoPlay.nextAchievement].ddesc.replace(/<q>.*?<\/q>/ig, '')
+          Game.AchievementsById[this.context.nextAchievement].ddesc.replace(/<q>.*?<\/q>/ig, '')
         );
         return;
       }
@@ -263,27 +209,27 @@ export class AchievementHandler {
       if (!achievement.won &&
           achievement.pool !== 'dungeon' &&
           achievement.id !== 367 &&
-          !AutoPlay.lateAchievements.includes(achievement.id)) {
-        AutoPlay.setMainActivity(
+        !this.context.lateAchievements.includes(achievement.id)) {
+        this.context.setMainActivity(
           'Missing achievement #' + achievement.id + ': ' +
           achievement.ddesc.replace(/<q>.*?<\/q>/ig, '') +
           ', try to get it now.'
         );
-        AutoPlay.nextAchievement = achievement.id;
+        this.context.nextAchievement = achievement.id;
         return false;
       }
     }
 
     // Check late achievements
-    for (const achievementId of AutoPlay.lateAchievements) {
+    for (const achievementId of this.context.lateAchievements) {
       const achievement = Game.AchievementsById[achievementId];
       if (!achievement.won && achievement.pool !== 'dungeon' && achievement.id !== 367) {
-        AutoPlay.setMainActivity(
+        this.context.setMainActivity(
           'Missing achievement #' + achievement.id + ': ' +
           achievement.ddesc.replace(/<q>.*?<\/q>/ig, '') +
           ', try to get it now.'
         );
-        AutoPlay.nextAchievement = achievement.id;
+        this.context.nextAchievement = achievement.id;
         return false;
       }
     }
@@ -292,8 +238,8 @@ export class AchievementHandler {
     for (const key in Game.Upgrades) {
       const upgrade = Game.Upgrades[key];
       if (upgrade.pool === 'prestige' && !upgrade.bought) {
-        AutoPlay.nextAchievement = 99; // Follow the white rabbit (from dungeons)
-        AutoPlay.setMainActivity(
+        this.context.nextAchievement = 99; // Follow the white rabbit (from dungeons)
+        this.context.setMainActivity(
           'Prestige upgrade ' + upgrade.name + ' is missing, waiting to buy it.'
         );
         return false;
@@ -303,21 +249,21 @@ export class AchievementHandler {
     // Wait for one-year legacy achievement
     if (!Game.Achievements['So much to do so much to see'].won) {
       const achievement = Game.Achievements['So much to do so much to see'];
-      AutoPlay.setMainActivity(
+      this.context.setMainActivity(
         'Missing achievement #' + achievement.id + ': ' +
         achievement.ddesc.replace(/<q>.*?<\/q>/ig, '') +
         ', try to get it now.'
       );
-      AutoPlay.nextAchievement = achievement.id;
+      this.context.nextAchievement = achievement.id;
       return false;
     }
 
     // All achievements complete!
-    AutoPlay.finished = true;
-    AutoPlay.setMainActivity(
+    this.context.finished = true;
+    this.context.setMainActivity(
       'My job is done here, have a nice day. I am still idling along.'
     );
-    AutoPlay.nextAchievement = 99; // Follow the white rabbit (from dungeons)
+    this.context.nextAchievement = 99; // Follow the white rabbit (from dungeons)
     return true;
   }
 
@@ -326,7 +272,7 @@ export class AchievementHandler {
    */
   handleAchievements(): void {
     // Find next achievement if current one is complete
-    if (Game.AchievementsById[AutoPlay.nextAchievement].won) {
+    if (Game.AchievementsById[this.context.nextAchievement].won) {
       this.findNextAchievement();
     }
   }
@@ -335,7 +281,7 @@ export class AchievementHandler {
    * Get achievement handler status
    */
   getStatus(): ModuleStatus {
-    if (AutoPlay.finished) {
+    if (this.context.finished) {
       return {
         module: 'Achievements',
         status: 'idle',
@@ -348,7 +294,7 @@ export class AchievementHandler {
       };
     }
 
-    const achievement = Game.AchievementsById[AutoPlay.nextAchievement];
+    const achievement = Game.AchievementsById[this.context.nextAchievement];
     if (!achievement) {
       return {
         module: 'Achievements',
@@ -630,7 +576,7 @@ export class AchievementHandler {
       status: 'active',
       currentAction: `Working on: ${achievement.name}`,
       reason: achievement.ddesc.replace(/<q>.*?<\/q>/ig, '').substring(0, 50),
-      nextAction: this.grinding() ? 'Grinding mode (no sleep)' : undefined,
+      nextAction: this.context.grinding() ? 'Grinding mode (no sleep)' : undefined,
       icon: '🏆',
       progress,
       timeRemaining,
@@ -638,8 +584,8 @@ export class AchievementHandler {
       details: {
         'Current': achievement.name,
         'Progress': `${wonCount}/${totalAchievements}`,
-        'Grinding': this.grinding(),
-        'Cheating': this.grindingCheat()
+        'Grinding': this.context.grinding(),
+        'Cheating': this.context.grindingCheat()
       }
     };
   }

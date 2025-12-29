@@ -19,6 +19,7 @@ declare const Game: any;
 declare const Beautify: (num: number) => string;
 
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 
 interface GoodData {
   min: number;        // Minimum price seen
@@ -33,22 +34,21 @@ interface GoodData {
 
 export class StockMarketManager {
   private goodsList: Map<number, GoodData> = new Map();
-  private resetTime: number = Date.now();
-  private wantAscend: boolean = false;
-  private plantPending: boolean = false;
+  private context: AutoPlayContext;
 
-  // Callbacks
-  private doAscend?: (reason: string) => void;
+  constructor(context: AutoPlayContext) {
+    this.context = context;
+  }
 
   /**
    * Main handler - called periodically (every 15 seconds)
    */
   handleStockMarket(): void {
     // Wait 1 hour after reset/reincarnation before trading
-    if (Date.now() < this.resetTime + 3600000) return;
+    if (Date.now() < this.context.resetTime + 3600000) return;
 
     if (!Game.isMinigameReady(Game.Objects['Bank'])) return;
-    if (this.wantAscend) return; // Don't trade before ascending
+    if (this.context.wantAscend) return; // Don't trade before ascending
 
     const market = Game.Objects['Bank'].minigame;
 
@@ -159,15 +159,13 @@ export class StockMarketManager {
    * Try to get "Debt evasion" achievement by ascending with loan
    */
   private tryDebtEvasion(): void {
-    if (!Game.Achievements['Debt evasion'].won && !this.plantPending) {
+    if (!Game.Achievements['Debt evasion'].won && !this.context.plantPending) {
       const loanButton = document.getElementById('bankLoan2');
       if (loanButton) {
         loanButton.click();
         // Wait 30 seconds then ascend
         setTimeout(() => {
-          if (this.doAscend) {
-            this.doAscend('trying debt evasion');
-          }
+          this.context.triggerAscend('trying debt evasion');
         }, 30 * 1000);
       }
     }
@@ -256,31 +254,11 @@ export class StockMarketManager {
   }
 
   /**
-   * Update state from AutoPlay
-   */
-  updateState(state: {
-    resetTime: number;
-    wantAscend: boolean;
-    plantPending: boolean;
-  }): void {
-    this.resetTime = state.resetTime;
-    this.wantAscend = state.wantAscend;
-    this.plantPending = state.plantPending;
-  }
-
-  /**
-   * Set ascension callback
-   */
-  setDoAscendCallback(callback: (reason: string) => void): void {
-    this.doAscend = callback;
-  }
-
-  /**
    * Get current stock market manager status
    */
   getStatus(): ModuleStatus {
     // Check for cooldown period after reset
-    const cooldownRemaining = Math.floor((this.resetTime + 3600000 - Date.now()) / 1000 / 60);
+    const cooldownRemaining = Math.floor((this.context.resetTime + 3600000 - Date.now()) / 1000 / 60);
     if (cooldownRemaining > 0) {
       return {
         module: 'Stock Market',
@@ -311,7 +289,7 @@ export class StockMarketManager {
     }
 
     // Don't trade before ascending
-    if (this.wantAscend) {
+    if (this.context.wantAscend) {
       return {
         module: 'Stock Market',
         status: 'waiting',

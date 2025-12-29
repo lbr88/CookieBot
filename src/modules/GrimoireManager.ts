@@ -16,11 +16,15 @@
 declare const Game: any;
 
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 
 export class GrimoireManager {
   // State tracking
-  private canUseLumps: boolean = false;
-  private cpsMult: number = 1.0;
+  private context: AutoPlayContext;
+
+  constructor(context: AutoPlayContext) {
+    this.context = context;
+  }
 
   /**
    * Main handler - called in high-activity phase (when hyperActive or deadline reached)
@@ -65,7 +69,7 @@ export class GrimoireManager {
     }
 
     // High CpS multiplier (>100x) - cast spells for maximum value
-    if (this.cpsMult > 100) {
+    if (this.context.cpsMult > 100) {
       // Cast Hand of Fate to get more golden cookies
       if (grimoire.magic >= grimoire.getSpellCost(handOfFate)) {
         grimoire.castSpell(handOfFate);
@@ -80,21 +84,14 @@ export class GrimoireManager {
       }
 
       // Refill magic with sugar lump if we have plenty
-      if (this.canUseLumps && Game.lumps > 100) {
+      if (this.context.canUseLumps && Game.lumps > 100) {
         grimoire.lumpRefill.click();
       }
     }
   }
 
   /**
-   * Update state from AutoPlay
-   */
-  updateState(canUseLumps: boolean, cpsMult: number): void {
-    this.canUseLumps = canUseLumps;
-    this.cpsMult = cpsMult;
-  }
 
-  /**
    * Get current grimoire manager status
    */
   getStatus(): ModuleStatus {
@@ -154,25 +151,25 @@ export class GrimoireManager {
         icon: '🔮',
         details: {
           'Magic': `${magicPercent}%`,
-          'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+          'CpS Multiplier': `${this.context.cpsMult.toFixed(1)}x`,
           'Strategy': 'Backfire farming'
         }
       };
     }
 
     // Check for high CpS multiplier (>100x)
-    if (this.cpsMult > 100) {
+    if (this.context.cpsMult > 100) {
       return {
         module: 'Grimoire',
         status: canCastHand ? 'active' : 'waiting',
         currentAction: canCastHand ? 'Casting spells' : 'Waiting for magic',
-        reason: `High CpS multiplier (${this.cpsMult.toFixed(0)}x)`,
+        reason: `High CpS multiplier (${this.context.cpsMult.toFixed(0)}x)`,
         nextAction: canCastHand ? 'Casting Hand of Fate & Conjure Baked Goods' : 'Recharging magic',
         icon: '🔮',
         details: {
           'Magic': `${magicPercent}%`,
-          'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
-          'Can Use Lumps': this.canUseLumps && Game.lumps > 100,
+          'CpS Multiplier': `${this.context.cpsMult.toFixed(1)}x`,
+          'Can Use Lumps': this.context.canUseLumps && Game.lumps > 100,
           'Sugar Lumps': Game.lumps
         }
       };
@@ -188,7 +185,7 @@ export class GrimoireManager {
       icon: '🔮',
       details: {
         'Magic': `${magicPercent}%`,
-        'CpS Multiplier': `${this.cpsMult.toFixed(1)}x`,
+        'CpS Multiplier': `${this.context.cpsMult.toFixed(1)}x`,
         'Threshold': '100x'
       }
     };

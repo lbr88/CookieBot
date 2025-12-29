@@ -15,6 +15,7 @@
  * Original implementation: lines 1010-1499 in cookieAutoPlayBeta.js
  */
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 export declare class GardenManager {
     private plantList;
     private plantPending;
@@ -22,17 +23,13 @@ export declare class GardenManager {
     private plantsMissing;
     private plantCookies;
     private wantGardenSacrifice;
-    private now;
-    private cpsMult;
-    private wantAscend;
-    private savingsGoal;
-    private canUseLumps;
-    private finished;
-    private lumpRelatedAchievements;
-    private poppingWrinklers;
-    private _grindingCheat;
-    private _cheatGolden;
-    private addActivity?;
+    private context;
+    constructor(context: AutoPlayContext);
+    /**
+     * Freeze or unfreeze the garden
+     * @param freeze true to freeze, false to unfreeze
+     */
+    freezeGarden(freeze: boolean): void;
     /**
      * Main handler - called periodically (every 15 seconds)
      */
@@ -143,25 +140,6 @@ export declare class GardenManager {
      * Log activity message
      */
     private logActivity;
-    /**
-     * Update state from AutoPlay
-     */
-    updateState(state: {
-        now: number;
-        cpsMult: number;
-        wantAscend: boolean;
-        savingsGoal: number;
-        canUseLumps: boolean;
-        finished: boolean;
-        lumpRelatedAchievements: number[];
-        poppingWrinklers: boolean;
-        grindingCheat: boolean;
-        cheatGolden: number;
-    }): void;
-    /**
-     * Set activity logging callback
-     */
-    setAddActivity(callback: (msg: string) => void): void;
     /**
      * Get plant pending status (for AutoPlay.plantPending)
      */

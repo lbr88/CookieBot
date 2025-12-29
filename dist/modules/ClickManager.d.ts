@@ -3,22 +3,13 @@
  * Respects Neverclick and True Neverclick achievements
  * Original: AutoPlay.handleClicking (lines 360-384)
  */
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
-interface ClickManagerConfig {
-    clickMode: number;
-}
-interface ClickManagerContext {
-    now: number;
-    endPhase: () => boolean;
-    grindingCheat: () => boolean;
-    getClickMode: () => number;
-}
 export declare class ClickManager {
-    private config;
     private context;
-    constructor(config: ClickManagerConfig, context: ClickManagerContext);
+    constructor(context: AutoPlayContext);
     /**
-     * Get current click mode (from live config or context getter)
+     * Get current click mode (from live config)
      */
     private getClickMode;
     /**
@@ -40,5 +31,4 @@ export declare class ClickManager {
      */
     private getClickModeName;
 }
-export {};
 //# sourceMappingURL=ClickManager.d.ts.map

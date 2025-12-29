@@ -23,3 +23,7 @@ Thumbs.db
 
 # Temporary files
 *.tmp
+
+# Game source
+src/Game.js
+

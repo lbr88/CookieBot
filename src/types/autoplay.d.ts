@@ -1,3 +1,19 @@
+import type { AchievementHandler } from '../modules/AchievementHandler';
+import type { AscensionManager } from '../modules/AscensionManager';
+import type { ClickManager } from '../modules/ClickManager';
+import type { DragonManager } from '../modules/DragonManager';
+import type { GardenManager } from '../modules/GardenManager';
+import type { GoldenCookieHandler } from '../modules/GoldenCookieHandler';
+import type { GrimoireManager } from '../modules/GrimoireManager';
+import type { NightMode } from '../modules/NightMode';
+import type { PantheonManager } from '../modules/PantheonManager';
+import type { PurchaseManager } from '../modules/PurchaseManager';
+import type { SavingsManager } from '../modules/SavingsManager';
+import type { SeasonHandler } from '../modules/SeasonHandler';
+import type { StockMarketManager } from '../modules/StockMarketManager';
+import type { SugarLumpManager } from '../modules/SugarLumpManager';
+import type { WrinklerManager } from '../modules/WrinklerManager';
+
 // AutoPlay state and configuration types
 
 export interface AutoPlayConfig {
@@ -41,10 +57,20 @@ export interface AutoPlayContext {
   nextAchievement: number;
   wantedAchievements: number[];
   lumpHarvestAchievements: number[];
+  lumpRelatedAchievements: number[];
   wantAscend: boolean;
+  onAscend: boolean;
   Config: {
-    HardcoreMode?: number;
-    NightMode?: number;
+    BotMode: number;
+    NightMode: number;
+    ClickMode: number;
+    GoldenClickMode: number;
+    SavingStrategy: number;
+    CheatLumps: number;
+    CheatGolden: number;
+    ShowDashboard: number;
+    HardcoreMode: number;
+    [key: string]: number;
   };
   mainActivity: string;
   activities: string;
@@ -52,7 +78,25 @@ export interface AutoPlayContext {
   workingOnSpecialAchievement: boolean;
   plantPending: boolean;
   delay: number;
+  deadline: number;
   finished: boolean;
+
+  // Shared state properties
+  cpsMult: number;
+  savingsGoal: number;
+  canUseLumps: boolean;
+  poppingWrinklers: boolean;
+  resetTime: number;
+  cheatGolden: number;
+  wrinklerTime: number;
+  nextWrinkler: number;
+  robotName: string;
+  backupHeight: number;
+  giftCode: number | string;
+  lateAchievements: number[];
+  runRightCount?: number;
+  loggingInfo: string | number;
+  logging: () => void;
 
   // Permanent slot arrays
   kittens: number[];
@@ -70,9 +114,36 @@ export interface AutoPlayContext {
   setDeadline: (time: number) => void;
   findNextAchievement: () => void;
   endPhase: () => boolean;
+  grindingCheat: () => boolean;
   preNightMode: () => boolean;
   mustRebornAscend: () => boolean;
   assignSpirit: (slot: number, spirit: string, force: number) => void;
+  triggerAscend: (msg: string, bypass?: boolean) => void;
+  seasonFinished: (season: string) => boolean;
+  grinding: () => boolean;
+  handleSugarLumps: () => void;
+  handleGoldenCookies: () => void;
+  activateNightSpirits: () => void;
+  deactivateNightSpirits: () => void;
+  handleNightTrading: () => void;
+  freezeGarden: (freeze: boolean) => void;
+
+  // Managers
+  clickManager?: ClickManager;
+  purchaseManager?: PurchaseManager;
+  gardenManager?: GardenManager;
+  wrinklerManager?: WrinklerManager;
+  goldenCookieHandler?: GoldenCookieHandler;
+  dragonManager?: DragonManager;
+  pantheonManager?: PantheonManager;
+  grimoireManager?: GrimoireManager;
+  stockMarketManager?: StockMarketManager;
+  sugarLumpManager?: SugarLumpManager;
+  ascensionManager?: AscensionManager;
+  seasonHandler?: SeasonHandler;
+  achievementHandler?: AchievementHandler;
+  savingsManager?: SavingsManager;
+  nightMode?: NightMode;
 }
 
 export interface AutoPlayState {
@@ -99,7 +170,8 @@ export interface AutoPlayState {
   buy10: boolean; // Flag to buy 10 buildings next time (Rigidel support)
 
   // Ascension tracking
-  onAscend: boolean; // Phase 6: Currently on ascension screen
+  // onAscend: boolean; // Phase 6: Currently on ascension screen - Moved to AutoPlay class property
+
 
   // Status tracking
   statusInfo?: StatusInfo; // Cache for status() method results

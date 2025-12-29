@@ -6,11 +6,10 @@
  * Dragons provide powerful auras that boost game performance.
  */
 
-declare const Game: any;
-declare const AutoPlay: any;
-
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
-import { Logger } from '../utils/Logger';
+
+declare const Game: any;
 
 /**
  * Dragon aura indices
@@ -70,6 +69,12 @@ const AURA_NAMES: Record<number, string> = {
 };
 
 export class DragonManager {
+  private context: AutoPlayContext;
+
+  constructor(context: AutoPlayContext) {
+    this.context = context;
+  }
+
   /**
    * Main handler for all dragon-related activities
    * Should be called periodically from the main AutoPlay loop
@@ -203,7 +208,7 @@ export class DragonManager {
       Game.ToggleSpecialMenu(0);
 
       const auraName = AURA_NAMES[desiredAura] || 'Unknown';
-      Logger.logStatus('dragon', `Dragon aura 1: ${auraName}`);
+      this.context.logStatus('dragon', `Dragon aura 1: ${auraName}`);
     }
   }
 
@@ -221,7 +226,7 @@ export class DragonManager {
       (Game as any).ConfirmPrompt();
       Game.ToggleSpecialMenu(0);
 
-      Logger.logStatus('dragon', 'Dragon aura 2: Breath of Milk');
+      this.context.logStatus('dragon', 'Dragon aura 2: Breath of Milk');
     }
   }
 
@@ -239,7 +244,7 @@ export class DragonManager {
     for (const drop of DRAGON_DROPS) {
       if (!(Game as any).Has(drop) && !(Game as any).HasUnlocked(drop)) {
         // Still have drops to collect
-        Logger.addActivity('Petting the dragon.');
+        this.context.addActivity('Petting the dragon.');
 
         Game.specialTab = 'dragon';
         Game.ToggleSpecialMenu(1);
@@ -300,10 +305,7 @@ export class DragonManager {
   private isHuntingLumpAchievement(): boolean {
     // Lump harvest achievements: IDs 266-272 and 396
     // These require harvesting lumps at specific maturity levels
-    if (typeof AutoPlay !== 'undefined' && 'nextAchievement' in AutoPlay) {
-      return LUMP_HARVEST_ACHIEVEMENTS.includes((AutoPlay as any).nextAchievement);
-    }
-    return false;
+    return LUMP_HARVEST_ACHIEVEMENTS.includes(this.context.nextAchievement);
   }
 
   /**

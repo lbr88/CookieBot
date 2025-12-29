@@ -8,23 +8,11 @@
  * - Calculating wrinkler value
  * - Managing wrinkler-related achievements
  */
-import type { AutoPlayState } from '../types/autoplay';
-import type { SeasonHandler } from './SeasonHandler';
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 export declare class WrinklerManager {
-    private state;
-    private seasonHandler?;
-    private wantedAchievements;
-    private nextAchievement;
-    constructor(state: AutoPlayState);
-    /**
-     * Set dependencies (called after construction to avoid circular dependencies)
-     */
-    setDependencies(seasonHandler: SeasonHandler, wantedAchievements: number[], nextAchievement: number): void;
-    /**
-     * Update state (called periodically from AutoPlay)
-     */
-    updateState(nextAchievement: number): void;
+    private context;
+    constructor(context: AutoPlayContext);
     /**
      * Main wrinkler handling logic
      * Runs periodically to manage wrinkler popping strategy

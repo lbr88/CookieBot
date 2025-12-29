@@ -6,25 +6,24 @@
  * - Auto-spending lumps on building levels for minigames
  * - Lump type manipulation for achievements (when cheating enabled)
  */
-import type { AutoPlayState } from '../types/autoplay';
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 export declare class SugarLumpManager {
     private minLumpsOK;
     private cheatLumps;
     private canUseLumps;
-    private state;
-    private addActivity;
+    private context;
     private cheatLumpsLevel;
     /**
-     * Constructor - expects 1 argument: state object
-     * @param state AutoPlayState for accessing game state
+     * Constructor - expects 1 argument: context object
+     * @param context AutoPlayContext for accessing game state
      */
-    constructor(state: AutoPlayState);
+    constructor(context: AutoPlayContext);
     /**
      * Set the activity logging callback
      * @param addActivity Callback to log activities
      */
-    setAddActivity(addActivity: (msg: string) => void): void;
+    setAddActivity(_addActivity: (msg: string) => void): void;
     /**
      * Set the cheat lumps level
      * @param level CheatLumps configuration level

@@ -5,6 +5,7 @@
  * - Handle Buildings (line 661)
  * - Handle Upgrades (line 617)
  */
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 export interface PurchaseInfo {
     name: string;
@@ -21,25 +22,8 @@ export interface PurchaseManagerState {
 }
 export declare class PurchaseManager {
     private state;
-    private savingsGoal;
-    private now;
-    private cpsMult;
-    private canUseLumps;
-    private nextAchievement;
-    private logAction;
-    private addActivity;
-    private setHyperActive;
-    private setDeadline;
-    constructor(callbacks?: {
-        logAction?: (action: string, details: string) => void;
-        addActivity?: (activity: string) => void;
-        setHyperActive?: () => void;
-        setDeadline?: (deadline: number) => void;
-    });
-    /**
-     * Update state values before processing
-     */
-    setState(savingsGoal: number, now: number, cpsMult: number, canUseLumps?: boolean, nextAchievement?: number): void;
+    private context;
+    constructor(context: AutoPlayContext);
     /**
      * Get current purchase info for dashboard
      */

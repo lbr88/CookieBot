@@ -12,10 +12,10 @@
  * - Slot 2: Labor (buildings +5%) during day, Industry (buildings +10%) at night
  */
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 export declare class PantheonManager {
-    private now;
-    private poppingWrinklers;
-    private cheatLumps;
+    private context;
+    constructor(context: AutoPlayContext);
     /**
      * Main handler - called periodically (every 15 seconds)
      * Assigns optimal spirits based on current game state
@@ -45,14 +45,7 @@ export declare class PantheonManager {
      */
     private removeSpirit;
     /**
-     * Check if it's pre-night mode (after 10pm)
-     */
-    private preNightMode;
-    /**
-     * Update state from AutoPlay
-     */
-    updateState(now: number, poppingWrinklers: boolean, cheatLumps: boolean): void;
-    /**
+  
      * Get current pantheon manager status
      */
     getStatus(): ModuleStatus;

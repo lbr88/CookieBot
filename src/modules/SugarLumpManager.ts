@@ -7,11 +7,10 @@
  * - Lump type manipulation for achievements (when cheating enabled)
  */
 
-import type { AutoPlayState } from '../types/autoplay';
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 
 declare const Game: any;
-declare const AutoPlay: any;
 declare const Beautify: (num: number) => string;
 
 // Sugar lump types
@@ -38,28 +37,25 @@ export class SugarLumpManager {
   private canUseLumps: boolean = false;
 
   // Injected dependencies
-  private state: AutoPlayState;
-  private addActivity: (msg: string) => void;
+  private context: AutoPlayContext;
 
   // Extended config for sugar lumps
   private cheatLumpsLevel: number = 0;
 
   /**
-   * Constructor - expects 1 argument: state object
-   * @param state AutoPlayState for accessing game state
+   * Constructor - expects 1 argument: context object
+   * @param context AutoPlayContext for accessing game state
    */
-  constructor(state: AutoPlayState) {
-    this.state = state;
-    // Default activity logger - should be overridden via setAddActivity if needed
-    this.addActivity = (msg: string) => console.log(`[SugarLumps] ${msg}`);
+  constructor(context: AutoPlayContext) {
+    this.context = context;
   }
 
   /**
    * Set the activity logging callback
    * @param addActivity Callback to log activities
    */
-  setAddActivity(addActivity: (msg: string) => void): void {
-    this.addActivity = addActivity;
+  setAddActivity(_addActivity: (msg: string) => void): void {
+  // Deprecated: context has addActivity
   }
 
   /**
@@ -80,7 +76,7 @@ export class SugarLumpManager {
     if (!game.canLumps()) return; // Do not work with sugar lumps before enabled
     if (Game.ascensionMode === 1) return; // No sugar lumps in born again mode
 
-    const now = this.state.now;
+    const now = this.context.now;
     const age = now - game.lumpT;
 
     // Hand-pick normal lumps when mature for "Hand-picked" achievement
@@ -128,10 +124,8 @@ export class SugarLumpManager {
     // Level 1: Only cheat during endgame for lump achievements
     if (this.cheatLumpsLevel === 1) {
       // Check if we're in end phase and not finished
-      if (typeof AutoPlay !== 'undefined') {
-        if (AutoPlay.finished) return;
-        if (typeof AutoPlay.endPhase === 'function' && !AutoPlay.endPhase()) return;
-      }
+      if (this.context.finished) return;
+      if (!this.context.endPhase()) return;
 
       // If all lump achievements are done, no need to cheat
       if (
@@ -143,15 +137,13 @@ export class SugarLumpManager {
       }
 
       // Apply 625x speedup when targeting lump achievements
-      if (typeof AutoPlay !== 'undefined' && 'nextAchievement' in AutoPlay) {
-        if (LUMP_RELATED_ACHIEVEMENTS.includes(AutoPlay.nextAchievement)) {
-          cheatReduction *= 25; // 25 * 25 = 625x total speedup
-        }
+      if (LUMP_RELATED_ACHIEVEMENTS.includes(this.context.nextAchievement)) {
+        cheatReduction *= 25; // 25 * 25 = 625x total speedup
       }
     }
 
     this.cheatLumps = true;
-    this.addActivity('Cheating sugar lumps.');
+    this.context.addActivity('Cheating sugar lumps.');
 
     // Set cheat reduction based on level
     if (this.cheatLumpsLevel === 2) cheatReduction = 25;
@@ -223,9 +215,7 @@ export class SugarLumpManager {
     this.minLumpsOK = true;
 
     // Keep reserve lumps before endgame
-    const endPhase = (typeof AutoPlay !== 'undefined' && typeof AutoPlay.endPhase === 'function')
-      ? AutoPlay.endPhase()
-      : false;
+    const endPhase = this.context.endPhase();
     const lumpLimit = endPhase ? 0 : 100;
 
     // Step 3: Bring Cursor (Stock Market) to level 12
@@ -320,7 +310,7 @@ export class SugarLumpManager {
       };
     }
 
-    const now = this.state.now;
+    const now = this.context.now;
     const age = now - game.lumpT;
     const matureAge = game.lumpMatureAge;
     const ripeAge = game.lumpRipeAge;

@@ -1,15 +1,17 @@
 /**
  * Handles seasonal events and upgrades
  */
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 export declare class SeasonHandler {
+    private context;
     private readonly valentineUpgrades;
     private readonly christmasUpgrades;
     private readonly easterUpgrades;
     private readonly halloweenUpgrades;
     private readonly allSeasonUpgrades;
     private elfClickTimeout;
-    constructor();
+    constructor(context: AutoPlayContext);
     /**
      * Main season handling logic
      * Manages Santa upgrades, Christmas elf achievement, and season cycling

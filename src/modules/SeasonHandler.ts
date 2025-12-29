@@ -2,8 +2,10 @@
  * Handles seasonal events and upgrades
  */
 
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
-import { Logger } from '../utils/Logger';
+
+declare const Game: any;
 
 /**
  * Helper function to create a range of numbers (inclusive)
@@ -17,6 +19,7 @@ function range(start: number, end: number): number[] {
 }
 
 export class SeasonHandler {
+  private context: AutoPlayContext;
   // Season upgrade IDs
   private readonly valentineUpgrades: number[] = range(169, 174).concat([645]);
   private readonly christmasUpgrades: number[] = [168]; // just wait for dominion
@@ -26,7 +29,8 @@ export class SeasonHandler {
 
   private elfClickTimeout: number | null = null;
 
-  constructor() {
+  constructor(context: AutoPlayContext) {
+    this.context = context;
     this.allSeasonUpgrades = this.valentineUpgrades
       .concat(this.christmasUpgrades)
       .concat(this.easterUpgrades)
@@ -86,7 +90,7 @@ export class SeasonHandler {
 
     // Find elf grandma
     const elfGrandmas = Game.Objects["Grandma"].pics.filter(
-      (p) => p.pic === "elfGrandma.png"
+      (p: any) => p.pic === "elfGrandma.png"
     );
 
     if (elfGrandmas.length > 0) {
@@ -144,7 +148,7 @@ export class SeasonHandler {
       }
     } else if (!this.allUnlocked(this.allSeasonUpgrades)) {
       // Still waiting for upgrades in current season
-      Logger.addActivity(`Waiting for all results in ${Game.season}.`);
+      this.context.addActivity(`Waiting for all results in ${Game.season}.`);
     }
   }
 

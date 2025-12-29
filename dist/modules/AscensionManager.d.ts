@@ -2,48 +2,14 @@
  * Manages ascension decisions and heavenly upgrades
  */
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 interface AscensionState {
     ascendLimit: number;
-    onAscend: boolean;
     loggedAchievements: {
         [key: number]: boolean;
     };
     neverclickWarn: boolean;
     resetTime: number;
-}
-interface AutoPlayContext {
-    now: number;
-    nextAchievement: number;
-    wantedAchievements: number[];
-    lumpHarvestAchievements: number[];
-    wantAscend: boolean;
-    Config: {
-        HardcoreMode?: number;
-        NightMode?: number;
-    };
-    mainActivity: string;
-    activities: string;
-    hyperActive: boolean;
-    workingOnSpecialAchievement: boolean;
-    plantPending: boolean;
-    delay: number;
-    finished: boolean;
-    kittens: number[];
-    maxBuildings: number[];
-    cursors: number[];
-    butterBiscuits: number[];
-    expensive: number[];
-    info: (message: string) => void;
-    logAction: (action: string, details?: string) => void;
-    logStatus: (type: string, message: string, details?: string) => void;
-    addActivity: (activity: string) => void;
-    setMainActivity: (activity: string) => void;
-    setDeadline: (time: number) => void;
-    findNextAchievement: () => void;
-    endPhase: () => boolean;
-    preNightMode: () => boolean;
-    mustRebornAscend: () => boolean;
-    assignSpirit: (slot: number, spirit: string, force: number) => void;
 }
 export declare class AscensionManager {
     private state;
@@ -91,7 +57,7 @@ export declare class AscensionManager {
      * Public method to trigger ascension with a reason
      * Used by special achievement logic like runJustRight()
      */
-    triggerAscend(reason: string): void;
+    triggerAscend(reason: string, log?: boolean): void;
     /**
      * Perform the actual ascension
      */

@@ -19,6 +19,7 @@ declare const Game: any;
 
 import { HARVESTABLE_PLANTS, GARDEN_UPGRADE_IDS, PLANT_DEPENDENCIES } from '../constants/gameIds';
 import type { ModuleStatus } from '../types/moduleStatus';
+import type { AutoPlayContext } from '../types/autoplay';
 
 // Convert readonly arrays to regular arrays for runtime use
 const HARVESTABLE_PLANTS_ARRAY = [...HARVESTABLE_PLANTS];
@@ -37,22 +38,29 @@ export class GardenManager {
   private plantCookies: boolean = false; // Harvest cookie-dropping plants?
   private wantGardenSacrifice: boolean = false; // Want to sacrifice garden?
 
-  // Injected state
-  private now: number = Date.now();
-  private cpsMult: number = 1.0;
-  private wantAscend: boolean = false;
-  private savingsGoal: number = 0;
-  private canUseLumps: boolean = false;
-  private finished: boolean = false;
-  private lumpRelatedAchievements: number[] = [];
-  private poppingWrinklers: boolean = false;
-  // @ts-ignore - Will be used in plantSeed
-  private _grindingCheat: boolean = false;
-  // @ts-ignore - Will be used in plantSeed
-  private _cheatGolden: number = 0;
+  private context: AutoPlayContext;
 
-  // Callbacks
-  private addActivity?: (msg: string) => void;
+  constructor(context: AutoPlayContext) {
+    this.context = context;
+  }
+
+  /**
+   * Freeze or unfreeze the garden
+   * @param freeze true to freeze, false to unfreeze
+   */
+  freezeGarden(freeze: boolean): void {
+    if (!Game.isMinigameReady(Game.Objects['Farm'])) return;
+
+    const garden = Game.Objects['Farm'].minigame;
+
+    // Toggle freeze if needed
+    if (freeze !== garden.freeze) {
+      const freezeButton = document.getElementById('gardenTool-2');
+      if (freezeButton) {
+        freezeButton.click();
+      }
+    }
+  }
 
   /**
    * Main handler - called periodically (every 15 seconds)
@@ -78,11 +86,11 @@ export class GardenManager {
     }
 
     // Convert garden for sugar lumps when endgame and all plants unlocked
-    if (!this.canUseLumps &&
+    if (!this.context.canUseLumps &&
         this.gardenReady(garden) &&
-        !this.finished &&
+      !this.context.finished &&
         !this.harvestPlant &&
-        !this.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
+      !this.context.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
       this.plantCookies = false;
       garden.askConvert();
       Game.ConfirmPrompt();
@@ -121,7 +129,7 @@ export class GardenManager {
           this.logActivity(`Waiting to harvest ${plant.name}.`);
           if (garden.plantsUnlockedN === garden.plantsN && tile[1] >= plant.mature) {
             // Harvest when CPS multiplier is high enough
-            if (this.cpsMult > 300) {
+            if (this.context.cpsMult > 300) {
               garden.harvest(x, y);
             }
           }
@@ -149,7 +157,7 @@ export class GardenManager {
    * Original: AutoPlay.seedCalendar (lines 1329-1393)
    */
   private seedCalendar(garden: any, sector: number): string {
-    if (this.wantAscend || this.wantGardenSacrifice) return 'bakerWheat';
+    if (this.context.wantAscend || this.wantGardenSacrifice) return 'bakerWheat';
 
     if (sector === 0) this.plantsMissing = false;
 
@@ -203,13 +211,13 @@ export class GardenManager {
     this.plantCookies = false;
     this.switchSoil(garden, sector, this.plantPending ? 'fertilizer' : 'clay');
 
-    if (this.poppingWrinklers && garden.plants['wrinklegill']?.unlocked) {
+    if (this.context.poppingWrinklers && garden.plants['wrinklegill']?.unlocked) {
       return 'wrinklegill'; // faster wrinklers
     }
 
     // Use bakeberry if all lump achievements are done (1% CPS + harvest 30 mins)
     if (garden.plants['bakeberry']?.unlocked &&
-        this.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
+      this.context.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
       return 'bakeberry';
     }
 
@@ -244,9 +252,9 @@ export class GardenManager {
    */
   private plantSeeds(garden: any, targets: Array<[string, number, number]>): void {
     // Don't plant when CPS multiplier is too high (expensive)
-    const grindingCheat = this._grindingCheat ? 1 : 0;
-    const cheatGolden = this._cheatGolden > 1 ? 1 : 0;
-    if (this.cpsMult > 1 + 10 * (grindingCheat + cheatGolden)) {
+    const grindingCheat = this.context.grindingCheat() ? 1 : 0;
+    const cheatGolden = this.context.cheatGolden > 1 ? 1 : 0;
+    if (this.context.cpsMult > 1 + 10 * (grindingCheat + cheatGolden)) {
       this.logActivity('Do not buy plants now - it is too expensive.');
       return;
     }
@@ -290,7 +298,7 @@ export class GardenManager {
 
     // Cost is in minutes of current CPS
     cost *= 60 * Game.cookiesPs;
-    if (cost > Game.cookies - this.savingsGoal) return;
+    if (cost > Game.cookies - this.context.savingsGoal) return;
 
     // Plant all seeds
     for (const target of toPlant) {
@@ -421,7 +429,7 @@ export class GardenManager {
    * Original: AutoPlay.findPlants (lines 1119-1157)
    */
   private findPlants(garden: any, idx: number): boolean {
-    if (this.wantAscend) return false; // do not plant before ascend
+    if (this.context.wantAscend) return false; // do not plant before ascend
 
     let couldPlant = 0;
 
@@ -684,9 +692,9 @@ export class GardenManager {
    */
   private plantSeed(garden: any, seed: string, whereX: number, whereY: number): void {
     // Don't plant when CPS multiplier is too high (expensive)
-    const grindingCheat = this._grindingCheat ? 1 : 0;
-    const cheatGolden = this._cheatGolden > 1 ? 1 : 0;
-    if (this.cpsMult > 1 + 10 * (grindingCheat + cheatGolden)) {
+    const grindingCheat = this.context.grindingCheat() ? 1 : 0;
+    const cheatGolden = this.context.cheatGolden > 1 ? 1 : 0;
+    if (this.context.cpsMult > 1 + 10 * (grindingCheat + cheatGolden)) {
       this.logActivity('Do not buy plants now - it is too expensive.');
       return;
     }
@@ -706,7 +714,7 @@ export class GardenManager {
 
     // Check if we can afford (cost is in minutes of current CPS)
     const cost = garden.plants[seed].cost * 60 * Game.cookiesPs;
-    if (cost > Game.cookies - this.savingsGoal) return;
+    if (cost > Game.cookies - this.context.savingsGoal) return;
 
     garden.useTool(garden.plants[seed].id, whereX, whereY);
   }
@@ -749,7 +757,7 @@ export class GardenManager {
   private switchSoil(garden: any, sector: number, which: string): void {
     if (sector) return; // Only switch for sector 0 (global soil)
 
-    if (garden.nextSoil > this.now) return; // Soil change on cooldown
+    if (garden.nextSoil > this.context.now) return; // Soil change on cooldown
 
     const soil = garden.soils[which];
     if (!soil) return;
@@ -775,43 +783,7 @@ export class GardenManager {
    * Log activity message
    */
   private logActivity(msg: string): void {
-    if (this.addActivity) {
-      this.addActivity(msg);
-    }
-  }
-
-  /**
-   * Update state from AutoPlay
-   */
-  updateState(state: {
-    now: number;
-    cpsMult: number;
-    wantAscend: boolean;
-    savingsGoal: number;
-    canUseLumps: boolean;
-    finished: boolean;
-    lumpRelatedAchievements: number[];
-    poppingWrinklers: boolean;
-    grindingCheat: boolean;
-    cheatGolden: number;
-  }): void {
-    this.now = state.now;
-    this.cpsMult = state.cpsMult;
-    this.wantAscend = state.wantAscend;
-    this.savingsGoal = state.savingsGoal;
-    this.canUseLumps = state.canUseLumps;
-    this.finished = state.finished;
-    this.lumpRelatedAchievements = state.lumpRelatedAchievements;
-    this.poppingWrinklers = state.poppingWrinklers;
-    this._grindingCheat = state.grindingCheat;
-    this._cheatGolden = state.cheatGolden;
-  }
-
-  /**
-   * Set activity logging callback
-   */
-  setAddActivity(callback: (msg: string) => void): void {
-    this.addActivity = callback;
+    this.context.addActivity(msg);
   }
 
   /**
@@ -843,7 +815,7 @@ export class GardenManager {
     const garden = Game.Objects['Farm'].minigame;
 
     // Check if ascending soon
-    if (this.wantAscend) {
+    if (this.context.wantAscend) {
       return {
         module: 'Garden',
         status: 'waiting',

@@ -3,70 +3,36 @@
  * Migrated from cookieAutoPlayBeta.js "Handle Cookies and Golden Cookies" section
  */
 
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 
 declare const Game: any;
 declare const Beautify: ((value: number, floats?: number) => string) | undefined;
 
-export interface GoldenCookieConfig {
-  GoldenClickMode?: number; // 0=off, 1=normal, 2=aggressive
-  CheatGolden?: number; // 0=off, 1=auto, 2+=manual levels
-  getGoldenClickMode?: () => number; // Live getter for current config value
-  getCheatGolden?: () => number; // Live getter for current config value
-}
-
 export class GoldenCookieHandler {
-  private config: GoldenCookieConfig;
+  private context: AutoPlayContext;
   private cheatMax: number = 0;
   private cheatMaxTime: number = Date.now();
   private hyperActive: boolean = false;
-  private wantAscend: boolean = false;
-  private now: number = Date.now();
 
-  // Callbacks for integration with main AutoPlay
-  private logAction: (action: string, details?: string) => void;
-  private addActivity: (activity: string) => void;
-  private grindingCheat: () => boolean;
-
-  constructor(
-    config?: GoldenCookieConfig,
-    logAction?: (action: string, details?: string) => void,
-    addActivity?: (activity: string) => void,
-    grindingCheat?: () => boolean
-  ) {
-    this.config = config || { GoldenClickMode: 0, CheatGolden: 0 };
-    this.logAction = logAction || (() => {});
-    this.addActivity = addActivity || (() => {});
-    this.grindingCheat = grindingCheat || (() => false);
+  constructor(context: AutoPlayContext) {
+    this.context = context;
   }
 
   /**
-   * Get current GoldenClickMode (from live config or fallback)
+   * Get current GoldenClickMode (from live config)
    */
   private getGoldenClickMode(): number {
-    if (this.config.getGoldenClickMode) {
-      return this.config.getGoldenClickMode();
-    }
-    return this.config.GoldenClickMode || 0;
+    return this.context.Config.GoldenClickMode || 0;
   }
 
   /**
-   * Get current CheatGolden (from live config or fallback)
+   * Get current CheatGolden (from live config)
    */
   private getCheatGolden(): number {
-    if (this.config.getCheatGolden) {
-      return this.config.getCheatGolden();
-    }
-    return this.config.CheatGolden || 0;
+    return this.context.Config.CheatGolden || 0;
   }
 
-  /**
-   * Update runtime state
-   */
-  updateState(now: number, wantAscend: boolean): void {
-    this.now = now;
-    this.wantAscend = wantAscend;
-  }
 
   /**
    * Returns whether the bot is in hyperactive mode (frequent updates needed)
@@ -116,7 +82,7 @@ export class GoldenCookieHandler {
       // Handle cookie storm drops (aggressive mode only)
       if (s.force === 'cookie storm drop' && goldenClickMode === 2) {
         s.pop();
-        this.logAction('Clicked cookie storm drop', s.type);
+        this.context.logAction('Clicked cookie storm drop', s.type);
       }
 
       // Click non-golden shimmers, or golden cookies that are about to expire
@@ -157,7 +123,7 @@ export class GoldenCookieHandler {
       const bonusType = shimmer.force || 'fading luck';
       // Lucky and Lucky Frenzy both have "lucky" in their force name
       if (bonusType.toLowerCase().includes('lucky')) {
-        this.logAction(
+        this.context.logAction(
           `Clicked ${bonusType} golden cookie`,
           `💰 +${Beautify(cookiesGained)} cookies`
         );
@@ -167,9 +133,9 @@ export class GoldenCookieHandler {
 
     // Log regular shimmer click
     if (shimmer.type === 'golden') {
-      this.logAction('Clicked golden cookie', shimmer.force || 'fading luck');
+      this.context.logAction('Clicked golden cookie', shimmer.force || 'fading luck');
     } else {
-      this.logAction(`Clicked ${shimmer.type}`, shimmer.force || 'shimmer');
+      this.context.logAction(`Clicked ${shimmer.type}`, shimmer.force || 'shimmer');
     }
   }
 
@@ -189,18 +155,18 @@ export class GoldenCookieHandler {
 
     if (cheatGolden === 1) {
       // Auto cheat mode
-      if (this.wantAscend) return; // already cheated enough
-      if (!this.grindingCheat()) return; // only cheat in grinding
+      if (this.context.wantAscend) return; // already cheated enough
+      if (!this.context.grindingCheat()) return; // only cheat in grinding
 
-      const daysInRun = (this.now - Game.startDate) / 1000 / 60 / 60 / 24;
+      const daysInRun = (this.context.now - Game.startDate) / 1000 / 60 / 60 / 24;
       if (daysInRun < 20) return; // cheat only after 20 days
 
       level = ((3 * daysInRun) << 0) - 20;
       if (level > 100) level = 100;
 
       const timeToNextLevel = (2 * 60 * 60 * 1000) / ((level - this.cheatMax + 8) / 10);
-      if (this.now - this.cheatMaxTime >= timeToNextLevel) {
-        this.cheatMaxTime = this.now;
+      if (this.context.now - this.cheatMaxTime >= timeToNextLevel) {
+        this.cheatMaxTime = this.context.now;
         this.cheatMax++;
       }
 
@@ -208,7 +174,7 @@ export class GoldenCookieHandler {
       this.cheatMax = level;
     }
 
-    this.addActivity(`Cheating golden cookies at level ${level}.`);
+    this.context.addActivity(`Cheating golden cookies at level ${level}.`);
 
     const levelTime = (Game.shimmerTypes.golden.maxTime * level) / 140;
     if (Game.shimmerTypes.golden.time < levelTime) {
@@ -345,7 +311,7 @@ export class GoldenCookieHandler {
       reason: goldenClickMode === 2 ? 'Aggressive mode' : 'Normal mode',
       icon: '✨',
       details: {
-        'Mode': this.config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
+        'Mode': this.context.Config.GoldenClickMode === 2 ? 'Aggressive' : 'Normal',
         'Golden Cookies': goldenCount,
         'Active Buff': activeBuff || 'None'
       }

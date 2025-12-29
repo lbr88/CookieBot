@@ -9,8 +9,7 @@
  * - Managing wrinkler-related achievements
  */
 
-import type { AutoPlayState } from '../types/autoplay';
-import type { SeasonHandler } from './SeasonHandler';
+import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 import { Logger } from '../utils/Logger';
 
@@ -18,33 +17,10 @@ declare const Game: any;
 declare const Beautify: (num: number) => string;
 
 export class WrinklerManager {
-  private state: AutoPlayState;
-  private seasonHandler?: SeasonHandler;
-  private wantedAchievements: number[] = [];
-  private nextAchievement: number = 0;
+  private context: AutoPlayContext;
 
-  constructor(state: AutoPlayState) {
-    this.state = state;
-  }
-
-  /**
-   * Set dependencies (called after construction to avoid circular dependencies)
-   */
-  setDependencies(
-    seasonHandler: SeasonHandler,
-    wantedAchievements: number[],
-    nextAchievement: number
-  ): void {
-    this.seasonHandler = seasonHandler;
-    this.wantedAchievements = wantedAchievements;
-    this.nextAchievement = nextAchievement;
-  }
-
-  /**
-   * Update state (called periodically from AutoPlay)
-   */
-  updateState(nextAchievement: number): void {
-    this.nextAchievement = nextAchievement;
+  constructor(context: AutoPlayContext) {
+    this.context = context;
   }
 
   /**
@@ -52,7 +28,7 @@ export class WrinklerManager {
    * Runs periodically to manage wrinkler popping strategy
    */
   handleWrinklers(): void {
-    this.state.poppingWrinklers = false;
+    this.context.poppingWrinklers = false;
 
     // Don't handle wrinklers until One mind is bought (unlocks wrinklers)
     if (!Game.Upgrades["One mind"].bought) {
@@ -97,8 +73,8 @@ export class WrinklerManager {
    * Pop all attached wrinklers
    */
   private popAllWrinklers(): void {
-    this.state.poppingWrinklers = true;
-    this.state.wrinklerTime = this.state.now;
+    this.context.poppingWrinklers = true;
+    this.context.wrinklerTime = this.context.now;
 
     Logger.addActivity("Popping wrinklers for droppings and/or achievements.");
     Logger.logStatus('wrinkler', 'Popping all wrinklers');
@@ -126,15 +102,15 @@ export class WrinklerManager {
     this.findNextWrinkler();
 
     // Calculate time since last pop
-    const minutesSinceLastPop = Math.floor((this.state.now - this.state.wrinklerTime) / 1000 / 60);
+    const minutesSinceLastPop = Math.floor((this.context.now - this.context.wrinklerTime) / 1000 / 60);
     Logger.addActivity(`Popping one wrinkler per two hours, last ${minutesSinceLastPop} minutes ago.`);
 
     // Pop the selected wrinkler if it's time (2 hours = 2*60*60*1000 ms)
-    if (this.state.nextWrinkler !== -1) {
+    if (this.context.nextWrinkler !== -1) {
       const twoHoursInMs = 2 * 60 * 60 * 1000;
-      if (this.state.now - this.state.wrinklerTime >= twoHoursInMs) {
-        Game.wrinklers[this.state.nextWrinkler].hp = 0;  // Pop the wrinkler
-        this.state.wrinklerTime = this.state.now;
+      if (this.context.now - this.context.wrinklerTime >= twoHoursInMs) {
+        Game.wrinklers[this.context.nextWrinkler].hp = 0;  // Pop the wrinkler
+        this.context.wrinklerTime = this.context.now;
         Logger.logStatus('wrinkler', 'Popped single wrinkler');
       }
     }
@@ -153,7 +129,7 @@ export class WrinklerManager {
       // Check if there's an empty spot (not attached, but within max wrinklers)
       if (w.close === 0 && w.id < Game.getWrinklersMax()) {
         // Empty spot found - don't pop any wrinkler, let it fill up
-        this.state.nextWrinkler = -1;
+        this.context.nextWrinkler = -1;
         return;
       }
 
@@ -164,7 +140,7 @@ export class WrinklerManager {
       }
     }
 
-    this.state.nextWrinkler = nextId;
+    this.context.nextWrinkler = nextId;
   }
 
   /**
@@ -229,11 +205,7 @@ export class WrinklerManager {
    * Delegates to SeasonHandler
    */
   private seasonFinished(): boolean {
-    if (!this.seasonHandler) {
-      // Fallback if dependencies not set yet
-      return false;
-    }
-    return this.seasonHandler.seasonFinished(Game.season);
+    return this.context.seasonFinished(Game.season);
   }
 
   /**
@@ -242,7 +214,7 @@ export class WrinklerManager {
    * (meaning we've completed all wanted achievements and moved to the end phase)
    */
   private isEndPhase(): boolean {
-    return this.wantedAchievements.indexOf(this.nextAchievement) < 0;
+    return this.context.wantedAchievements.indexOf(this.context.nextAchievement) < 0;
   }
 
   /**
@@ -269,7 +241,7 @@ export class WrinklerManager {
     const maxWrinklers = Game.getWrinklersMax();
 
     // Check if popping all wrinklers
-    if (this.state.poppingWrinklers) {
+    if (this.context.poppingWrinklers) {
       return {
         module: 'Wrinklers',
         status: 'active',
@@ -305,10 +277,10 @@ export class WrinklerManager {
     }
 
     // Regular rotation mode
-    const minutesSinceLastPop = Math.floor((this.state.now - this.state.wrinklerTime) / 1000 / 60);
+    const minutesSinceLastPop = Math.floor((this.context.now - this.context.wrinklerTime) / 1000 / 60);
     const minutesUntilNext = 120 - minutesSinceLastPop;
 
-    if (this.state.nextWrinkler === -1) {
+    if (this.context.nextWrinkler === -1) {
       return {
         module: 'Wrinklers',
         status: 'waiting',
