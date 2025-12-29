@@ -660,6 +660,7 @@ export default class AutoPlay {
 
     // Savings calculation
     if (this.config.savingsEnabled) {
+      this.savingsManager.setCurrentTime(this.state.now);
       this.measureModule('SavingsManager', () => this.savingsManager.handleSavings());
     }
 

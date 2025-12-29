@@ -172,6 +172,31 @@ const { initializeFullEnvironment } = require('../utils/setup');
       if (bot.savingsManager.getSavingsGoal() !== expected) throw new Error(`Expected ${expected}, got ${bot.savingsManager.getSavingsGoal()}`);
     });
 
+    await runTest('SavingsManager: Regression - Initialization Bug (Gazillion Minutes)', () => {
+      const bot = window.AutoPlay;
+      const sm = bot.savingsManager;
+      
+      // Verify that sm.now is initialized to Game.startDate (or at least not 0)
+      if (sm.now === 0) {
+        throw new Error('Regression: sm.now is 0 after initialization!');
+      }
+
+      // Reset state to simulate fresh start
+      bot.Config.SavingStrategy = 1; // AUTO
+      // We do NOT call setCurrentTime here to simulate the race condition
+      
+      sm.handleSavings();
+      const status = sm.getStatus();
+      
+      // Check for the bug (huge negative number interpreted as millions of minutes)
+      if (status.reason.includes('m remaining')) {
+         const match = status.reason.match(/(\d+)m remaining/);
+         if (match && parseInt(match[1]) > 1000) {
+             throw new Error(`Bug reproduced! Huge remaining time detected: ${status.reason}`);
+         }
+      }
+    });
+
     // 7. NightMode
     await runTest('NightMode: Should initialize and accept config', () => {
       const bot = window.AutoPlay;

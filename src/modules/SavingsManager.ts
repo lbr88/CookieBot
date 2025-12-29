@@ -20,6 +20,7 @@ export class SavingsManager {
   constructor(context: AutoPlayContext) {
     this.context = context;
     this.savingsStart = Game.startDate;
+    this.now = Game.startDate; // Initialize to start time to avoid 0-value bug
   }
 
   /**
@@ -124,12 +125,16 @@ export class SavingsManager {
     }
 
     // Auto-adjustment: if fallen behind savings plan, reset the start time
-    // This handles cases where the bot was stopped or a big purchase was made
     const fractionSaved = Game.cookies / this.savingsGoal;
 
     // Division by zero check: only adjust if scaling > 0
     if (fractionSaved < 0.8 && scaling > 0) {
-      this.savingsStart = this.now - this.START_TIME - this.TARGET_TIME * fractionSaved / scaling;
+      // Calculate what the elapsed time SHOULD be to match current savings
+      // fractionSaved = Current / Goal = Current / (Base * scaling)
+      // We want newScaling such that Current = Base * newScaling
+      // So newScaling = Current / Base = fractionSaved * scaling
+      // newElapsedTime = newScaling * TARGET_TIME
+      this.savingsStart = this.now - this.START_TIME - (this.TARGET_TIME * fractionSaved * scaling);
     }
   }
 
