@@ -32,6 +32,7 @@ export interface AutoPlayConfig {
   autoAscend: boolean;
   autoSugarLumps: boolean;
   autoWrinklers: boolean;
+  fpsScaling: boolean;
 
   // Clicking settings
   clickMode: number; // 0=off, 1=normal, 2+=aggressive
@@ -128,6 +129,14 @@ export interface AutoPlayContext {
   handleNightTrading: () => void;
   freezeGarden: (freeze: boolean) => void;
 
+  // FPS Scaling
+  fpsScale: number;
+
+  // Performance tracking
+  lastTickDuration: number;
+  avgTickDuration: number;
+  moduleTimings: { [key: string]: number };
+
   // Managers
   clickManager?: ClickManager;
   purchaseManager?: PurchaseManager;
@@ -201,6 +210,11 @@ export interface AutoPlayState {
 
   // Temporary state
   isInitialized: boolean;
+
+  // Performance tracking
+  lastTickDuration: number;
+  avgTickDuration: number;
+  moduleTimings: { [key: string]: number };
 
   // Just Right achievement tracking
   runRightCount?: number; // Counter for cursor adjustment during Just Right achievement

@@ -92,7 +92,7 @@ export class PantheonManager {
    * @param godName Name of the spirit (e.g., 'mother', 'decadence')
    * @param force If 1, forces use of 1 swap. If 0, requires 3 swaps available.
    */
-  private assignSpirit(slot: number, godName: string, force: number): void {
+  public assignSpirit(slot: number, godName: string, force: number): void {
     const pantheon = Game.Objects['Temple'].minigame;
 
     // Check if we have enough swaps (worship swaps recharge over time)

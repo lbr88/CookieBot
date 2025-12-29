@@ -228,8 +228,9 @@ export class PurchaseManager {
     if (!haveBought) {
       if ((this.context.now - Game.startDate) < 10 * 60 * 1000 &&
           Game.Achievements['Neverclick'].won) {
-        // Wait five seconds before next step
-        this.context.setDeadline(this.context.now + 5000);
+        // Wait five seconds before next step (scaled by FPS)
+        const delay = 5000 * (this.context.fpsScale || 1);
+        this.context.setDeadline(this.context.now + delay);
       }
       this.context.addActivity('Waiting to buy ' + best);
     }

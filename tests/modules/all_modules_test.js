@@ -115,14 +115,61 @@ const { initializeFullEnvironment } = require('../utils/setup');
     });
 
     // 6. SavingsManager
-    await runTest('SavingsManager: Should calculate savings goal when enabled', () => {
+    await runTest('SavingsManager: Strategy 0 (NONE) should have 0 savings', () => {
       const bot = window.AutoPlay;
-      // Enable savings
-      bot.config.savingsEnabled = true;
-      bot.config.SavingStrategy = 2; // Lucky
+      bot.Config.SavingStrategy = 0;
+      bot.savingsManager.handleSavings();
+      if (bot.savingsManager.getSavingsGoal() !== 0) throw new Error(`Expected 0, got ${bot.savingsManager.getSavingsGoal()}`);
+    });
 
-      // We can check if the bot has calculated a savings goal
-      if (typeof bot.config.savingsGoal === 'undefined') throw new Error('savingsGoal is undefined');
+    await runTest('SavingsManager: Strategy 2 (LUCKY) should save 100 mins of CPS', () => {
+      const bot = window.AutoPlay;
+      bot.Config.SavingStrategy = 2;
+      Game.ascensionMode = 0; // Ensure not in reborn mode
+      Game.unbuffedCps = 100;
+      bot.savingsManager.handleSavings();
+      const expected = 100 * 60 * 100; // 600,000
+      if (bot.savingsManager.getSavingsGoal() !== expected) throw new Error(`Expected ${expected}, got ${bot.savingsManager.getSavingsGoal()}`);
+    });
+
+    await runTest('SavingsManager: Strategy 3 (LUCKY FRENZY) should save 700 mins of CPS', () => {
+      const bot = window.AutoPlay;
+      bot.Config.SavingStrategy = 3;
+      Game.ascensionMode = 0;
+      Game.unbuffedCps = 100;
+      bot.savingsManager.handleSavings();
+      const expected = 100 * 60 * 100 * 7; // 4,200,000
+      if (bot.savingsManager.getSavingsGoal() !== expected) throw new Error(`Expected ${expected}, got ${bot.savingsManager.getSavingsGoal()}`);
+    });
+
+    await runTest('SavingsManager: AUTO Strategy - Startup period', () => {
+      const bot = window.AutoPlay;
+      bot.Config.SavingStrategy = 1; // AUTO
+      const now = Date.now();
+      Game.startDate = now - (10 * 60 * 1000); // 10 mins ago
+      bot.savingsManager.setCurrentTime(now);
+      bot.savingsManager.handleSavings();
+      if (bot.savingsManager.getSavingsGoal() !== 0) throw new Error(`Expected 0, got ${bot.savingsManager.getSavingsGoal()}`);
+    });
+
+    await runTest('SavingsManager: AUTO Strategy - Max savings', () => {
+      const bot = window.AutoPlay;
+      bot.Config.SavingStrategy = 1;
+      const now = Date.now();
+      Game.startDate = now - (431 * 60 * 1000); // > 430 mins
+      bot.savingsManager.initializeSavings(Game.startDate);
+      bot.savingsManager.setCurrentTime(now);
+
+      // Mock upgrades
+      if (!Game.UpgradesById[52]) Game.UpgradesById[52] = { bought: 0 };
+      if (!Game.UpgradesById[53]) Game.UpgradesById[53] = { bought: 0 };
+      Game.UpgradesById[52].bought = 1;
+      Game.UpgradesById[53].bought = 1;
+      Game.unbuffedCps = 100;
+
+      bot.savingsManager.handleSavings();
+      const expected = 100 * 60 * 100; // 600,000
+      if (bot.savingsManager.getSavingsGoal() !== expected) throw new Error(`Expected ${expected}, got ${bot.savingsManager.getSavingsGoal()}`);
     });
 
     // 7. NightMode
@@ -165,8 +212,165 @@ const { initializeFullEnvironment } = require('../utils/setup');
     await runTest('SugarLumpManager: Should be initialized', () => {
       const bot = window.AutoPlay;
       bot.config.autoSugarLumps = true;
-      // Just verify config and existence
       if (!bot['sugarLumpManager']) throw new Error('SugarLumpManager module missing');
+    });
+
+    // 10. DragonManager
+    await runTest('DragonManager: Should handle dragon training', async () => {
+      // Unlock Dragon requirements
+      Game.Earn(1000000000000);
+      Game.Upgrades['A crumbly egg'].unlocked = 1;
+      Game.Upgrades['A crumbly egg'].bought = 1;
+      Game.dragonLevel = 4;
+
+      // Suppress UI prompts that might block execution
+      Game.ConfirmPrompt = () => { };
+
+      const dm = window.AutoPlay.dragonManager;
+      dm.handleDragon();
+
+      if (Game.dragonLevel <= 4) throw new Error(`Dragon did not level up. Level: ${Game.dragonLevel}`);
+    });
+
+    // 11. GardenManager
+    await runTest('GardenManager: Should handle garden', async () => {
+      // Ensure Farm level for minigame
+      Game.Objects['Farm'].amount = 10;
+      Game.Objects['Farm'].level = 10;
+
+      // Check if minigame exists (it should if level > 0, but might need a tick or save reload in real game)
+      // We can't easily force-load it without internal game logic, but let's check.
+      if (Game.Objects['Farm'].minigame) {
+        const M = Game.Objects['Farm'].minigame;
+        const startSoil = M.soil;
+
+        const gm = window.AutoPlay.gardenManager;
+        gm.handleGarden();
+
+        // Just verify it runs without crashing
+      } else {
+        console.log('    (Skipping Garden logic check - Minigame not loaded)');
+      }
+    });
+
+    // 12. GrimoireManager
+    await runTest('GrimoireManager: Should handle grimoire', async () => {
+      Game.Objects['Wizard tower'].amount = 10;
+      Game.Objects['Wizard tower'].level = 10;
+
+      if (Game.Objects['Wizard tower'].minigame) {
+        const gm = window.AutoPlay.grimoireManager;
+        gm.handleGrimoires();
+      } else {
+        console.log('    (Skipping Grimoire logic check - Minigame not loaded)');
+      }
+    });
+
+    // 13. PantheonManager
+    await runTest('PantheonManager: Should handle pantheon', async () => {
+      Game.Objects['Temple'].amount = 10;
+      Game.Objects['Temple'].level = 10;
+
+      if (Game.Objects['Temple'].minigame) {
+        const pm = window.AutoPlay.pantheonManager;
+        pm.handlePantheon();
+      } else {
+        console.log('    (Skipping Pantheon logic check - Minigame not loaded)');
+      }
+    });
+
+    // 14. SeasonHandler
+    await runTest('SeasonHandler: Should cycle seasons', async () => {
+      Game.Upgrades["Season switcher"].unlocked = 1;
+      Game.Upgrades["Season switcher"].bought = 1;
+
+      const sh = window.AutoPlay.seasonHandler;
+      sh.handleSeasons();
+    });
+
+    // 15. StockMarketManager
+    await runTest('StockMarketManager: Should handle stock market', async () => {
+      Game.Objects['Bank'].amount = 10;
+      Game.Objects['Bank'].level = 10;
+
+      if (Game.Objects['Bank'].minigame) {
+        const sm = window.AutoPlay.stockMarketManager;
+        sm.handleStockMarket();
+      } else {
+        console.log('    (Skipping StockMarket logic check - Minigame not loaded)');
+      }
+    });
+
+    // 16. AscensionManager
+    await runTest('AscensionManager: Should trigger ascension when achievement won', async () => {
+      const bot = window.AutoPlay;
+      const am = bot.ascensionManager;
+
+      if (!am) throw new Error('AscensionManager not initialized');
+
+      // Mock State: Target achievement is won
+      const targetId = bot.nextAchievement;
+      if (!targetId) throw new Error('No next achievement set');
+
+      // Ensure the achievement object exists and is mocked as won
+      if (!Game.AchievementsById[targetId]) {
+        Game.AchievementsById[targetId] = { won: 0, name: 'Mock Achievement', ddesc: 'Mock Desc' };
+      }
+      Game.AchievementsById[targetId].won = 1;
+
+      // Mock Game.Ascend to track if it was called
+      let ascendCalled = false;
+      const originalAscend = Game.Ascend;
+      Game.Ascend = (bypass) => {
+        ascendCalled = true;
+        console.log('Game.Ascend called with bypass:', bypass);
+      };
+
+      // Mock other requirements
+      Game.AscendTimer = 0;
+      Game.OnAscend = 0;
+      bot.onAscend = false;
+      Game.prestige = 1000; // Ensure not first run (requires 365)
+      Game.ascendMeterLevel = 100;
+
+      // Run logic
+      am.handleAscend();
+
+      // Restore
+      Game.Ascend = originalAscend;
+
+      if (!ascendCalled && !bot.onAscend) {
+        throw new Error('Ascension was not triggered despite achievement being won');
+      }
+    });
+
+    // 17. FPS Scaling
+    await runTest('FPS Scaling: Should calculate scale factor correctly', () => {
+      const bot = window.AutoPlay;
+
+      // Enable scaling
+      bot.config.fpsScaling = true;
+
+      // Test 30 FPS (Standard)
+      Game.fps = 30;
+      if (Math.abs(bot.fpsScale - 1) > 0.01) throw new Error(`Expected scale 1 for 30 FPS, got ${bot.fpsScale}`);
+
+      // Test 60 FPS (Fast)
+      Game.fps = 60;
+      if (Math.abs(bot.fpsScale - 0.5) > 0.01) throw new Error(`Expected scale 0.5 for 60 FPS, got ${bot.fpsScale}`);
+
+      // Test 15 FPS (Slow)
+      Game.fps = 15;
+      if (Math.abs(bot.fpsScale - 2) > 0.01) throw new Error(`Expected scale 2 for 15 FPS, got ${bot.fpsScale}`);
+
+      // Test Disabled
+      bot.config.fpsScaling = false;
+      Game.fps = 60;
+      if (bot.fpsScale !== 1) throw new Error(`Expected scale 1 when disabled, got ${bot.fpsScale}`);
+
+      // Restore
+      bot.config.fpsScaling = true;
+      Game.fps = 30;
     });
 
     if (failedTests > 0) {

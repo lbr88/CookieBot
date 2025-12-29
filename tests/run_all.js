@@ -32,13 +32,10 @@ const runScript = (scriptName, label) => {
   const startTime = Date.now();
 
   try {
-    // 1. Unit Tests (Fastest)
-    await runScript('test:savings', 'Unit Tests (SavingsManager)');
-
-    // 2. Module Integration Tests (Medium)
+    // 1. Module Integration Tests (Medium)
     await runScript('test:modules', 'Module Integration Tests');
 
-    // 3. E2E Smoke Test (Medium)
+    // 2. E2E Smoke Test (Medium)
     await runScript('test:e2e', 'E2E Smoke Test');
 
     // 4. Bot Decision Tests (Integration)

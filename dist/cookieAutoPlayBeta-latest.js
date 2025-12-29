@@ -844,8 +844,9 @@ class PurchaseManager {
         if (!haveBought) {
             if ((this.context.now - Game.startDate) < 10 * 60 * 1000 &&
                 Game.Achievements['Neverclick'].won) {
-                // Wait five seconds before next step
-                this.context.setDeadline(this.context.now + 5000);
+                // Wait five seconds before next step (scaled by FPS)
+                const delay = 5000 * (this.context.fpsScale || 1);
+                this.context.setDeadline(this.context.now + delay);
             }
             this.context.addActivity('Waiting to buy ' + best);
         }
@@ -4345,23 +4346,31 @@ class Dashboard {
         if (!timerElement)
             return;
         try {
+            let text = '';
+            let color = '#9cf';
             // Check if AutoPlay has a deadline
             if (this.context && this.context.deadline) {
                 const now = Date.now();
                 const timeUntilUpdate = this.context.deadline - now;
                 if (timeUntilUpdate > 0) {
-                    timerElement.textContent = `Next update: ${this.formatTimeRemaining(timeUntilUpdate)}`;
-                    timerElement.style.color = '#9cf';
+                    text = `Next update: ${this.formatTimeRemaining(timeUntilUpdate)}`;
                 }
                 else {
-                    timerElement.textContent = 'Next update: now';
-                    timerElement.style.color = '#6f6';
+                    text = 'Next update: now';
+                    color = '#6f6';
                 }
             }
             else {
-                timerElement.textContent = 'Next update: continuous';
-                timerElement.style.color = '#9cf';
+                text = 'Next update: continuous';
             }
+            // Add tick stats if available
+            if (this.context && typeof this.context.lastTickDuration === 'number') {
+                const last = this.context.lastTickDuration.toFixed(1);
+                const avg = this.context.avgTickDuration.toFixed(1);
+                text += ` | Tick: ${last}ms (Avg: ${avg}ms)`;
+            }
+            timerElement.textContent = text;
+            timerElement.style.color = color;
         }
         catch (e) {
             timerElement.textContent = 'Next update: unknown';
@@ -4512,12 +4521,33 @@ class Dashboard {
                 return a.status.module.localeCompare(b.status.module);
             });
             // Helper function to render a module card
-            const renderModuleCard = (status) => {
+            const renderModuleCard = (key, status) => {
                 const color = statusColors[status.status] || '#ccc';
                 const icon = status.icon || '📦';
+                // Get timing
+                const timingKeyMap = {
+                    'clicking': 'ClickManager',
+                    'buildings': 'PurchaseManager',
+                    'upgrades': 'PurchaseManager',
+                    'garden': 'GardenManager',
+                    'wrinklers': 'WrinklerManager',
+                    'goldenCookies': 'GoldenCookieHandler',
+                    'dragon': 'DragonManager',
+                    'pantheon': 'PantheonManager',
+                    'grimoire': 'GrimoireManager',
+                    'stockMarket': 'StockMarketManager',
+                    'sugarLumps': 'SugarLumpManager',
+                    'savings': 'SavingsManager',
+                    'ascension': 'AscensionManager',
+                    'season': 'SeasonHandler',
+                    'achievements': 'AchievementHandler'
+                };
+                const timingKey = timingKeyMap[key];
+                const timing = (this.context.moduleTimings && timingKey) ? this.context.moduleTimings[timingKey] : 0;
+                const timingDisplay = timing > 0 ? `<span style="color: #666; font-size: 9px; margin-left: 4px;">(${timing.toFixed(2)}ms)</span>` : '';
                 let cardHtml = '<div style="padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + '; border-radius: 4px;">';
                 cardHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-                cardHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
+                cardHtml += '<div><span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>' + timingDisplay + '</div>';
                 cardHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
                 cardHtml += '</div>';
                 cardHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
@@ -4560,8 +4590,8 @@ class Dashboard {
             };
             // Render all modules into a single grid
             let modulesHtml = '';
-            for (const { status } of allModules) {
-                modulesHtml += renderModuleCard(status);
+            for (const { key, status } of allModules) {
+                modulesHtml += renderModuleCard(key, status);
             }
             if (modulesHtml === '') {
                 modulesHtml = '<div style="color: #888; grid-column: 1 / -1;">No modules active</div>';
@@ -6968,6 +6998,20 @@ class AutoPlay_AutoPlay {
     set statusInfo(value) { this.state.statusInfo = value; }
     get workingOnSpecialAchievement() { return this.state.workingOnSpecialAchievement; }
     set workingOnSpecialAchievement(value) { this.state.workingOnSpecialAchievement = value; }
+    get fpsScale() {
+        if (!this.config.fpsScaling)
+            return 1;
+        const Game = globalThis.Game;
+        if (Game && Game.fps && Game.fps > 0) {
+            // Standard FPS is 30. If FPS is higher, scale factor is < 1 (faster)
+            // e.g. 60 FPS -> 30/60 = 0.5
+            return Math.max(0.1, 30 / Game.fps);
+        }
+        return 1;
+    }
+    get lastTickDuration() { return this.state.lastTickDuration; }
+    get avgTickDuration() { return this.state.avgTickDuration; }
+    get moduleTimings() { return this.state.moduleTimings; }
     // Public accessors for shared context
     get cpsMult() {
         const Game = globalThis.Game;
@@ -7169,6 +7213,9 @@ class AutoPlay_AutoPlay {
     deactivateNightSpirits() {
         this.pantheonManager.deactivateNightSpirits();
     }
+    assignSpirit(slot, spirit, force) {
+        this.pantheonManager.assignSpirit(slot, spirit, force);
+    }
     handleNightTrading() {
         this.stockMarketManager.handleNightTrading();
     }
@@ -7232,27 +7279,66 @@ class AutoPlay_AutoPlay {
         };
     }
     /**
+     * Update tick execution statistics
+     */
+    updateTickStats(startTime) {
+        const duration = performance.now() - startTime;
+        this.state.lastTickDuration = duration;
+        // Exponential moving average (alpha = 0.05 for smooth updates)
+        if (this.state.avgTickDuration === 0) {
+            this.state.avgTickDuration = duration;
+        }
+        else {
+            this.state.avgTickDuration = (this.state.avgTickDuration * 0.95) + (duration * 0.05);
+        }
+    }
+    /**
+     * Measure execution time of a module
+     */
+    measureModule(name, fn) {
+        const start = performance.now();
+        try {
+            fn();
+        }
+        finally {
+            const duration = performance.now() - start;
+            // Use exponential moving average for module timings too
+            const currentAvg = this.state.moduleTimings[name] || 0;
+            if (currentAvg === 0) {
+                this.state.moduleTimings[name] = duration;
+            }
+            else {
+                this.state.moduleTimings[name] = (currentAvg * 0.9) + (duration * 0.1);
+            }
+        }
+    }
+    /**
      * Main execution cycle - implements 8-phase model from original
      * Runs every 300ms via setInterval
      */
     periodic() {
         // Schedule next run FIRST so it always continues regardless of early returns
         this.scheduleNextRun();
+        const startTime = performance.now();
         // Declare Game global
         const Game = globalThis.Game;
         // ===== Phase 0: Early exits for timers =====
-        if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0)
+        if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0) {
+            this.updateTickStats(startTime);
             return;
+        }
         // ===== Phase 1: Delay handling =====
         if (this.state.delay > 0) {
             this.state.delay--;
+            this.updateTickStats(startTime);
             return;
         }
         // ===== Phase 2: Setup =====
         this.state.now = Date.now();
         // Handle "Just Right" achievement (special case)
         if (this.state.nextAchievement === 397) {
-            this.runJustRight();
+            this.measureModule('JustRight', () => this.runJustRight());
+            this.updateTickStats(startTime);
             return;
         }
         // Update finished state - check if all lump-related achievements are complete
@@ -7261,40 +7347,42 @@ class AutoPlay_AutoPlay {
         if (this.nightMode.checkNightMode() && !Game.ascensionMode) {
             // If sleeping, only cheat sugar lumps at level 4 and return
             if (this.Config.CheatLumps === 4) {
-                this.sugarLumpManager.handleSugarLumps();
+                this.measureModule('SugarLumpManager', () => this.sugarLumpManager.handleSugarLumps());
             }
+            this.updateTickStats(startTime);
             return;
         }
         // ===== Phase 4: Fast actions (always run every 300ms) =====
-        this.clickManager.handleClicking();
-        this.goldenCookieHandler.handleGoldenCookies();
+        this.measureModule('ClickManager', () => this.clickManager.handleClicking());
+        this.measureModule('GoldenCookieHandler', () => this.goldenCookieHandler.handleGoldenCookies());
         // Speed cheat sugar lumps if level 4
         if (this.Config.CheatLumps === 4) {
-            this.sugarLumpManager.handleSugarLumps();
+            this.measureModule('SugarLumpManager', () => this.sugarLumpManager.handleSugarLumps());
         }
         // ===== Phase 5: High-activity phase =====
         if (this.state.hyperActive || (this.state.now >= this.state.deadline)) {
             this.state.hyperActive = false; // Reset flag, can be overwritten
             // Unified bestBuy logic (compares buildings and upgrades by PP)
-            this.bestBuy();
+            this.measureModule('PurchaseManager', () => this.bestBuy());
             // Set hyperActive if CPS multiplier is very high
             if (this.cpsMult > 100) {
                 this.state.hyperActive = true;
             }
             // Handle speed minigames (grimoire spells)
-            this.handleSpeedMinigames();
+            this.measureModule('GrimoireManager', () => this.handleSpeedMinigames());
         }
         // ===== Phase 6: Frequent ascension checks =====
         // Check ascend often in reborn and during ascend
         if (Game.ascensionMode === 1 || this.onAscend) {
-            this.ascensionManager.handleAscend();
+            this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
         }
         // Check ascend often for lucky payout
         if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
-            this.ascensionManager.handleAscend();
+            this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
         }
         // ===== Phase 7: Deadline check (end of high-activity) =====
         if (this.state.now < this.state.deadline) {
+            this.updateTickStats(startTime);
             return;
         }
         // ===== Phase 8: Periodic actions (every 15 seconds) =====
@@ -7316,37 +7404,38 @@ class AutoPlay_AutoPlay {
             Logger.addActivity('Make sure to harvest the new plant before ascend!');
         }
         // Calculate dynamic deadline based on when next purchase is affordable
-        let dynamicDeadline = 15000; // Default 15 seconds
+        let dynamicDeadline = 5000 * this.fpsScale; // Default 5 seconds (scaled)
         if (this.state.nextPurchasePrice && Game.cookiesPs > 0) {
             const availableCookies = Game.cookies - (this.config.savingsGoal || 0);
             const needsForPurchase = this.state.nextPurchasePrice - availableCookies;
             if (needsForPurchase > 0) {
                 // Calculate seconds until affordable (with buffer to catch it early)
                 let timeToAfford = (needsForPurchase / Game.cookiesPs) * 1000; // Convert to ms
-                const bufferTime = 500; // Check 0.5s before affordable
-                timeToAfford = Math.max(timeToAfford - bufferTime, 100);
+                const bufferTime = 500 * this.fpsScale; // Check 0.5s before affordable (scaled)
+                timeToAfford = Math.max(timeToAfford - bufferTime, 100 * this.fpsScale);
                 // Smart deadline calculation to avoid overshooting
-                if (timeToAfford <= 15000) {
+                const maxWait = 5000 * this.fpsScale;
+                if (timeToAfford <= maxWait) {
                     // Can check exactly when it's affordable
                     dynamicDeadline = timeToAfford;
                 }
                 else {
                     // For longer waits, check at intervals that lead up to affordable time
-                    const remainder = timeToAfford % 15000;
-                    if (remainder > 1000) {
+                    const remainder = timeToAfford % maxWait;
+                    if (remainder > 1000 * this.fpsScale) {
                         // Check at the remainder time to align with affordable moment
                         dynamicDeadline = remainder;
                     }
                     else {
-                        // Remainder is small, just use standard 15s interval
-                        dynamicDeadline = 15000;
+                        // Remainder is small, just use standard interval
+                        dynamicDeadline = maxWait;
                     }
                 }
-                dynamicDeadline = Math.max(dynamicDeadline, 100); // Minimum 100ms
+                dynamicDeadline = Math.max(dynamicDeadline, 100 * this.fpsScale); // Minimum 100ms (scaled)
             }
             else {
                 // Already affordable - check immediately
-                dynamicDeadline = 100;
+                dynamicDeadline = 100 * this.fpsScale;
             }
         }
         this.state.deadline = this.state.now + dynamicDeadline;
@@ -7358,26 +7447,26 @@ class AutoPlay_AutoPlay {
         // Run all periodic modules (every 15 seconds)
         // Sugar lumps (if not level 4, which runs in fast phase)
         if (this.config.cheatLumps !== 4 && this.config.autoSugarLumps) {
-            this.sugarLumpManager.handleSugarLumps();
+            this.measureModule('SugarLumpManager', () => this.sugarLumpManager.handleSugarLumps());
         }
         // Savings calculation
         if (this.config.savingsEnabled) {
-            this.savingsManager.handleSavings();
+            this.measureModule('SavingsManager', () => this.savingsManager.handleSavings());
         }
         // Seasons
         if (this.config.autoSeason) {
-            this.seasonHandler.handleSeasons();
+            this.measureModule('SeasonHandler', () => this.seasonHandler.handleSeasons());
         }
         // Dragon
-        this.dragonManager.handleDragon();
+        this.measureModule('DragonManager', () => this.dragonManager.handleDragon());
         // Small achievements
-        this.achievementHandler.handleSmallAchievements();
+        this.measureModule('AchievementHandler', () => this.achievementHandler.handleSmallAchievements());
         // Wrinklers
         if (this.config.autoWrinklers) {
-            this.wrinklerManager.handleWrinklers();
+            this.measureModule('WrinklerManager', () => this.wrinklerManager.handleWrinklers());
         }
         // Ascension
-        this.ascensionManager.handleAscend();
+        this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
         // Minigames (garden, pantheon, stock market)
         this.handleMinigames();
         // Handle notes
@@ -7395,13 +7484,26 @@ class AutoPlay_AutoPlay {
             }
         }
         // Note: scheduleNextRun() is called at the START of periodic(), not here
+        this.updateTickStats(startTime);
     }
     /**
      * Schedule the next periodic execution
      * Original runs at fixed 300ms interval via setInterval
      */
     scheduleNextRun() {
-        setTimeout(() => this.periodic(), 300);
+        let delay = 300;
+        // Scale delay based on Game.fps if enabled
+        if (this.config.fpsScaling) {
+            const Game = globalThis.Game;
+            if (Game && Game.fps && Game.fps > 0) {
+                // Standard FPS is 30. If FPS is higher, run faster (lower delay).
+                // e.g. 60 FPS -> 300 * (30/60) = 150ms
+                delay = Math.floor(300 * (30 / Game.fps));
+                // Clamp to reasonable minimum (e.g. 10ms) to prevent freezing
+                delay = Math.max(10, delay);
+            }
+        }
+        setTimeout(() => this.periodic(), delay);
     }
     /**
      * Unified bestBuy - compares buildings AND upgrades by payback period
@@ -7447,13 +7549,13 @@ class AutoPlay_AutoPlay {
         if (Game.ascensionMode === 1)
             return; // No minigames in born again mode
         // Handle pantheon spirit assignments
-        this.pantheonManager.handlePantheon();
+        this.measureModule('PantheonManager', () => this.pantheonManager.handlePantheon());
         // Handle garden planting and harvesting
-        this.gardenManager.handleGarden();
+        this.measureModule('GardenManager', () => this.gardenManager.handleGarden());
         // Update plantPending state from garden
         this.state.plantPending = this.gardenManager.isPlantPending();
         // Handle stock market trading
-        this.stockMarketManager.handleStockMarket();
+        this.measureModule('StockMarketManager', () => this.stockMarketManager.handleStockMarket());
     }
     /**
      * Handle notes - extend lifetime of game notifications
@@ -7773,6 +7875,7 @@ class AutoPlay_AutoPlay {
             autoAscend: false,
             autoSugarLumps: true,
             autoWrinklers: true,
+            fpsScaling: true,
             clickMode: 1, // 0=off, 1=normal, 2+=aggressive
             cheatLumps: 0, // 0=off, 1=auto, 2-4=manual levels
             cheatGolden: 0, // 0=off, 1=auto, 2+=manual levels
@@ -7817,6 +7920,9 @@ class AutoPlay_AutoPlay {
             wantAscend: false,
             finished: false,
             isInitialized: false,
+            lastTickDuration: 0,
+            avgTickDuration: 0,
+            moduleTimings: {},
         };
     }
     /**

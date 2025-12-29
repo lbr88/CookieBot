@@ -78,6 +78,12 @@ export default class AutoPlay {
     set statusInfo(value: import("./types/autoplay").StatusInfo | undefined);
     get workingOnSpecialAchievement(): boolean;
     set workingOnSpecialAchievement(value: boolean);
+    get fpsScale(): number;
+    get lastTickDuration(): number;
+    get avgTickDuration(): number;
+    get moduleTimings(): {
+        [key: string]: number;
+    };
     get cpsMult(): number;
     get canUseLumps(): boolean;
     get poppingWrinklers(): boolean;
@@ -114,6 +120,7 @@ export default class AutoPlay {
     handleGoldenCookies(): void;
     activateNightSpirits(): void;
     deactivateNightSpirits(): void;
+    assignSpirit(slot: number, spirit: string, force: number): void;
     handleNightTrading(): void;
     freezeGarden(freeze: boolean): void;
     /**
@@ -124,6 +131,14 @@ export default class AutoPlay {
      * Hook into Game.UpdateMenu to add config options to preferences menu
      */
     private setupMenuHook;
+    /**
+     * Update tick execution statistics
+     */
+    private updateTickStats;
+    /**
+     * Measure execution time of a module
+     */
+    private measureModule;
     /**
      * Main execution cycle - implements 8-phase model from original
      * Runs every 300ms via setInterval

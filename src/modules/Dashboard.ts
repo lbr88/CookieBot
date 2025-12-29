@@ -496,22 +496,33 @@ export class Dashboard {
     if (!timerElement) return;
 
     try {
+      let text = '';
+      let color = '#9cf';
+
       // Check if AutoPlay has a deadline
       if (this.context && this.context.deadline) {
         const now = Date.now();
         const timeUntilUpdate = this.context.deadline - now;
 
         if (timeUntilUpdate > 0) {
-          timerElement.textContent = `Next update: ${this.formatTimeRemaining(timeUntilUpdate)}`;
-          timerElement.style.color = '#9cf';
+          text = `Next update: ${this.formatTimeRemaining(timeUntilUpdate)}`;
         } else {
-          timerElement.textContent = 'Next update: now';
-          timerElement.style.color = '#6f6';
+          text = 'Next update: now';
+          color = '#6f6';
         }
       } else {
-        timerElement.textContent = 'Next update: continuous';
-        timerElement.style.color = '#9cf';
+        text = 'Next update: continuous';
       }
+
+      // Add tick stats if available
+      if (this.context && typeof this.context.lastTickDuration === 'number') {
+        const last = this.context.lastTickDuration.toFixed(1);
+        const avg = this.context.avgTickDuration.toFixed(1);
+        text += ` | Tick: ${last}ms (Avg: ${avg}ms)`;
+      }
+
+      timerElement.textContent = text;
+      timerElement.style.color = color;
     } catch (e) {
       timerElement.textContent = 'Next update: unknown';
       timerElement.style.color = '#888';
@@ -668,13 +679,36 @@ export class Dashboard {
       });
 
       // Helper function to render a module card
-      const renderModuleCard = (status: any): string => {
+      const renderModuleCard = (key: string, status: any): string => {
         const color = statusColors[status.status as keyof typeof statusColors] || '#ccc';
         const icon = status.icon || '📦';
 
+        // Get timing
+        const timingKeyMap: { [key: string]: string } = {
+          'clicking': 'ClickManager',
+          'buildings': 'PurchaseManager',
+          'upgrades': 'PurchaseManager',
+          'garden': 'GardenManager',
+          'wrinklers': 'WrinklerManager',
+          'goldenCookies': 'GoldenCookieHandler',
+          'dragon': 'DragonManager',
+          'pantheon': 'PantheonManager',
+          'grimoire': 'GrimoireManager',
+          'stockMarket': 'StockMarketManager',
+          'sugarLumps': 'SugarLumpManager',
+          'savings': 'SavingsManager',
+          'ascension': 'AscensionManager',
+          'season': 'SeasonHandler',
+          'achievements': 'AchievementHandler'
+        };
+
+        const timingKey = timingKeyMap[key];
+        const timing = (this.context.moduleTimings && timingKey) ? this.context.moduleTimings[timingKey] : 0;
+        const timingDisplay = timing > 0 ? `<span style="color: #666; font-size: 9px; margin-left: 4px;">(${timing.toFixed(2)}ms)</span>` : '';
+
         let cardHtml = '<div style="padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + '; border-radius: 4px;">';
         cardHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-        cardHtml += '<span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>';
+        cardHtml += '<div><span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>' + timingDisplay + '</div>';
         cardHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
         cardHtml += '</div>';
         cardHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
@@ -726,8 +760,8 @@ export class Dashboard {
 
       // Render all modules into a single grid
       let modulesHtml = '';
-      for (const { status } of allModules) {
-        modulesHtml += renderModuleCard(status);
+      for (const { key, status } of allModules) {
+        modulesHtml += renderModuleCard(key, status);
       }
 
       if (modulesHtml === '') {

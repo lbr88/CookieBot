@@ -37,7 +37,7 @@ export declare class PantheonManager {
      * @param godName Name of the spirit (e.g., 'mother', 'decadence')
      * @param force If 1, forces use of 1 swap. If 0, requires 3 swaps available.
      */
-    private assignSpirit;
+    assignSpirit(slot: number, godName: string, force: number): void;
     /**
      * Remove a spirit from a pantheon slot
      * @param slot 0=Diamond, 1=Ruby, 2=Jade
