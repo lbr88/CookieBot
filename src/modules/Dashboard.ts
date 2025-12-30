@@ -416,22 +416,22 @@ export class Dashboard {
 
       // Render module statuses
       const moduleOrder: (keyof ModuleStatuses)[] = [
+        'achievements',
+        'ascension',
         'clicking',
         'buildings',
         'upgrades',
+        'goldenCookies',
+        'savings',
         'garden',
         'wrinklers',
-        'goldenCookies',
         'dragon',
         'pantheon',
         'grimoire',
         'stockMarket',
         'sugarLumps',
-        'savings',
-        'ascension',
         'season',
-        'nightMode',
-        'achievements'
+        'nightMode'
       ];
 
       // Map status to colors
@@ -444,29 +444,15 @@ export class Dashboard {
         'error': '#f00'
       };
 
-      // Collect all modules and sort by priority (active/blocked first, then others)
-      const allModules: Array<{ key: keyof ModuleStatuses; status: any; priority: number }> = [];
+      // Collect all modules in persistent order
+      const allModules: Array<{ key: keyof ModuleStatuses; status: any }> = [];
 
       for (const key of moduleOrder) {
         const status = statuses[key];
         if (!status) continue;
 
-        // Priority: active/blocked = 0, waiting/error = 1, idle/disabled = 2
-        let priority = 2;
-        if (status.status === 'active' || status.status === 'blocked') {
-          priority = 0;
-        } else if (status.status === 'waiting' || status.status === 'error') {
-          priority = 1;
-        }
-
-        allModules.push({ key, status, priority });
+        allModules.push({ key, status });
       }
-
-      // Sort by priority, then by module name
-      allModules.sort((a, b) => {
-        if (a.priority !== b.priority) return a.priority - b.priority;
-        return a.status.module.localeCompare(b.status.module);
-      });
 
       // Helper function to render a module card
       const renderModuleCard = (key: string, status: any): string => {
