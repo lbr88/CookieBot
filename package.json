@@ -1,10 +1,11 @@
 {
   "name": "cookiebot",
-  "version": "2.052-72",
+  "version": "2.052-73",
   "description": "Automated bot for Cookie Clicker game",
   "main": "dist/cookieAutoPlayBeta.js",
   "scripts": {
     "build": "node scripts/bump-version.js && webpack --mode production && node scripts/post-build.js && node scripts/build-userscript.js",
+    "cleanup": "node scripts/cleanup-builds.js",
     "dev": "webpack --mode development --watch",
     "type-check": "tsc --noEmit",
     "test": "node tests/run_all.js",
