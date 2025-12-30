@@ -121,7 +121,7 @@ export class Dashboard {
     // Create mini modules container (hidden by default)
     const miniModules = document.createElement('div');
     miniModules.id = 'dashMiniModules';
-    miniModules.style.cssText = 'display: none; flex: 1; justify-content: center; gap: 16px; align-items: center; overflow: hidden; white-space: nowrap; margin: 0 16px;';
+    miniModules.style.cssText = 'display: none; flex: 1; justify-content: flex-start; gap: 16px; align-items: center; overflow: hidden; white-space: nowrap; margin: 0 16px;';
 
     // Create right section (Toggle)
     const toggleBtn = document.createElement('span');
@@ -629,33 +629,7 @@ export class Dashboard {
           return true;
         });
 
-        // If we have both buildings and upgrades, try to determine which is the "real" target
-        const hasBuilding = interestingModules.find(m => m.key === 'buildings');
-        const hasUpgrade = interestingModules.find(m => m.key === 'upgrades');
-
-        if (hasBuilding && hasUpgrade) {
-          const bIndex = interestingModules.findIndex(m => m.key === 'buildings');
-          const uIndex = interestingModules.findIndex(m => m.key === 'upgrades');
-
-          if (bIndex !== -1 && uIndex !== -1) {
-            const b = interestingModules[bIndex];
-            const u = interestingModules[uIndex];
-
-            // If one is active and the other is waiting, prioritize active
-            if (b.status.status === 'active' && u.status.status !== 'active') {
-              interestingModules.splice(uIndex, 1);
-            } else if (u.status.status === 'active' && b.status.status !== 'active') {
-              interestingModules.splice(bIndex, 1);
-            } else {
-              // If both are same status (e.g. both waiting), remove upgrades to save space
-              // (Assuming buildings is the primary goal or they are redundant)
-              interestingModules.splice(uIndex, 1);
-            }
-          }
-        }
-
-        // Take first 4 modules
-        interestingModules = interestingModules.slice(0, 4);
+        // Show all interesting modules (no limit, no deduplication)
 
         if (interestingModules.length === 0) {
           miniModulesContainer.innerHTML = '<span style="color: #888; font-size: 10px;">Idle</span>';

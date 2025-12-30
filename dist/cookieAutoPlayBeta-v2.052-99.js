@@ -3089,7 +3089,7 @@ class PurchaseManager {
             }
             return {
                 module: 'Upgrades',
-                status: 'idle',
+                status: 'waiting',
                 currentAction: 'Waiting for first upgrade purchase',
                 reason: 'Bot does not auto-buy first upgrade (Hardcore achievement protection)',
                 nextAction: availableUpgrades > 0 ? `${availableUpgrades} upgrade${availableUpgrades !== 1 ? 's' : ''} available to purchase manually` : 'No upgrades unlocked yet',
@@ -9808,7 +9808,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-100';
+AutoPlay_AutoPlay.version = '2.052-99';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts
