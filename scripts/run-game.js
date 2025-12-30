@@ -38,6 +38,9 @@ const formatNumber = (num) => {
   console.log('  [m] - Show module status');
   console.log('  [l] - Toggle console logging');
   console.log('  [c] - Click big cookie');
+  console.log('  [+] - Increase Game FPS (+30)');
+  console.log('  [-] - Decrease Game FPS (-30)');
+  console.log('  [0] - Reset Game FPS (30)');
   console.log('  [q] - Quit');
 
   try {
@@ -68,7 +71,8 @@ const formatNumber = (num) => {
         try {
           const stats = JSON.parse(text.substring(14));
           const time = new Date().toLocaleTimeString();
-          console.log(`[${time}] 🍪 ${stats.cookiesStr} | CPS: ${stats.cpsStr} | Bld: ${stats.buildings} | Upg: ${stats.upgrades} | Lumps: ${Math.floor(stats.lumps)}`);
+          const lumps = stats.lumps === -1 ? 'Locked' : Math.floor(stats.lumps);
+          console.log(`[${time}] 🍪 ${stats.cookiesStr} | CPS: ${stats.cpsStr} | Bld: ${stats.buildings} | Upg: ${stats.upgrades} | Lumps: ${lumps}`);
           console.log(`           Target: ${stats.buyStatus} | Ach: ${stats.achStatus} | Asc: ${stats.ascStatus}`);
         } catch (e) {
           console.error('Failed to parse status update:', e);
@@ -363,6 +367,33 @@ Dragon Level: ${Game.dragonLevel}
           return `Console Logging: ${current ? 'OFF' : 'ON'}`;
         });
         console.log(result);
+      }
+
+      if (key.name === '0') {
+        const fps = await page.evaluate(() => {
+          if (typeof Game === 'undefined') return 0;
+          Game.fps = 30;
+          return Game.fps;
+        });
+        console.log(`Game FPS reset to ${fps}`);
+      }
+
+      if (str === '+' || key.name === 'equals') { // + is usually shift+=
+        const fps = await page.evaluate(() => {
+          if (typeof Game === 'undefined') return 0;
+          Game.fps += 30;
+          return Game.fps;
+        });
+        console.log(`Game FPS increased to ${fps}`);
+      }
+
+      if (str === '-' || key.name === 'minus') {
+        const fps = await page.evaluate(() => {
+          if (typeof Game === 'undefined') return 0;
+          Game.fps = Math.max(30, Game.fps - 30);
+          return Game.fps;
+        });
+        console.log(`Game FPS decreased to ${fps}`);
       }
     });
 

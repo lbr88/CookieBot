@@ -1016,7 +1016,7 @@ class PurchaseManager {
         if (!building)
             return false;
         const price = building.getSumPrice(checkAmount);
-        if (price <= Game.cookies - this.context.savingsGoal) {
+        if (price < Game.cookies - this.context.savingsGoal) {
             building.buy(buyAmount);
             this.context.logAction('Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''), Beautify(price) + ' cookies');
             this.context.hyperActive = true; // might buy more soon
@@ -1129,7 +1129,7 @@ class PurchaseManager {
      * @returns true if purchase was made
      */
     buyUpgrade(upgrade, bypass = true) {
-        if (upgrade.getPrice() <= Game.cookies - this.context.savingsGoal) {
+        if (upgrade.getPrice() < Game.cookies - this.context.savingsGoal) {
             const price = upgrade.getPrice();
             upgrade.buy(bypass);
             this.context.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
@@ -1226,7 +1226,7 @@ class PurchaseManager {
         if (this.state.nextPurchase && this.state.nextPurchaseType === 'building') {
             const price = this.state.nextPurchasePrice || 0;
             const available = Game.cookies - this.context.savingsGoal;
-            const canAfford = price <= available;
+            const canAfford = price < available;
             // Calculate progress
             const progressPercent = Math.min(100, (available / price) * 100);
             const progressColor = canAfford ? '#6f6' : (progressPercent > 50 ? '#fc6' : '#f66');
@@ -1329,7 +1329,7 @@ class PurchaseManager {
         if (this.state.nextPurchase && this.state.nextPurchaseType === 'upgrade') {
             const price = this.state.nextPurchasePrice || 0;
             const available = Game.cookies - this.context.savingsGoal;
-            const canAfford = price <= available;
+            const canAfford = price < available;
             // Calculate progress
             const progressPercent = Math.min(100, (available / price) * 100);
             const progressColor = canAfford ? '#6f6' : (progressPercent > 50 ? '#fc6' : '#f66');
@@ -8214,7 +8214,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-78';
+AutoPlay_AutoPlay.version = '2.052-77';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

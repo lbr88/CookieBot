@@ -425,21 +425,21 @@ export class Dashboard {
 
       // Render module statuses
       const moduleOrder: (keyof ModuleStatuses)[] = [
-        'achievements',
-        'ascension',
-        'clicking',
         'buildings',
         'upgrades',
-        'goldenCookies',
+        'achievements',
+        'ascension',
         'savings',
-        'garden',
+        'clicking',
+        'goldenCookies',
         'wrinklers',
+        'season',
+        'garden',
         'dragon',
         'pantheon',
         'grimoire',
         'stockMarket',
         'sugarLumps',
-        'season',
         'nightMode'
       ];
 

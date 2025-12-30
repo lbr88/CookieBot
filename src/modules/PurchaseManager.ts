@@ -341,7 +341,7 @@ export class PurchaseManager {
     if (!building) return false;
 
     const price = building.getSumPrice(checkAmount);
-    if (price < Game.cookies - this.context.savingsGoal) {
+    if (price <= Game.cookies - this.context.savingsGoal) {
       building.buy(buyAmount);
       this.context.logAction(
         'Bought ' + building.name + (buyAmount > 1 ? ' x' + buyAmount : ''),
@@ -477,7 +477,7 @@ export class PurchaseManager {
    * @returns true if purchase was made
    */
   buyUpgrade(upgrade: Upgrade, bypass: boolean = true): boolean {
-    if (upgrade.getPrice() < Game.cookies - this.context.savingsGoal) {
+    if (upgrade.getPrice() <= Game.cookies - this.context.savingsGoal) {
       const price = upgrade.getPrice();
       upgrade.buy(bypass);
       this.context.logAction('Upgraded: ' + upgrade.name, Beautify(price) + ' cookies');
@@ -586,7 +586,7 @@ export class PurchaseManager {
     if (this.state.nextPurchase && this.state.nextPurchaseType === 'building') {
       const price = this.state.nextPurchasePrice || 0;
       const available = Game.cookies - this.context.savingsGoal;
-      const canAfford = price < available;
+      const canAfford = price <= available;
 
       // Calculate progress
       const progressPercent = Math.min(100, (available / price) * 100);
@@ -697,7 +697,7 @@ export class PurchaseManager {
     if (this.state.nextPurchase && this.state.nextPurchaseType === 'upgrade') {
       const price = this.state.nextPurchasePrice || 0;
       const available = Game.cookies - this.context.savingsGoal;
-      const canAfford = price < available;
+      const canAfford = price <= available;
 
       // Calculate progress
       const progressPercent = Math.min(100, (available / price) * 100);
