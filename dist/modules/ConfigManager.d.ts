@@ -59,13 +59,5 @@ export declare class ConfigManager {
      * Toggle dashboard visibility via config
      */
     private toggleDashboardConfig;
-    /**
-     * Clean the log
-     */
-    private cleanLog;
-    /**
-     * Show the log
-     */
-    private showLog;
 }
 //# sourceMappingURL=ConfigManager.d.ts.map

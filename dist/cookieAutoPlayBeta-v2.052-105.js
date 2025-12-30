@@ -8938,7 +8938,7 @@ class AutoPlay_AutoPlay {
             ],
             label: ['Normal (30 fps)', 'Fast (60 fps)', 'Faster (144 fps)', 'Hyper (300 fps)'],
             desc: 'Adjust game speed (FPS). Warning: High speeds may crash the game. Not saved.'
-        }, 0, 'Cheats');
+        }, 0);
         this.configManager.registerOption('FPS', {
             options: [
                 { value: 0, label: 'OFF' },
@@ -9838,7 +9838,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-106';
+AutoPlay_AutoPlay.version = '2.052-105';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

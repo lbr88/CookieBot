@@ -3,7 +3,7 @@
  */
 import type { AutoPlayConfig, AutoPlayState } from './types/autoplay';
 export default class AutoPlay {
-    static readonly version = "2.052-104";
+    static readonly version = "2.052-106";
     private config;
     private state;
     Config: {

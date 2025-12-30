@@ -231,8 +231,6 @@ export class ConfigManager {
           if (key === 'BotMode') handler = () => this.setBotMode();
           else if (key === 'ShowDashboard') handler = () => this.toggleDashboardConfig();
           else if (key === 'GameSpeed') handler = () => this.setGameSpeed();
-          else if (key === 'CleanLog') handler = () => this.cleanLog();
-          else if (key === 'ShowLog') handler = () => this.showLog();
 
           frag.appendChild(listing(key, handler));
         }
@@ -289,40 +287,6 @@ export class ConfigManager {
       if (this.onDashboardToggle) {
         this.onDashboardToggle();
       }
-    }
-  }
-
-  /**
-   * Clean the log
-   */
-  private cleanLog(): void {
-    try {
-      window.localStorage.setItem('autoplayLog', '');
-    } catch (e) {
-      console.error('Failed to clean log:', e);
-    }
-  }
-
-  /**
-   * Show the log
-   */
-  private showLog(): void {
-    let theLog = '';
-    try {
-      theLog = window.localStorage.getItem('autoplayLog') || '';
-    } catch (e) {
-      theLog = '';
-    }
-    if (typeof Game !== 'undefined' && Game.Prompt) {
-      Game.Prompt(
-        '<h3>Cookie Bot Log</h3><div class="block">' +
-        'This is the log of the bot with saves at important stages.<br>' +
-        'Copy it and use it as you like.</div>' +
-        '<div class="block"><textarea id="textareaPrompt" ' +
-        'style="width:100%;height:128px;" readonly>' +
-        theLog + '</textarea></div>',
-        ['All done!']
-      );
     }
   }
 }

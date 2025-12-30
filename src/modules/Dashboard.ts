@@ -47,22 +47,6 @@ export class Dashboard {
       desc: 'Toggle dashboard visibility'
     }, 1, 'Display');
 
-    this.configManager.registerOption('CleanLog', {
-      options: [
-        { value: 0, label: 'Clean Log' }
-      ],
-      label: ['Clean Log'], // Legacy support
-      desc: 'Cleaning the log'
-    }, 0, 'Logging');
-
-    this.configManager.registerOption('ShowLog', {
-      options: [
-        { value: 0, label: 'Show Log' }
-      ],
-      label: ['Show Log'], // Legacy support
-      desc: 'Showing the log'
-    }, 0, 'Logging');
-
     this.configManager.registerOption('ConsoleLog', {
       options: [
         { value: 0, label: 'OFF' },

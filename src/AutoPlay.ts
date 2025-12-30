@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-104';
+  static readonly version = '2.052-106';
 
   // State
   private config: AutoPlayConfig;
@@ -314,7 +314,7 @@ export default class AutoPlay {
       ],
       label: ['Normal (30 fps)', 'Fast (60 fps)', 'Faster (144 fps)', 'Hyper (300 fps)'],
       desc: 'Adjust game speed (FPS). Warning: High speeds may crash the game. Not saved.'
-    }, 0);
+    }, 0, 'Cheats');
 
     this.configManager.registerOption('FPS', {
       options: [
