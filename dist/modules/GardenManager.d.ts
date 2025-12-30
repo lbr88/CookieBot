@@ -26,6 +26,10 @@ export declare class GardenManager {
     private context;
     constructor(context: AutoPlayContext);
     /**
+     * Safely confirm a prompt, handling cases where the game loop might be paused
+     */
+    private safeConfirm;
+    /**
      * Freeze or unfreeze the garden
      * @param freeze true to freeze, false to unfreeze
      */

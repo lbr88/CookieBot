@@ -45,6 +45,21 @@ export class GardenManager {
   }
 
   /**
+   * Safely confirm a prompt, handling cases where the game loop might be paused
+   */
+  private safeConfirm(): void {
+    // Try synchronous confirm first (works if game is not paused)
+    Game.ConfirmPrompt();
+
+    // Fallback to async confirm (works if game loop is paused by the prompt)
+    setTimeout(() => {
+      if (Game.promptOn) {
+        Game.ConfirmPrompt();
+      }
+    }, 100);
+  }
+
+  /**
    * Freeze or unfreeze the garden
    * @param freeze true to freeze, false to unfreeze
    */
@@ -78,9 +93,10 @@ export class GardenManager {
 
     // Check if ready to sacrifice for "Seedless to nay" achievement (382)
     if (this.gardenSacrificeReady(garden)) {
+      if (Game.promptOn) return;
       this.plantCookies = false;
       garden.askConvert();
-      Game.ConfirmPrompt();
+      this.safeConfirm();
       this.plantList = [0, 0, 0, 0];
       return;
     }
@@ -91,9 +107,10 @@ export class GardenManager {
       !this.context.finished &&
         !this.harvestPlant &&
       !this.context.lumpRelatedAchievements.every((a) => Game.AchievementsById[a].won)) {
+      if (Game.promptOn) return;
       this.plantCookies = false;
       garden.askConvert();
-      Game.ConfirmPrompt();
+      this.safeConfirm();
       this.plantList = [0, 0, 0, 0];
     }
   }

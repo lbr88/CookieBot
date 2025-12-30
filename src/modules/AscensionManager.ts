@@ -56,6 +56,21 @@ export class AscensionManager {
   }
 
   /**
+   * Safely confirm a prompt, handling cases where the game loop might be paused
+   */
+  private safeConfirm(): void {
+    // Try synchronous confirm first (works if game is not paused)
+    Game.ConfirmPrompt();
+
+    // Fallback to async confirm (works if game loop is paused by the prompt)
+    setTimeout(() => {
+      if (Game.promptOn) {
+        Game.ConfirmPrompt();
+      }
+    }, 100);
+  }
+
+  /**
    * Main handler for ascension logic
    * Checks achievements, prestige levels, and decides when to ascend
    */
@@ -442,7 +457,7 @@ export class AscensionManager {
       if (Game.dragonLevel >= 9) {
         Game.specialTab = "dragon";
         Game.SetDragonAura(5, 0);
-        Game.ConfirmPrompt();
+        this.safeConfirm();
         Game.ToggleSpecialMenu(0);
       }
       Game.ObjectsById.forEach((e: any) => { e.sell(e.amount); });
@@ -491,13 +506,13 @@ export class AscensionManager {
     if (!Game.Achievements["Neverclick"].won || !Game.Achievements["Hardcore"].won) {
       Game.PickAscensionMode();
       Game.nextAscensionMode = 1;
-      Game.ConfirmPrompt();
+      this.safeConfirm();
     }
 
     if (this.context.endPhase() && this.context.mustRebornAscend()) {
       Game.PickAscensionMode();
       Game.nextAscensionMode = 1;
-      Game.ConfirmPrompt();
+      this.safeConfirm();
     }
 
     Game.Reincarnate(true);
@@ -579,7 +594,7 @@ export class AscensionManager {
       }
     }
 
-    Game.ConfirmPrompt();
+    this.safeConfirm();
   }
 
   /**

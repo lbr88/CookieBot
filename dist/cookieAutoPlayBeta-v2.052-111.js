@@ -4849,19 +4849,6 @@ class AscensionManager {
         }, 1, 'Strategy');
     }
     /**
-     * Safely confirm a prompt, handling cases where the game loop might be paused
-     */
-    safeConfirm() {
-        // Try synchronous confirm first (works if game is not paused)
-        Game.ConfirmPrompt();
-        // Fallback to async confirm (works if game loop is paused by the prompt)
-        setTimeout(() => {
-            if (Game.promptOn) {
-                Game.ConfirmPrompt();
-            }
-        }, 100);
-    }
-    /**
      * Main handler for ascension logic
      * Checks achievements, prestige levels, and decides when to ascend
      */
@@ -5197,7 +5184,7 @@ class AscensionManager {
             if (Game.dragonLevel >= 9) {
                 Game.specialTab = "dragon";
                 Game.SetDragonAura(5, 0);
-                this.safeConfirm();
+                Game.ConfirmPrompt();
                 Game.ToggleSpecialMenu(0);
             }
             Game.ObjectsById.forEach((e) => { e.sell(e.amount); });
@@ -5240,12 +5227,12 @@ class AscensionManager {
         if (!Game.Achievements["Neverclick"].won || !Game.Achievements["Hardcore"].won) {
             Game.PickAscensionMode();
             Game.nextAscensionMode = 1;
-            this.safeConfirm();
+            Game.ConfirmPrompt();
         }
         if (this.context.endPhase() && this.context.mustRebornAscend()) {
             Game.PickAscensionMode();
             Game.nextAscensionMode = 1;
-            this.safeConfirm();
+            Game.ConfirmPrompt();
         }
         Game.Reincarnate(true);
         this.state.resetTime = Date.now(); // save the current date for things that need to be delayed after reincarnating
@@ -5315,7 +5302,7 @@ class AscensionManager {
                 break;
             }
         }
-        this.safeConfirm();
+        Game.ConfirmPrompt();
     }
     /**
      * Get current ascension state (for external access)
@@ -9937,7 +9924,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-112';
+AutoPlay_AutoPlay.version = '2.052-111';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

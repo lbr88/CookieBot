@@ -16,6 +16,10 @@ export declare class AscensionManager {
     private context;
     constructor(context: AutoPlayContext);
     /**
+     * Safely confirm a prompt, handling cases where the game loop might be paused
+     */
+    private safeConfirm;
+    /**
      * Main handler for ascension logic
      * Checks achievements, prestige levels, and decides when to ascend
      */

@@ -11,15 +11,37 @@ declare const l: (id: string) => HTMLElement | null;
 
 export class AchievementHandler {
   private context: AutoPlayContext;
+  private lastPromptTime: number = 0;
+  private originalBakeryName: string = '';
 
   constructor(context: AutoPlayContext) {
     this.context = context;
   }
 
   /**
+   * Safely confirm a prompt, handling cases where the game loop might be paused
+   */
+  private safeConfirm(): void {
+    // Try synchronous confirm first (works if game is not paused)
+    Game.ConfirmPrompt();
+
+    // Fallback to async confirm (works if game loop is paused by the prompt)
+    setTimeout(() => {
+      if (Game.promptOn) {
+        Game.ConfirmPrompt();
+      }
+    }, 100);
+
+    this.lastPromptTime = Date.now();
+  }
+
+  /**
    * Handle small achievements that can be obtained through simple interactions
    */
   handleSmallAchievements(): void {
+    // Throttle prompts to prevent spamming
+    if (Date.now() - this.lastPromptTime < 2000) return;
+
     // Tabloid addiction - click news ticker 50 times
     if (!Game.AchievementsById[ACHIEVEMENT_IDS.TABLOID_ADDICTION].won) {
       for (let i = 0; i < 50; i++) {
@@ -38,28 +60,42 @@ export class AchievementHandler {
     }
 
     // God complex - name bakery "Orteil"
-    const bakeryName = Game.bakeryName;
     if (!Game.AchievementsById[ACHIEVEMENT_IDS.GOD_COMPLEX].won) {
-      Game.bakeryName = 'Orteil';
+      if (Game.promptOn) return; // Wait for any existing prompt
+
+      if (Game.bakeryName !== 'Orteil') {
+        this.originalBakeryName = Game.bakeryName;
+        Game.bakeryName = 'Orteil';
+        Game.bakeryNamePrompt();
+        this.safeConfirm();
+        return; // Wait for next tick/prompt close
+      }
+    } else if (this.originalBakeryName && Game.bakeryName === 'Orteil') {
+      // Restore name after getting the achievement
+      if (Game.promptOn) return;
+      Game.bakeryName = this.originalBakeryName;
       Game.bakeryNamePrompt();
-      Game.ConfirmPrompt();
-      Game.bakeryName = bakeryName;
-      Game.bakeryNamePrompt();
-      Game.ConfirmPrompt();
+      this.safeConfirm();
+      this.originalBakeryName = '';
+      return;
     }
 
     // What's in a name - add robot name to bakery name
     if (!Game.AchievementsById[ACHIEVEMENT_IDS.WHATS_IN_A_NAME].won) {
-      Game.bakeryName = this.context.robotName + bakeryName;
+      if (Game.promptOn) return;
+      Game.bakeryName = this.context.robotName + Game.bakeryName;
       Game.bakeryNamePrompt();
-      Game.ConfirmPrompt();
+      this.safeConfirm();
+      return;
     }
 
     // Remove robot name if it's still there
     if (Game.bakeryName.slice(0, this.context.robotName.length) === this.context.robotName) {
+      if (Game.promptOn) return;
       Game.bakeryName = Game.bakeryName.slice(this.context.robotName.length);
       Game.bakeryNamePrompt();
-      Game.ConfirmPrompt();
+      this.safeConfirm();
+      return;
     }
 
     // Cheated cookies taste awful - get this after all other achievements
