@@ -241,22 +241,7 @@ const { initializeFullEnvironment } = require('./utils/setup');
     // 3. Wait for the periodic check (runs every 2000ms, so wait 4000ms to be safe)
     console.log('Waiting for periodic fix (4s)...');
 
-    // Debug: check if render loop is active
-    await page.evaluate(() => {
-      window.renderCount = 0;
-      // Hook into render to count calls
-      const dashboard = window.AutoPlay.dashboard;
-      const originalRender = dashboard.render;
-      dashboard.render = function () {
-        window.renderCount = (window.renderCount || 0) + 1;
-        return originalRender.apply(this, arguments);
-      };
-    });
-
     await new Promise(r => setTimeout(r, 4000));
-
-    const renderCount = await page.evaluate(() => window.renderCount);
-    console.log(`Render called ${renderCount} times during wait.`);
 
     // 4. Verify it is fixed
     const fixedBottom = await page.evaluate(() => {

@@ -72,6 +72,15 @@ export class Dashboard {
       desc: 'Log activity to browser console'
     }, 0, 'Logging');
 
+    this.configManager.registerOption('DashboardCollapsed', {
+      options: [
+        { value: 0, label: 'Expanded' },
+        { value: 1, label: 'Collapsed' }
+      ],
+      label: ['Expanded', 'Collapsed'],
+      desc: 'Dashboard collapse state'
+    }, 0, 'Display');
+
     this.configManager.onDashboardToggle = () => {
       setTimeout(() => {
         this.positionDashboard();
@@ -155,6 +164,14 @@ export class Dashboard {
 
     dashboard.appendChild(header);
     dashboard.appendChild(content);
+
+    // Initialize collapse state from config
+    if (this.configManager.getConfig().DashboardCollapsed === 1) {
+      this.dashboardCollapsed = true;
+      content.style.display = 'none';
+      miniModules.style.display = 'flex';
+      toggleBtn.textContent = '▲ Expand';
+    }
 
     // Append to wrapper element
     const wrapper = document.getElementById('wrapper');
@@ -285,6 +302,9 @@ export class Dashboard {
     const toggle = document.getElementById('dashboardToggle');
 
     this.dashboardCollapsed = !this.dashboardCollapsed;
+
+    // Save state
+    this.configManager.updateConfig({ DashboardCollapsed: this.dashboardCollapsed ? 1 : 0 });
 
     if (this.dashboardCollapsed) {
       if (content) content.style.display = 'none';
