@@ -246,7 +246,7 @@ export function handleNotes(): void {
  * @returns Object with counts of missing items
  */
 export function status(
-  print: boolean = true
+  print: boolean = false
 ): {
   achievements: number;
   shadowAchievements: number;
@@ -268,8 +268,8 @@ export function status(
     if (!me.won && me.pool !== 'dungeon') {
       // Missing achievement
       if (print) {
-        const desc = me.ddesc.replace(/<q>.*?<\/q>/gi, '');
-        info(`Missing achievement #${me.id}: ${desc}`);
+        // const desc = me.ddesc.replace(/<q>.*?<\/q>/gi, '');
+        // info(`Missing achievement #${me.id}: ${desc}`);
       }
       if (me.pool === 'shadow') sach++;
       ach++;
@@ -282,7 +282,7 @@ export function status(
     if (!me.bought && me.pool !== 'debug' && me.pool !== 'toggle') {
       if (Game.resets && nonUp.includes(me.id)) continue;
       if (print) {
-        info(`Upgrade ${me.name} is missing.`);
+        // info(`Upgrade ${me.name} is missing.`);
       }
       up++;
     }
@@ -301,7 +301,7 @@ export function status(
     }
 
     if (print && myl) {
-      info(`${myl} sugar lumps missing for ${me.name}.`);
+      // info(`${myl} sugar lumps missing for ${me.name}.`);
     }
     lum += myl;
   }

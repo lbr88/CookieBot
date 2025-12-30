@@ -2994,15 +2994,6 @@ class AscensionManager {
             neverclickWarn: true,
             resetTime: Date.now()
         };
-        // Initialize logged achievements to prevent spam on startup
-        if (Game && Game.Achievements) {
-            for (const key in Game.Achievements) {
-                const achiev = Game.Achievements[key];
-                if (achiev.won) {
-                    this.state.loggedAchievements[achiev.id] = true;
-                }
-            }
-        }
         // Register configuration options
         this.context.configManager.registerOption('HardcoreMode', {
             id: 'HardcoreMode',
@@ -4622,10 +4613,6 @@ class Dashboard {
             if (this.actionHistory.length > this.maxHistorySize) {
                 this.actionHistory.pop(); // Remove oldest
             }
-            // Log to console if enabled
-            if (this.configManager.getConfig().ConsoleLog) {
-                console.log(`[Action] ${action} ${details ? `(${details})` : ''}`);
-            }
             this.updateDashboard(); // Refresh display
         }
         catch (e) {
@@ -4652,10 +4639,6 @@ class Dashboard {
             this.statusHistory.unshift(entry); // Add to beginning
             if (this.statusHistory.length > this.maxHistorySize) {
                 this.statusHistory.pop(); // Remove oldest
-            }
-            // Log to console if enabled
-            if (this.configManager.getConfig().ConsoleLog) {
-                console.log(`[Status] [${statusType}] ${message} ${details ? `(${details})` : ''}`);
             }
             this.updateDashboard(); // Refresh display
         }
@@ -8214,7 +8197,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-72';
+AutoPlay_AutoPlay.version = '2.052-56';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

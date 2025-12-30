@@ -30,6 +30,16 @@ export class AscensionManager {
       resetTime: Date.now()
     };
 
+    // Initialize logged achievements to prevent spam on startup
+    if (Game && Game.Achievements) {
+      for (const key in Game.Achievements) {
+        const achiev = Game.Achievements[key];
+        if (achiev.won) {
+          this.state.loggedAchievements[achiev.id] = true;
+        }
+      }
+    }
+
     // Register configuration options
     this.context.configManager.registerOption('HardcoreMode', {
       id: 'HardcoreMode',

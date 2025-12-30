@@ -688,6 +688,11 @@ export class Dashboard {
         this.actionHistory.pop(); // Remove oldest
       }
 
+      // Log to console if enabled
+      if (this.configManager.getConfig().ConsoleLog) {
+        console.log(`[Action] ${action} ${details ? `(${details})` : ''}`);
+      }
+
       this.updateDashboard(); // Refresh display
     } catch (e) {
       console.log('Log action error:', e);
@@ -715,6 +720,11 @@ export class Dashboard {
       this.statusHistory.unshift(entry); // Add to beginning
       if (this.statusHistory.length > this.maxHistorySize) {
         this.statusHistory.pop(); // Remove oldest
+      }
+
+      // Log to console if enabled
+      if (this.configManager.getConfig().ConsoleLog) {
+        console.log(`[Status] [${statusType}] ${message} ${details ? `(${details})` : ''}`);
       }
 
       this.updateDashboard(); // Refresh display

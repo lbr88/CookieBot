@@ -9,7 +9,7 @@ const useFirefox = !useChrome; // Default to Firefox
 
 // Parse context flag
 const contextArg = process.argv.find(arg => arg.startsWith('--context='));
-const contextName = contextArg ? contextArg.split('=')[1] : null;
+const contextName = contextArg ? contextArg.split('=')[1] : 'default';
 
 // Helper to format numbers
 const formatNumber = (num) => {
@@ -103,18 +103,82 @@ const formatNumber = (num) => {
       try {
         const stats = await page.evaluate(() => {
           if (typeof Game === 'undefined' || !Game.ready) return null;
+
+          let ascStatus = '-';
+          let achStatus = '-';
+          let buyStatus = 'Idle';
+
+          // Helper to format time
+          const formatTime = (ms) => {
+            if (!ms || !isFinite(ms)) return '--';
+            const s = Math.ceil(ms / 1000);
+            if (s < 60) return s + 's';
+            if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+            return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+          };
+
+          if (typeof AutoPlay !== 'undefined') {
+            // Ascension
+            if (AutoPlay.ascensionManager && AutoPlay.ascensionManager.getStatus) {
+              const s = AutoPlay.ascensionManager.getStatus();
+              if (s) ascStatus = s.currentAction;
+            }
+
+            // Achievement
+            if (AutoPlay.achievementHandler && AutoPlay.achievementHandler.getStatus) {
+              const s = AutoPlay.achievementHandler.getStatus();
+              if (s) achStatus = s.currentAction;
+            }
+            if (Game.AchievementsOwned !== undefined) {
+              achStatus += ` (${Game.AchievementsOwned}/${Game.AchievementsN})`;
+            }
+
+            // Purchase
+            if (AutoPlay.purchaseManager) {
+              const pm = AutoPlay.purchaseManager;
+              const b = pm.getBuildingStatus ? pm.getBuildingStatus() : null;
+              const u = pm.getUpgradeStatus ? pm.getUpgradeStatus() : null;
+
+              let active = null;
+              if (b && b.status === 'active') active = b;
+              else if (u && u.status === 'active') active = u;
+
+              if (active && active.details) {
+                const name = active.details['Next Building'] || active.details['Next Upgrade'] || 'Unknown';
+
+                let progressStr = '';
+                if (active.progress) {
+                  const current = Beautify(Math.floor(active.progress.current), 0);
+                  const target = Beautify(Math.floor(active.progress.target), 0);
+                  progressStr = ` (${current}/${target})`;
+                }
+
+                let timeStr = '';
+                if (active.timeRemaining) {
+                  timeStr = ` [${formatTime(active.timeRemaining)}]`;
+                }
+
+                buyStatus = `${name}${progressStr}${timeStr}`;
+              }
+            }
+          }
+
           return {
-            cookies: Game.cookies,
-            cps: Game.cookiesPs,
+            cookiesStr: Beautify(Math.floor(Game.cookies), 0),
+            cpsStr: Beautify(Game.cookiesPs),
             buildings: Game.BuildingsOwned,
             upgrades: Game.UpgradesOwned,
-            lumps: Game.lumps
+            lumps: Game.lumps,
+            ascStatus,
+            achStatus,
+            buyStatus
           };
         });
 
         if (stats) {
           const time = new Date().toLocaleTimeString();
-          console.log(`[${time}] 🍪 ${formatNumber(stats.cookies)} | CPS: ${formatNumber(stats.cps)} | Bld: ${stats.buildings} | Upg: ${stats.upgrades} | Lumps: ${Math.floor(stats.lumps)}`);
+          console.log(`[${time}] 🍪 ${stats.cookiesStr} | CPS: ${stats.cpsStr} | Bld: ${stats.buildings} | Upg: ${stats.upgrades} | Lumps: ${Math.floor(stats.lumps)}`);
+          console.log(`           Target: ${stats.buyStatus} | Ach: ${stats.achStatus} | Asc: ${stats.ascStatus}`);
         }
 
         // Auto-save context every minute
@@ -249,6 +313,16 @@ Dragon Level: ${Game.dragonLevel}
           ];
 
           return list.map(item => {
+            if (item.name === 'Purchase') {
+              const bStatus = item.mgr && item.mgr.getBuildingStatus ? item.mgr.getBuildingStatus() : null;
+              const uStatus = item.mgr && item.mgr.getUpgradeStatus ? item.mgr.getUpgradeStatus() : null;
+
+              let res = [];
+              if (bStatus) res.push(`Purchase (Buildings): [${bStatus.status}] ${bStatus.currentAction || ''}`);
+              if (uStatus) res.push(`Purchase (Upgrades): [${uStatus.status}] ${uStatus.currentAction || ''}`);
+              return res.length ? res.join('\n') : 'Purchase: N/A';
+            }
+
             const s = get(item.mgr);
             if (!s) return `${item.name}: N/A`;
             return `${item.name}: [${s.status}] ${s.currentAction || ''} ${s.reason ? '(' + s.reason + ')' : ''}`;

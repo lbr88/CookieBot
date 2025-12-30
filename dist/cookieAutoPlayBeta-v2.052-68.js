@@ -8214,7 +8214,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-72';
+AutoPlay_AutoPlay.version = '2.052-68';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts
@@ -8225,6 +8225,7 @@ AutoPlay_AutoPlay.version = '2.052-72';
 
 // Export AutoPlay class as default for webpack
 /* harmony default export */ const src = ((/* unused pure expression or super */ null && (AutoPlay)));
+// Test comment to trigger build
 // Auto-initialize when loaded and expose instance globally
 if (typeof Game !== 'undefined' && Game.ready) {
     const bot = new src_AutoPlay();

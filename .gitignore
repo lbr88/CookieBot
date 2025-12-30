@@ -31,3 +31,6 @@ src/Game.js
 saves/
 profiles/
 
+# Build artifacts
+scripts/.last-build-hash
+
