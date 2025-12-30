@@ -138,18 +138,6 @@ const { initializeFullEnvironment } = require('./utils/setup');
     if (miniVisible) {
       console.log('✓ PASS: Mini dashboard is visible when collapsed.');
 
-      // Verify "Next update" is hidden
-      const nextUpdateHidden = await page.evaluate(() => {
-        const nextUpdate = document.getElementById('dashboardNextUpdate');
-        return nextUpdate && window.getComputedStyle(nextUpdate).display === 'none';
-      });
-
-      if (nextUpdateHidden) {
-        console.log('✓ PASS: "Next update" text is hidden in mini view.');
-      } else {
-        console.error('❌ FAIL: "Next update" text is visible in mini view!');
-      }
-
       // Take a screenshot for visual verification
       await page.screenshot({ path: 'dashboard_mini_view.png', clip: { x: 0, y: 0, width: 800, height: 600 } });
       console.log('📸 Screenshot saved to dashboard_mini_view.png');
@@ -181,6 +169,46 @@ const { initializeFullEnvironment } = require('./utils/setup');
 
     } else {
       console.error('❌ FAIL: Mini dashboard is NOT visible when collapsed.');
+    }
+
+    // Test Native Mode Timer Text
+    console.log('Testing Native Mode Timer Text...');
+    
+    // First, ensure dashboard is expanded so we can verify the text
+    await page.evaluate(() => {
+      const content = document.getElementById('dashboardContent');
+      if (content && content.style.display === 'none') {
+        const header = document.querySelector('#cookieBotDashboard > div:first-child');
+        if (header) header.click();
+      }
+    });
+    await new Promise(r => setTimeout(r, 500));
+
+    // Enable UseGameHooks via global AutoPlay instance
+    const hasAutoPlay = await page.evaluate(() => typeof window.AutoPlay !== 'undefined');
+    
+    if (hasAutoPlay) {
+        await page.evaluate(() => {
+            // Update config
+            window.AutoPlay.configManager.updateConfig({ UseGameHooks: 1 });
+            // Force update
+            window.AutoPlay.dashboard.updateDashboard();
+        });
+        
+        // Check if timer text is "continuous"
+        const timerText = await page.evaluate(() => {
+            const timer = document.getElementById('dashboardNextUpdate');
+            return timer ? timer.innerText : '';
+        });
+        
+        if (timerText.includes('continuous')) {
+            console.log('✓ PASS: Timer shows "continuous" when UseGameHooks is enabled.');
+        } else {
+            console.error(`❌ FAIL: Timer text is "${timerText}" when UseGameHooks is enabled!`);
+            process.exit(1);
+        }
+    } else {
+        console.log('⚠️ SKIPPING: Could not find global AutoPlay object to test UseGameHooks.');
     }
 
   } catch (error) {

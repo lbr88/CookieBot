@@ -40,6 +40,10 @@ export declare class ConfigManager {
      */
     private getConfigDisplay;
     /**
+     * Update configuration (for external access)
+     */
+    updateConfig(updates: Partial<Config>): void;
+    /**
      * Add menu preferences to the game menu
      */
     addMenuPref(): void;

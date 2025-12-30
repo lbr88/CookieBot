@@ -151,6 +151,19 @@ export class ConfigManager {
   }
 
   /**
+   * Update configuration (for external access)
+   */
+  updateConfig(updates: Partial<Config>): void {
+    for (const key in updates) {
+      const val = updates[key];
+      if (typeof val === 'number') {
+        this.config[key] = val;
+      }
+    }
+    this.saveConfig(this.config);
+  }
+
+  /**
    * Add menu preferences to the game menu
    */
   addMenuPref(): void {

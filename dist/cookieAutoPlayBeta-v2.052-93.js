@@ -5885,12 +5885,6 @@ class Dashboard {
         <span style="color: #6f6; font-size: 14px; font-weight: bold;">CookieBot Dashboard</span>
         <span id="dashboardNextUpdate" style="color: #9cf; font-size: 10px; opacity: 0.8;">Next update: checking...</span>
     `;
-        // Hide timer initially if using native hooks
-        if (this.configManager.getConfig().UseGameHooks === 1) {
-            const timer = leftSection.querySelector('#dashboardNextUpdate');
-            if (timer)
-                timer.style.display = 'none';
-        }
         // Create mini modules container (hidden by default)
         const miniModules = document.createElement('div');
         miniModules.id = 'dashMiniModules';
@@ -6085,8 +6079,8 @@ class Dashboard {
         const timerElement = document.getElementById('dashboardNextUpdate');
         if (!timerElement)
             return;
-        // Hide next update in mini view to save space
-        if (this.dashboardCollapsed) {
+        // Hide next update if using native game hooks (continuous update)
+        if (this.configManager.getConfig().UseGameHooks === 1) {
             timerElement.style.display = 'none';
             return;
         }
@@ -6094,13 +6088,8 @@ class Dashboard {
         try {
             let text = '';
             let color = '#9cf';
-            // Check if using Native Hooks (continuous update)
-            if (this.configManager.getConfig().UseGameHooks === 1) {
-                text = 'Next update: continuous';
-                color = '#6f6';
-            }
             // Check if AutoPlay has a deadline
-            else if (this.context && this.context.deadline) {
+            if (this.context && this.context.deadline) {
                 const now = Date.now();
                 const timeUntilUpdate = this.context.deadline - now;
                 if (timeUntilUpdate > 0) {
@@ -6767,18 +6756,6 @@ class ConfigManager {
             return option.label[value];
         }
         return 'Unknown';
-    }
-    /**
-     * Update configuration (for external access)
-     */
-    updateConfig(updates) {
-        for (const key in updates) {
-            const val = updates[key];
-            if (typeof val === 'number') {
-                this.config[key] = val;
-            }
-        }
-        this.saveConfig(this.config);
     }
     /**
      * Add menu preferences to the game menu
@@ -9832,7 +9809,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-97';
+AutoPlay_AutoPlay.version = '2.052-93';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

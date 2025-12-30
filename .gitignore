@@ -34,3 +34,4 @@ profiles/
 # Build artifacts
 scripts/.last-build-hash
 
+dashboard_mini_view.png

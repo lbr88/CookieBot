@@ -112,6 +112,12 @@ export class Dashboard {
         <span id="dashboardNextUpdate" style="color: #9cf; font-size: 10px; opacity: 0.8;">Next update: checking...</span>
     `;
 
+    // Hide timer initially if using native hooks
+    if (this.configManager.getConfig().UseGameHooks === 1) {
+      const timer = leftSection.querySelector('#dashboardNextUpdate') as HTMLElement;
+      if (timer) timer.style.display = 'none';
+    }
+
     // Create mini modules container (hidden by default)
     const miniModules = document.createElement('div');
     miniModules.id = 'dashMiniModules';
@@ -337,8 +343,13 @@ export class Dashboard {
       let text = '';
       let color = '#9cf';
 
+      // Check if using Native Hooks (continuous update)
+      if (this.configManager.getConfig().UseGameHooks === 1) {
+        text = 'Next update: continuous';
+        color = '#6f6';
+      }
       // Check if AutoPlay has a deadline
-      if (this.context && this.context.deadline) {
+      else if (this.context && this.context.deadline) {
         const now = Date.now();
         const timeUntilUpdate = this.context.deadline - now;
 
@@ -349,7 +360,7 @@ export class Dashboard {
           color = '#6f6';
         }
       } else {
-        text = 'Next update: continuous';
+        text = 'Next update: waiting...';
       }
 
       // Add tick stats if available

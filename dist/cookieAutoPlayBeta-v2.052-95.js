@@ -6769,18 +6769,6 @@ class ConfigManager {
         return 'Unknown';
     }
     /**
-     * Update configuration (for external access)
-     */
-    updateConfig(updates) {
-        for (const key in updates) {
-            const val = updates[key];
-            if (typeof val === 'number') {
-                this.config[key] = val;
-            }
-        }
-        this.saveConfig(this.config);
-    }
-    /**
      * Add menu preferences to the game menu
      */
     addMenuPref() {
@@ -9832,7 +9820,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-97';
+AutoPlay_AutoPlay.version = '2.052-95';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts
