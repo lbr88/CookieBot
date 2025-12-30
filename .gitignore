@@ -27,3 +27,7 @@ Thumbs.db
 # Game source
 src/Game.js
 
+# Local game runner data
+saves/
+profiles/
+

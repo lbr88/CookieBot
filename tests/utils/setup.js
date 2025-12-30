@@ -5,9 +5,12 @@ const path = require('path');
 /**
  * Launches a configured Puppeteer browser instance
  */
-async function launchBrowser() {
-  return await puppeteer.launch({
-    headless: "new",
+async function launchBrowser(options = {}) {
+  const headless = options.headless !== undefined ? options.headless : "new";
+  const browserType = options.browser || 'chrome';
+
+  const launchOptions = {
+    headless: headless,
     args: [
       '--mute-audio',
       '--no-sandbox',
@@ -15,13 +18,25 @@ async function launchBrowser() {
       '--disable-dev-shm-usage',
       '--window-size=1920,1080'
     ]
-  });
+  };
+
+  if (options.userDataDir) {
+    launchOptions.userDataDir = options.userDataDir;
+  }
+
+  if (browserType === 'firefox') {
+    launchOptions.browser = 'firefox';
+    // Firefox doesn't support "new" headless mode yet, use boolean
+    if (headless === "new") launchOptions.headless = true;
+  }
+
+  return await puppeteer.launch(launchOptions);
 }
 
 /**
  * Creates a new page with request interception (caching) and user agent set
  */
-async function setupPage(browser) {
+async function setupPage(browser, options = {}) {
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
@@ -58,7 +73,9 @@ async function setupPage(browser) {
   page.on('console', msg => {
     const text = msg.text();
     if (text.includes('Failed to load resource') && text.includes('403')) return;
-    // console.log('BROWSER:', text);
+    if (options.logConsole) {
+      console.log('BROWSER:', text);
+    }
   });
 
   return page;
@@ -103,10 +120,10 @@ async function injectBot(page) {
  * Full initialization helper: Browser -> Page -> Game -> Mods -> Bot
  * Returns { browser, page }
  */
-async function initializeFullEnvironment() {
-  const browser = await launchBrowser();
+async function initializeFullEnvironment(options = {}) {
+  const browser = await launchBrowser(options);
   try {
-    const page = await setupPage(browser);
+    const page = await setupPage(browser, options);
     await loadGame(page);
     await injectCookieMonster(page);
     await injectBot(page);

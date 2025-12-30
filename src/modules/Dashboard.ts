@@ -62,6 +62,15 @@ export class Dashboard {
       desc: 'Showing the log'
     }, 0, 'Logging');
 
+    this.configManager.registerOption('ConsoleLog', {
+      options: [
+        { value: 0, label: 'OFF' },
+        { value: 1, label: 'ON' }
+      ],
+      label: ['OFF', 'ON'], // Legacy support
+      desc: 'Log activity to browser console'
+    }, 0, 'Logging');
+
     this.configManager.onDashboardToggle = () => {
       setTimeout(() => {
         this.positionDashboard();

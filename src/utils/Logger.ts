@@ -45,7 +45,11 @@ class LoggerService {
   logAction(action: string, details?: string): void {
     if (this.callbacks?.logAction) {
       this.callbacks.logAction(action, details);
-    } else {
+    }
+
+    // Check for console logging config
+    const bot = (window as any).AutoPlay;
+    if (bot && bot.Config && bot.Config.ConsoleLog) {
       console.log(`[Action] ${action}${details ? ': ' + details : ''}`);
     }
   }
@@ -59,7 +63,11 @@ class LoggerService {
   logStatus(type: string, message: string, details?: string): void {
     if (this.callbacks?.logStatus) {
       this.callbacks.logStatus(type, message, details);
-    } else {
+    }
+
+    // Check for console logging config
+    const bot = (window as any).AutoPlay;
+    if (bot && bot.Config && bot.Config.ConsoleLog) {
       console.log(`[${type}] ${message}${details ? ': ' + details : ''}`);
     }
   }
@@ -70,12 +78,20 @@ class LoggerService {
    * @returns true if activity was added, false if it already existed
    */
   addActivity(activity: string): boolean {
+    let result = true;
     if (this.callbacks?.addActivity) {
-      return this.callbacks.addActivity(activity);
-    } else {
-      console.log(`[Activity] ${activity}`);
-      return true;
+      result = this.callbacks.addActivity(activity);
     }
+
+    // Check for console logging config
+    const bot = (window as any).AutoPlay;
+    if (bot && bot.Config && bot.Config.ConsoleLog) {
+      if (result) {
+        console.log(`[Activity] ${activity}`);
+      }
+    }
+
+    return result;
   }
 
   /**

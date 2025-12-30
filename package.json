@@ -1,6 +1,6 @@
 {
   "name": "cookiebot",
-  "version": "2.052-46",
+  "version": "2.052-54",
   "description": "Automated bot for Cookie Clicker game",
   "main": "dist/cookieAutoPlayBeta.js",
   "scripts": {
@@ -10,7 +10,11 @@
     "test": "node tests/run_all.js",
     "test:e2e": "node tests/e2e.js",
     "test:modules": "node tests/modules/all_modules_test.js",
-    "test:saves": "node tests/integration/bot_decisions.test.js"
+    "test:saves": "node tests/integration/bot_decisions.test.js",
+    "start:game": "node scripts/run-game.js",
+    "start:game:firefox": "node scripts/run-game.js --firefox",
+    "start:headless": "node scripts/run-game.js --headless",
+    "start:headless:firefox": "node scripts/run-game.js --headless --firefox"
   },
   "keywords": [
     "cookie-clicker",
