@@ -5505,11 +5505,6 @@ class DragonManager {
         if (!Game.UpgradesById[UPGRADE_IDS.A_CRUMBLY_EGG].unlocked) {
             return;
         }
-        // Safety check: If a prompt is already open, don't try to open another one
-        // This prevents "prompt on prompt" issues and potential game freezes
-        if (Game.promptOn) {
-            return;
-        }
         // Throttle dragon actions to avoid spamming when main loop is running fast (e.g. waiting for purchase)
         // 5 seconds cooldown
         if (Date.now() - this.lastActionTime < 5000) {
@@ -5619,18 +5614,10 @@ class DragonManager {
         if (Game.dragonAura !== desiredAura) {
             Game.specialTab = 'dragon';
             Game.SetDragonAura(desiredAura, 0);
-            // Try to confirm synchronously
             if (typeof Game.ConfirmPrompt === 'function') {
                 Game.ConfirmPrompt();
             }
             Game.ToggleSpecialMenu(0);
-            // Safety net: If prompt is still open (e.g. it was async or game paused hooks), 
-            // confirm it from outside the hook using setTimeout
-            setTimeout(() => {
-                if (Game.promptOn && typeof Game.ConfirmPrompt === 'function') {
-                    Game.ConfirmPrompt();
-                }
-            }, 100);
             const auraName = AURA_NAMES[desiredAura] || 'Unknown';
             this.context.logStatus('dragon', `Dragon aura 1: ${auraName}`);
         }
@@ -5645,18 +5632,10 @@ class DragonManager {
         if (Game.dragonAura2 !== desiredAura) {
             Game.specialTab = 'dragon';
             Game.SetDragonAura(desiredAura, 1);
-            // Try to confirm synchronously
             if (typeof Game.ConfirmPrompt === 'function') {
                 Game.ConfirmPrompt();
             }
             Game.ToggleSpecialMenu(0);
-            // Safety net: If prompt is still open (e.g. it was async or game paused hooks), 
-            // confirm it from outside the hook using setTimeout
-            setTimeout(() => {
-                if (Game.promptOn && typeof Game.ConfirmPrompt === 'function') {
-                    Game.ConfirmPrompt();
-                }
-            }, 100);
             this.context.logStatus('dragon', 'Dragon aura 2: Breath of Milk');
         }
     }
@@ -9870,7 +9849,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-109';
+AutoPlay_AutoPlay.version = '2.052-107';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

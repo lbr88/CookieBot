@@ -9,6 +9,7 @@ import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 export declare class DragonManager {
     private context;
+    private lastActionTime;
     constructor(context: AutoPlayContext);
     /**
      * Main handler for all dragon-related activities

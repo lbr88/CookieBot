@@ -71,6 +71,7 @@ const AURA_NAMES: Record<number, string> = {
 
 export class DragonManager {
   private context: AutoPlayContext;
+  private lastActionTime: number = 0;
 
   constructor(context: AutoPlayContext) {
     this.context = context;
@@ -85,6 +86,19 @@ export class DragonManager {
     if (!Game.UpgradesById[UPGRADE_IDS.A_CRUMBLY_EGG].unlocked) {
       return;
     }
+
+    // Safety check: If a prompt is already open, don't try to open another one
+    // This prevents "prompt on prompt" issues and potential game freezes
+    if ((Game as any).promptOn) {
+      return;
+    }
+
+    // Throttle dragon actions to avoid spamming when main loop is running fast (e.g. waiting for purchase)
+    // 5 seconds cooldown
+    if (Date.now() - this.lastActionTime < 5000) {
+      return;
+    }
+    this.lastActionTime = Date.now();
 
     // Train dragon to next level if possible
     this.trainDragon();
@@ -205,8 +219,21 @@ export class DragonManager {
     if (Game.dragonAura !== desiredAura) {
       Game.specialTab = 'dragon';
       Game.SetDragonAura(desiredAura, 0);
-      (Game as any).ConfirmPrompt();
+
+      // Try to confirm synchronously
+      if (typeof (Game as any).ConfirmPrompt === 'function') {
+        (Game as any).ConfirmPrompt();
+      }
+
       Game.ToggleSpecialMenu(0);
+
+      // Safety net: If prompt is still open (e.g. it was async or game paused hooks), 
+      // confirm it from outside the hook using setTimeout
+      setTimeout(() => {
+        if ((Game as any).promptOn && typeof (Game as any).ConfirmPrompt === 'function') {
+          (Game as any).ConfirmPrompt();
+        }
+      }, 100);
 
       const auraName = AURA_NAMES[desiredAura] || 'Unknown';
       this.context.logStatus('dragon', `Dragon aura 1: ${auraName}`);
@@ -224,8 +251,21 @@ export class DragonManager {
     if (Game.dragonAura2 !== desiredAura) {
       Game.specialTab = 'dragon';
       Game.SetDragonAura(desiredAura, 1);
-      (Game as any).ConfirmPrompt();
+
+      // Try to confirm synchronously
+      if (typeof (Game as any).ConfirmPrompt === 'function') {
+        (Game as any).ConfirmPrompt();
+      }
+
       Game.ToggleSpecialMenu(0);
+
+      // Safety net: If prompt is still open (e.g. it was async or game paused hooks), 
+      // confirm it from outside the hook using setTimeout
+      setTimeout(() => {
+        if ((Game as any).promptOn && typeof (Game as any).ConfirmPrompt === 'function') {
+          (Game as any).ConfirmPrompt();
+        }
+      }, 100);
 
       this.context.logStatus('dragon', 'Dragon aura 2: Breath of Milk');
     }
