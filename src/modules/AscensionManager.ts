@@ -29,6 +29,19 @@ export class AscensionManager {
       neverclickWarn: true,
       resetTime: Date.now()
     };
+
+    // Register configuration options
+    this.context.configManager.registerOption('HardcoreMode', {
+      id: 'HardcoreMode',
+      type: 'select',
+      label: 'Hardcore/Neverclick',
+      options: [
+        { value: 0, label: 'SKIP (Ignore these achievements)' },
+        { value: 1, label: 'AUTO (Attempt when possible)' }
+      ],
+      default: 1,
+      desc: 'Whether to automatically attempt Hardcore and Neverclick achievements.'
+    }, 1, 'Strategy');
   }
 
   /**

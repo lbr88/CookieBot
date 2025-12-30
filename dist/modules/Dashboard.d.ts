@@ -1,65 +1,27 @@
 import type { Config, AutoPlayContext } from '../types/autoplay';
+import type { ConfigManager } from './ConfigManager';
 export declare class Dashboard {
     private context;
-    private config;
-    private configData;
-    private configDefault;
-    private configPrefix;
+    private configManager;
     private dashboardCollapsed;
     private dashboardObserver;
     private resizeObserver;
     private positionTimeout;
+    private lastRenderTime;
+    private renderInterval;
     private actionHistory;
     private statusHistory;
     private lastStatus;
     private maxHistorySize;
-    private colorTextPre;
-    private colorBlue;
-    constructor(context: AutoPlayContext);
+    constructor(context: AutoPlayContext, configManager: ConfigManager);
     /**
      * Get the current config object (for AutoPlay.Config sync)
      */
     getConfig(): Config;
     /**
-     * Initialize configuration options
-     */
-    private initializeConfigData;
-    /**
-     * Set default configuration values
-     */
-    private setConfigDefaults;
-    /**
-     * Save configuration to localStorage
-     */
-    private saveConfig;
-    /**
-     * Load configuration from localStorage
-     */
-    private loadConfig;
-    /**
-     * Restore default configuration
-     */
-    private restoreDefault;
-    /**
-     * Toggle a configuration option
-     */
-    private toggleConfig;
-    /**
-     * Increment a configuration option
-     */
-    private toggleConfigUp;
-    /**
-     * Get display text for a configuration option
-     */
-    private getConfigDisplay;
-    /**
      * Add menu preferences to the game menu
      */
     addMenuPref(): void;
-    /**
-     * Set bot mode handler
-     */
-    private setBotMode;
     /**
      * Create the dashboard UI
      */
@@ -72,10 +34,6 @@ export declare class Dashboard {
      * Toggle dashboard collapse/expand
      */
     private toggleDashboard;
-    /**
-     * Toggle dashboard visibility via config
-     */
-    private toggleDashboardConfig;
     /**
      * Update dashboard content
      */
@@ -108,14 +66,6 @@ export declare class Dashboard {
      * Log a status update to the status history
      */
     logStatus(statusType: string, message: string, details?: string): void;
-    /**
-     * Clean the log
-     */
-    private cleanLog;
-    /**
-     * Show the log
-     */
-    private showLog;
     /**
      * Render/update the dashboard
      */

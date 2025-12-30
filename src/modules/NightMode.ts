@@ -25,6 +25,20 @@ export class NightMode {
    */
   constructor(context: AutoPlayContext) {
     this.context = context;
+
+    // Register configuration options
+    this.context.configManager.registerOption('NightMode', {
+      id: 'NightMode',
+      type: 'select',
+      label: 'Night Mode',
+      options: [
+        { value: 0, label: 'OFF' },
+        { value: 1, label: 'AUTO (Sleep unless grinding)' },
+        { value: 2, label: 'ON (Always sleep at night)' }
+      ],
+      default: 1,
+      desc: 'Controls bot behavior during night hours (11pm-7am).'
+    }, 1, 'General');
   }
 
   /**

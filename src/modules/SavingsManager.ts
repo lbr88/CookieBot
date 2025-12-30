@@ -21,6 +21,21 @@ export class SavingsManager {
     this.context = context;
     this.savingsStart = Game.startDate;
     this.now = Game.startDate; // Initialize to start time to avoid 0-value bug
+
+    // Register configuration options
+    this.context.configManager.registerOption('SavingStrategy', {
+      id: 'SavingStrategy',
+      type: 'select',
+      label: 'Saving Strategy',
+      options: [
+        { value: 0, label: 'NONE (Spend everything)' },
+        { value: 1, label: 'AUTO (Smart ramp-up)' },
+        { value: 2, label: 'LUCKY (Keep Lucky bank)' },
+        { value: 3, label: 'LUCKY FRENZY (Keep Lucky Frenzy bank)' }
+      ],
+      default: 1,
+      desc: 'How much cookies the bot keeps in reserve for golden cookie rewards.'
+    }, 1, 'Strategy');
   }
 
   /**

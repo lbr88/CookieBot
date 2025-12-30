@@ -48,6 +48,22 @@ export class SugarLumpManager {
    */
   constructor(context: AutoPlayContext) {
     this.context = context;
+
+    // Register configuration options
+    this.context.configManager.registerOption('CheatLumps', {
+      id: 'CheatLumps',
+      type: 'select',
+      label: 'Cheat Sugar Lumps',
+      options: [
+        { value: 0, label: 'OFF' },
+        { value: 1, label: 'Level 1 (Endgame only)' },
+        { value: 2, label: 'Level 2 (25x speed)' },
+        { value: 3, label: 'Level 3 (625x speed)' },
+        { value: 4, label: 'Level 4 (15625x speed + Type manipulation)' }
+      ],
+      default: 0,
+      desc: 'Cheats to make sugar lumps ripen faster. Disables achievements.'
+    }, 0, 'Cheats');
   }
 
   /**

@@ -8194,7 +8194,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-41';
+AutoPlay_AutoPlay.version = '2.052-43';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

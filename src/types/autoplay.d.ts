@@ -13,6 +13,7 @@ import type { SeasonHandler } from '../modules/SeasonHandler';
 import type { StockMarketManager } from '../modules/StockMarketManager';
 import type { SugarLumpManager } from '../modules/SugarLumpManager';
 import type { WrinklerManager } from '../modules/WrinklerManager';
+import type { ConfigManager } from '../modules/ConfigManager';
 
 // AutoPlay state and configuration types
 
@@ -138,6 +139,7 @@ export interface AutoPlayContext {
   moduleTimings: { [key: string]: number };
 
   // Managers
+  configManager: ConfigManager;
   clickManager?: ClickManager;
   purchaseManager?: PurchaseManager;
   gardenManager?: GardenManager;
@@ -232,7 +234,11 @@ export interface DashboardStats {
 
 // Config data structure for menu
 export interface ConfigOption {
-  label: string[];
+  id?: string;
+  type?: 'select' | 'toggle';
+  label: string | string[]; // String for group label, or string[] for legacy value labels
+  options?: { value: number; label: string }[];
+  default?: number;
   desc: string;
 }
 

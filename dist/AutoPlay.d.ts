@@ -3,7 +3,7 @@
  */
 import type { AutoPlayConfig, AutoPlayState } from './types/autoplay';
 export default class AutoPlay {
-    static readonly version = "2.052-41";
+    static readonly version = "2.052-44";
     private config;
     private state;
     Config: {
@@ -30,6 +30,7 @@ export default class AutoPlay {
     private ascensionManager;
     private dragonManager;
     private dashboard;
+    private configManager;
     private nightMode;
     private pantheonManager;
     private grimoireManager;
@@ -42,6 +43,7 @@ export default class AutoPlay {
     giftCode: number | string;
     onAscend: boolean;
     loggingInfo: string | number;
+    private tickCounter;
     kittens: number[];
     cursors: number[];
     maxBuildings: number[];
@@ -128,6 +130,27 @@ export default class AutoPlay {
      * Initialize the bot
      */
     init(): void;
+    /**
+     * Register the bot as a native game mod
+     */
+    private registerGameMod;
+    /**
+     * Native logic hook - runs every game tick (30 times/sec)
+     */
+    private hookLogic;
+    /**
+     * Native draw hook - runs every frame
+     */
+    private hookDraw;
+    /**
+     * Native reincarnate hook - runs after ascension
+     */
+    private hookReincarnate;
+    /**
+     * Shared logic for slow/periodic tasks
+     * Called by periodic() (legacy) and hookLogic() (native)
+     */
+    private runSlowLogic;
     /**
      * Hook into Game.UpdateMenu to add config options to preferences menu
      */

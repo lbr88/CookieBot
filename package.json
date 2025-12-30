@@ -1,17 +1,15 @@
 {
   "name": "cookiebot",
-  "version": "2.052-41",
+  "version": "2.052-44",
   "description": "Automated bot for Cookie Clicker game",
   "main": "dist/cookieAutoPlayBeta.js",
   "scripts": {
-    "build": "webpack --mode production && node scripts/post-build.js",
-    "build:userscript": "npm run build && node scripts/build-userscript.js",
+    "build": "node scripts/bump-version.js && webpack --mode production && node scripts/post-build.js && node scripts/build-userscript.js",
     "dev": "webpack --mode development --watch",
     "type-check": "tsc --noEmit",
     "test": "node tests/run_all.js",
     "test:e2e": "node tests/e2e.js",
     "test:modules": "node tests/modules/all_modules_test.js",
-    "test:click": "node tests/modules/ClickManager.test.js",
     "test:saves": "node tests/integration/bot_decisions.test.js"
   },
   "keywords": [

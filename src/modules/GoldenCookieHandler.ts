@@ -17,6 +17,36 @@ export class GoldenCookieHandler {
 
   constructor(context: AutoPlayContext) {
     this.context = context;
+
+    // Register configuration options
+    this.context.configManager.registerOption('GoldenClickMode', {
+      id: 'GoldenClickMode',
+      type: 'select',
+      label: 'Golden Cookie Clicks',
+      options: [
+        { value: 0, label: 'OFF' },
+        { value: 1, label: 'Normal' },
+        { value: 2, label: 'Aggressive (Includes Storm Drops)' }
+      ],
+      default: 1,
+      desc: 'How the bot handles golden cookies and reindeer.'
+    }, 1, 'Clicking');
+
+    this.context.configManager.registerOption('CheatGolden', {
+      id: 'CheatGolden',
+      type: 'select',
+      label: 'Cheat Golden Cookies',
+      options: [
+        { value: 0, label: 'OFF' },
+        { value: 1, label: 'Auto (Smart Cheating)' },
+        { value: 2, label: 'Level 10' },
+        { value: 3, label: 'Level 40' },
+        { value: 4, label: 'Level 70' },
+        { value: 5, label: 'Level 100 (Max)' }
+      ],
+      default: 0,
+      desc: 'Cheats to make golden cookies spawn faster. Disables achievements.'
+    }, 0, 'Cheats');
   }
 
   /**

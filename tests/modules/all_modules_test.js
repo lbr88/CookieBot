@@ -400,6 +400,137 @@ const { initializeFullEnvironment } = require('../utils/setup');
       Game.fps = 30;
     });
 
+    // 18. ConfigManager
+    await runTest('ConfigManager: Should register option with new structure', () => {
+      const cm = window.AutoPlay.configManager;
+      const key = 'TestNewOption';
+      const option = {
+        options: [
+          { value: 0, label: 'OFF' },
+          { value: 1, label: 'ON' },
+          { value: 2, label: 'AUTO' }
+        ],
+        label: ['OFF', 'ON', 'AUTO'], // Legacy fallback
+        desc: 'Test option with new structure'
+      };
+
+      cm.registerOption(key, option, 1);
+
+      if (cm.configData[key] !== option) throw new Error('Option not registered correctly');
+      if (cm.config[key] !== 1) throw new Error('Default value not set correctly');
+    });
+
+    await runTest('ConfigManager: Should register option with legacy structure', () => {
+      const cm = window.AutoPlay.configManager;
+      const key = 'TestLegacyOption';
+      const option = {
+        label: ['LOW', 'MEDIUM', 'HIGH'],
+        desc: 'Test option with legacy structure'
+      };
+
+      cm.registerOption(key, option, 0);
+
+      if (cm.configData[key] !== option) throw new Error('Option not registered correctly');
+      if (cm.config[key] !== 0) throw new Error('Default value not set correctly');
+    });
+
+    await runTest('ConfigManager: Should get correct display text for new structure', () => {
+      const cm = window.AutoPlay.configManager;
+      const key = 'TestNewOption';
+
+      // Value 1 -> 'ON'
+      cm.config[key] = 1;
+      const display1 = cm.getConfigDisplay(key);
+      if (display1 !== 'ON') throw new Error(`Expected 'ON', got '${display1}'`);
+
+      // Value 2 -> 'AUTO'
+      cm.config[key] = 2;
+      const display2 = cm.getConfigDisplay(key);
+      if (display2 !== 'AUTO') throw new Error(`Expected 'AUTO', got '${display2}'`);
+    });
+
+    await runTest('ConfigManager: Should get correct display text for legacy structure', () => {
+      const cm = window.AutoPlay.configManager;
+      const key = 'TestLegacyOption';
+
+      // Value 0 -> 'LOW'
+      cm.config[key] = 0;
+      const display0 = cm.getConfigDisplay(key);
+      if (display0 !== 'LOW') throw new Error(`Expected 'LOW', got '${display0}'`);
+
+      // Value 2 -> 'HIGH'
+      cm.config[key] = 2;
+      const display2 = cm.getConfigDisplay(key);
+      if (display2 !== 'HIGH') throw new Error(`Expected 'HIGH', got '${display2}'`);
+    });
+
+    await runTest('ConfigManager: Should toggle values correctly (New Structure)', () => {
+      const cm = window.AutoPlay.configManager;
+      const key = 'TestNewOption';
+
+      // Start at 0
+      cm.config[key] = 0;
+
+      // Toggle -> 1
+      cm.toggleConfigUp(key);
+      if (cm.config[key] !== 1) throw new Error(`Expected 1, got ${cm.config[key]}`);
+
+      // Toggle -> 2
+      cm.toggleConfigUp(key);
+      if (cm.config[key] !== 2) throw new Error(`Expected 2, got ${cm.config[key]}`);
+
+      // Toggle -> 0 (Wrap around)
+      cm.toggleConfigUp(key);
+      if (cm.config[key] !== 0) throw new Error(`Expected 0, got ${cm.config[key]}`);
+    });
+
+    await runTest('ConfigManager: Should toggle values correctly (Legacy Structure)', () => {
+      const cm = window.AutoPlay.configManager;
+      const key = 'TestLegacyOption';
+
+      // Start at 2
+      cm.config[key] = 2;
+
+      // Toggle -> 0 (Wrap around)
+      cm.toggleConfigUp(key);
+      if (cm.config[key] !== 0) throw new Error(`Expected 0, got ${cm.config[key]}`);
+
+      // Toggle -> 1
+      cm.toggleConfigUp(key);
+      if (cm.config[key] !== 1) throw new Error(`Expected 1, got ${cm.config[key]}`);
+    });
+
+    await runTest('ConfigManager: Should save config to localStorage', () => {
+      const cm = window.AutoPlay.configManager;
+      const key = 'TestSaveOption';
+
+      cm.registerOption(key, { label: ['A', 'B'], desc: 'Save test' }, 0);
+
+      // Spy on localStorage
+      const setItemSpy = { called: false, key: '', value: '' };
+      const originalSetItem = window.localStorage.setItem;
+      window.localStorage.setItem = (k, v) => {
+        setItemSpy.called = true;
+        setItemSpy.key = k;
+        setItemSpy.value = v;
+        originalSetItem.call(window.localStorage, k, v);
+      };
+
+      try {
+        // Trigger save via toggle
+        cm.toggleConfigUp(key);
+
+        if (!setItemSpy.called) throw new Error('localStorage.setItem was not called');
+        if (!setItemSpy.key.includes('autoplayConfig')) throw new Error(`Unexpected key: ${setItemSpy.key}`);
+
+        const savedConfig = JSON.parse(setItemSpy.value);
+        if (savedConfig[key] !== 1) throw new Error(`Saved value mismatch. Expected 1, got ${savedConfig[key]}`);
+
+      } finally {
+        window.localStorage.setItem = originalSetItem;
+      }
+    });
+
     if (failedTests > 0) {
       console.error(`\n${failedTests} tests failed.`);
       process.exit(1);

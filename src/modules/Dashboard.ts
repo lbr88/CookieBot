@@ -1,5 +1,4 @@
 import type {
-  ConfigData,
   Config,
   ActionHistoryEntry,
   StatusHistoryEntry,
@@ -7,6 +6,7 @@ import type {
   AutoPlayContext
 } from '../types/autoplay';
 import type { ModuleStatuses } from '../types/moduleStatus';
+import type { ConfigManager } from './ConfigManager';
 
 declare const Game: any;
 declare const Beautify: (num: number) => string;
@@ -14,18 +14,15 @@ declare const CookieMonsterData: any;
 
 export class Dashboard {
   private context: AutoPlayContext;
-
-  // Configuration system
-  private config: Config = {};
-  private configData: ConfigData = {};
-  private configDefault: Config = {};
-  private configPrefix = 'autoplayConfig';
+  private configManager: ConfigManager;
 
   // Dashboard state
   private dashboardCollapsed = false;
   private dashboardObserver: MutationObserver | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private positionTimeout: number | null = null;
+  private lastRenderTime = 0;
+  private renderInterval = 100; // Min ms between renders (approx 10fps)
 
   // Activity tracking
   private actionHistory: ActionHistoryEntry[] = [];
@@ -33,257 +30,57 @@ export class Dashboard {
   private lastStatus: { [key: string]: string } = {};
   private maxHistorySize = 20;
 
-  // Display utilities
-  private colorTextPre = 'color: ';
-  private colorBlue = '#4169E1';
 
-  constructor(context: AutoPlayContext) {
+
+  constructor(context: AutoPlayContext, configManager: ConfigManager) {
     this.context = context;
-    this.initializeConfigData();
-    this.setConfigDefaults();
-    this.loadConfig();
+    this.configManager = configManager;
+
+    // Register options
+    this.configManager.registerOption('ShowDashboard', {
+      options: [
+        { value: 0, label: 'HIDE' },
+        { value: 1, label: 'SHOW' }
+      ],
+      label: ['HIDE', 'SHOW'], // Legacy support
+      desc: 'Toggle dashboard visibility'
+    }, 1, 'Display');
+
+    this.configManager.registerOption('CleanLog', {
+      options: [
+        { value: 0, label: 'Clean Log' }
+      ],
+      label: ['Clean Log'], // Legacy support
+      desc: 'Cleaning the log'
+    }, 0, 'Logging');
+
+    this.configManager.registerOption('ShowLog', {
+      options: [
+        { value: 0, label: 'Show Log' }
+      ],
+      label: ['Show Log'], // Legacy support
+      desc: 'Showing the log'
+    }, 0, 'Logging');
+
+    this.configManager.onDashboardToggle = () => {
+      setTimeout(() => {
+        this.positionDashboard();
+      }, 0);
+    };
   }
 
   /**
    * Get the current config object (for AutoPlay.Config sync)
    */
   getConfig(): Config {
-    return this.config;
-  }
-
-  /**
-   * Initialize configuration options
-   */
-  private initializeConfigData(): void {
-    this.configData.BotMode = {
-      label: ['IDLE', 'AUTO', 'MANUAL'],
-      desc: 'Cookiebot global mode (work in progress)'
-    };
-    this.configData.NightMode = {
-      label: ['OFF', 'AUTO', 'ON'],
-      desc: 'Handling of night mode'
-    };
-    this.configData.ClickMode = {
-      label: ['OFF', 'AUTO', 'LIGHT SPEED', 'RIDICULOUS SPEED', 'LUDICROUS SPEED'],
-      desc: 'Clicking speed'
-    };
-    this.configData.GoldenClickMode = {
-      label: ['OFF', 'AUTO', 'ALL'],
-      desc: 'Golden Cookie clicking mode'
-    };
-    this.configData.SavingStrategy = {
-      label: ['NONE', 'AUTO', 'LUCKY', 'LUCKY FRENZY'],
-      desc: 'Saving strategy'
-    };
-    this.configData.CheatLumps = {
-      label: ['OFF', 'AUTO', 'LITTLE', 'MEDIUM', 'MUCH'],
-      desc: 'Cheating of sugar lumps'
-    };
-    this.configData.CheatGolden = {
-      label: ['OFF', 'AUTO', 'LITTLE', 'MEDIUM', 'MUCH'],
-      desc: 'Cheating of golden cookies'
-    };
-    this.configData.ShowDashboard = {
-      label: ['HIDE', 'SHOW'],
-      desc: 'Toggle dashboard visibility'
-    };
-    this.configData.HardcoreMode = {
-      label: ['SKIP', 'AUTO'],
-      desc: 'Hardcore/Neverclick achievements: SKIP (ignore them) or AUTO (attempt on first run)'
-    };
-    this.configData.FPS = {
-      label: ['OFF', 'ON'],
-      desc: 'Scale timers based on game FPS (smoother at >30fps)'
-    };
-    this.configData.CleanLog = {
-      label: ['Clean Log'],
-      desc: 'Cleaning the log'
-    };
-    this.configData.ShowLog = {
-      label: ['Show Log'],
-      desc: 'Showing the log'
-    };
-  }
-
-  /**
-   * Set default configuration values
-   */
-  private setConfigDefaults(): void {
-    this.configDefault = {
-      BotMode: 1,
-      NightMode: 1,
-      ClickMode: 1,
-      GoldenClickMode: 1,
-      SavingStrategy: 1,
-      FPS: 1,
-      CheatLumps: 1,
-      CheatGolden: 1,
-      ShowDashboard: 1,
-      HardcoreMode: 1,
-      CleanLog: 0,
-      ShowLog: 0
-    };
-  }
-
-  /**
-   * Save configuration to localStorage
-   */
-  private saveConfig(config: Config): void {
-    try {
-      window.localStorage.setItem(this.configPrefix, JSON.stringify(config));
-    } catch (e) {
-      console.error('Failed to save config:', e);
-    }
-  }
-
-  /**
-   * Load configuration from localStorage
-   */
-  private loadConfig(): void {
-    try {
-      const stored = window.localStorage.getItem(this.configPrefix);
-      if (stored != null) {
-        this.config = JSON.parse(stored);
-        // Check values
-        let modified = false;
-        for (const key in this.configDefault) {
-          if (typeof this.config[key] === 'undefined' ||
-              this.config[key] < 0 ||
-              this.config[key] >= this.configData[key].label.length) {
-            modified = true;
-            this.config[key] = this.configDefault[key];
-          }
-        }
-        if (modified) {
-          this.saveConfig(this.config);
-        }
-      } else {
-        // Default values
-        this.restoreDefault();
-      }
-    } catch (e) {
-      console.error('Failed to load config:', e);
-    }
-  }
-
-  /**
-   * Restore default configuration
-   */
-  private restoreDefault(): void {
-    this.config = {};
-    this.saveConfig(this.configDefault);
-    this.loadConfig();
-    if (typeof Game !== 'undefined' && Game.UpdateMenu) {
-      Game.UpdateMenu();
-    }
-  }
-
-  /**
-   * Toggle a configuration option
-   */
-  private toggleConfig(configKey: string): void {
-    this.toggleConfigUp(configKey);
-    const element = document.getElementById(this.configPrefix + configKey);
-    if (element) {
-      element.className = this.config[configKey] ? 'option' : 'option off';
-    }
-  }
-
-  /**
-   * Increment a configuration option
-   */
-  private toggleConfigUp(configKey: string): void {
-    this.config[configKey]++;
-    if (this.config[configKey] === this.configData[configKey].label.length) {
-      this.config[configKey] = 0;
-    }
-    const element = document.getElementById(this.configPrefix + configKey);
-    if (element) {
-      element.innerHTML = this.getConfigDisplay(configKey);
-    }
-    this.saveConfig(this.config);
-  }
-
-  /**
-   * Get display text for a configuration option
-   */
-  private getConfigDisplay(configKey: string): string {
-    return this.configData[configKey].label[this.config[configKey]];
+    return this.configManager.getConfig();
   }
 
   /**
    * Add menu preferences to the game menu
    */
   addMenuPref(): void {
-    const header = (text: string): HTMLElement => {
-      const div = document.createElement('div');
-      div.className = 'listing';
-      div.style.padding = '5px 16px';
-      div.style.opacity = '0.7';
-      div.style.fontSize = '17px';
-      div.style.fontFamily = '"Kavoon", Georgia, serif';
-      div.textContent = text;
-      return div;
-    };
-
-    const frag = document.createDocumentFragment();
-    const div = document.createElement('div');
-    div.className = `title ${this.colorTextPre}${this.colorBlue}`;
-    div.textContent = 'Cookiebot Options';
-    frag.appendChild(div);
-
-    const listing = (configKey: string, clickFunc?: () => void): HTMLElement => {
-      const div = document.createElement('div');
-      div.className = 'listing';
-      const a = document.createElement('a');
-      a.className = 'option';
-      if (this.config[configKey] === 0) {
-        a.className = 'option off';
-      }
-      a.id = this.configPrefix + configKey;
-      a.onclick = clickFunc || (() => this.toggleConfig(configKey));
-      a.textContent = this.getConfigDisplay(configKey);
-      div.appendChild(a);
-      const label = document.createElement('label');
-      label.textContent = this.configData[configKey].desc;
-      div.appendChild(label);
-      return div;
-    };
-
-    frag.appendChild(listing('BotMode', () => this.setBotMode()));
-    frag.appendChild(listing('NightMode'));
-    frag.appendChild(listing('ClickMode'));
-    frag.appendChild(listing('GoldenClickMode'));
-    frag.appendChild(listing('SavingStrategy'));
-    frag.appendChild(listing('FPS'));
-    frag.appendChild(listing('HardcoreMode'));
-    frag.appendChild(header('Cheating'));
-    frag.appendChild(listing('CheatLumps'));
-    frag.appendChild(listing('CheatGolden'));
-    frag.appendChild(header('Display'));
-    frag.appendChild(listing('ShowDashboard', () => this.toggleDashboardConfig()));
-    frag.appendChild(header('Logging'));
-    frag.appendChild(listing('CleanLog', () => this.cleanLog()));
-    frag.appendChild(listing('ShowLog', () => this.showLog()));
-
-    const menu = document.getElementById('menu');
-    if (menu && menu.childNodes[2]) {
-      const menuSection = menu.childNodes[2] as HTMLElement;
-      const lastChild = menuSection.childNodes[menuSection.childNodes.length - 1];
-      menuSection.insertBefore(frag, lastChild);
-    }
-  }
-
-  /**
-   * Set bot mode handler
-   */
-  private setBotMode(): void {
-    this.toggleConfig('BotMode');
-    const modeName = this.configData.BotMode.label[this.config.BotMode];
-    if (this.context && this.context.info) {
-      this.context.info(`The bot has changed mode to ${modeName}`);
-      this.logStatus('mode', `Mode: ${modeName}`);
-    }
+    this.configManager.addMenuPref();
   }
 
   /**
@@ -356,7 +153,7 @@ export class Dashboard {
     }
 
     // Apply config setting for visibility
-    if (this.config.ShowDashboard === 0) {
+    if (this.configManager.getConfig().ShowDashboard === 0) {
       dashboard.style.display = 'none';
     }
   }
@@ -429,7 +226,7 @@ export class Dashboard {
     }
 
     // Hide dashboard if config says to
-    if (this.config.ShowDashboard === 0) {
+    if (this.configManager.getConfig().ShowDashboard === 0) {
       dashboard.style.display = 'none';
     }
   }
@@ -457,20 +254,7 @@ export class Dashboard {
     }, 0);
   }
 
-  /**
-   * Toggle dashboard visibility via config
-   */
-  private toggleDashboardConfig(): void {
-    this.toggleConfig('ShowDashboard');
-    const dashboard = document.getElementById('cookieBotDashboard');
-    if (dashboard) {
-      dashboard.style.display = this.config.ShowDashboard ? 'block' : 'none';
-      // Reposition to update game div's bottom
-      setTimeout(() => {
-        this.positionDashboard();
-      }, 0);
-    }
-  }
+
 
   /**
    * Update dashboard content
@@ -944,45 +728,20 @@ export class Dashboard {
     }
   }
 
-  /**
-   * Clean the log
-   */
-  private cleanLog(): void {
-    try {
-      window.localStorage.setItem('autoplayLog', '');
-    } catch (e) {
-      console.error('Failed to clean log:', e);
-    }
-  }
 
-  /**
-   * Show the log
-   */
-  private showLog(): void {
-    let theLog = '';
-    try {
-      theLog = window.localStorage.getItem('autoplayLog') || '';
-    } catch (e) {
-      theLog = '';
-    }
-    if (typeof Game !== 'undefined' && Game.Prompt) {
-      Game.Prompt(
-        '<h3>Cookie Bot Log</h3><div class="block">' +
-        'This is the log of the bot with saves at important stages.<br>' +
-        'Copy it and use it as you like.</div>' +
-        '<div class="block"><textarea id="textareaPrompt" ' +
-        'style="width:100%;height:128px;" readonly>' +
-        theLog + '</textarea></div>',
-        ['All done!']
-      );
-    }
-  }
 
 
   /**
    * Render/update the dashboard
    */
   render(): void {
+    // Throttle rendering to avoid DOM thrashing
+    const now = Date.now();
+    if (now - this.lastRenderTime < this.renderInterval) {
+      return;
+    }
+    this.lastRenderTime = now;
+
     // Check if dashboard exists, create if not
     if (!document.getElementById('cookieBotDashboard')) {
       this.createDashboard();

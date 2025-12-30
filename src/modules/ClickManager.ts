@@ -15,6 +15,21 @@ export class ClickManager {
 
   constructor(context: AutoPlayContext) {
     this.context = context;
+
+    // Register configuration options
+    this.context.configManager.registerOption('ClickMode', {
+      id: 'ClickMode',
+      type: 'select',
+      label: 'Click Mode',
+      options: [
+        { value: 0, label: 'OFF' },
+        { value: 1, label: 'Normal (Human-like)' },
+        { value: 2, label: 'Aggressive (Fast)' },
+        { value: 3, label: 'Very Aggressive (Instant)' }
+      ],
+      default: 1,
+      desc: 'How fast the bot clicks the big cookie.'
+    }, 1, 'Clicking');
   }
 
   /**

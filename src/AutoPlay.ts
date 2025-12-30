@@ -13,6 +13,7 @@ import { AchievementHandler } from './modules/AchievementHandler';
 import { AscensionManager } from './modules/AscensionManager';
 import { DragonManager } from './modules/DragonManager';
 import { Dashboard } from './modules/Dashboard';
+import { ConfigManager } from './modules/ConfigManager';
 import { NightMode } from './modules/NightMode';
 import { PantheonManager } from './modules/PantheonManager';
 import { GrimoireManager } from './modules/GrimoireManager';
@@ -24,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-41';
+  static readonly version = '2.052-44';
 
   // State
   private config: AutoPlayConfig;
@@ -58,6 +59,7 @@ export default class AutoPlay {
   private ascensionManager: AscensionManager;
   private dragonManager: DragonManager;
   private dashboard: Dashboard;
+  private configManager: ConfigManager;
   private nightMode: NightMode;
   private pantheonManager: PantheonManager;
   private grimoireManager: GrimoireManager;
@@ -72,6 +74,7 @@ export default class AutoPlay {
   giftCode: number | string = 0;
   onAscend: boolean = false; // Flag to prevent duplicate ascension calls
   loggingInfo: string | number = 0;
+  private tickCounter: number = 0; // For native mod hook scheduling
 
   // Permanent slot arrays
   kittens: number[] = [31, 32, 54, 108, 187, 320, 321, 322, 425, 442, 462, 494, 613, 766, 865];
@@ -280,19 +283,50 @@ export default class AutoPlay {
       CheatGolden: 1,
       ShowDashboard: 1,
       HardcoreMode: 1,
-      FPS: 1
+      FPS: 1,
+      UseGameHooks: 0
     };
 
     // Initialize public achievement arrays
     this.wantedAchievements = [...WANTED_ACHIEVEMENTS];
     this.lateAchievements = [...LUMP_RELATED_ACHIEVEMENTS];
 
-    // Create dashboard FIRST so logging callbacks can use it
-    this.dashboard = new Dashboard(this as any);
+    // Create ConfigManager and Dashboard
+    this.configManager = new ConfigManager(this as any);
 
-    // Sync Config with Dashboard's config system (Dashboard loads from localStorage)
-    // Cast to our Config type since Dashboard's Config interface is just [key: string]: number
-    this.Config = this.dashboard.getConfig() as typeof this.Config;
+    // Register global options
+    this.configManager.registerOption('BotMode', {
+      options: [
+        { value: 0, label: 'IDLE' },
+        { value: 1, label: 'AUTO' },
+        { value: 2, label: 'MANUAL' }
+      ],
+      label: ['IDLE', 'AUTO', 'MANUAL'], // Legacy support
+      desc: 'Cookiebot global mode (work in progress)'
+    }, 1);
+
+    this.configManager.registerOption('FPS', {
+      options: [
+        { value: 0, label: 'OFF' },
+        { value: 1, label: 'ON' }
+      ],
+      label: ['OFF', 'ON'], // Legacy support
+      desc: 'Scale timers based on game FPS (smoother at >30fps)'
+    }, 1);
+
+    this.configManager.registerOption('UseGameHooks', {
+      options: [
+        { value: 0, label: 'OFF' },
+        { value: 1, label: 'ON' }
+      ],
+      label: ['OFF', 'ON'], // Legacy support
+      desc: 'Use native game hooks (logic/draw) instead of timers. WARNING: Might trigger "Cheated cookies" achievement.'
+    }, 0);
+
+    this.dashboard = new Dashboard(this as any, this.configManager);
+
+    // Sync Config with ConfigManager's config system
+    this.Config = this.configManager.getConfig() as typeof this.Config;
 
     // Helper methods for logging and activities (now dashboard exists)
     const logAction = (action: string, details?: string) => {
@@ -429,11 +463,238 @@ export default class AutoPlay {
       this.state.nextPurchasePrice = purchaseInfo.price;
     }
 
-    // Set up periodic execution
-    this.scheduleNextRun();
+    // Check if we should use native game hooks or legacy timer
+    if (this.Config.UseGameHooks === 1) {
+      this.registerGameMod();
+    } else {
+      // Set up periodic execution
+      this.scheduleNextRun();
+    }
 
     this.state.isInitialized = true;
     console.log('CookieBot initialized successfully');
+  }
+
+  /**
+   * Register the bot as a native game mod
+   */
+  private registerGameMod(): void {
+    const Game = (globalThis as any).Game;
+    if (!Game || !Game.registerMod) return;
+
+    Game.registerMod('CookieBot', {
+      init: () => {
+        this.info('CookieBot native mod registered.');
+        
+        // Logic hook - runs every game tick (30 TPS)
+        Game.registerHook('logic', () => this.hookLogic());
+        
+        // Draw hook - runs every frame
+        Game.registerHook('draw', () => this.hookDraw());
+        
+        // Reincarnate hook - runs after ascension
+        Game.registerHook('reincarnate', () => this.hookReincarnate());
+      },
+      save: () => {
+        // We use our own config saving mechanism, but we could return a string here
+        return JSON.stringify(this.config);
+      },
+      load: (str: string) => {
+        // We load config separately, but could load here
+        try {
+          const data = JSON.parse(str);
+          this.updateConfig(data);
+        } catch (e) {}
+      }
+    });
+  }
+
+  /**
+   * Native logic hook - runs every game tick (30 times/sec)
+   */
+  private hookLogic(): void {
+    this.tickCounter++;
+    // const Game = (globalThis as any).Game; // Removed unused variable
+
+    // Update time
+    this.state.now = Date.now();
+
+    // ===== Fast Actions (Every Tick) =====
+    // These need to be as responsive as possible
+    this.clickManager.handleClicking();
+    this.goldenCookieHandler.handleGoldenCookies();
+    
+    // Speed cheat sugar lumps if level 4
+    if (this.Config.CheatLumps === 4) {
+      this.sugarLumpManager.handleSugarLumps();
+    }
+
+    // ===== Throttled Actions (Every 10 ticks / ~300ms) =====
+    // This matches the original periodic() speed
+    if (this.tickCounter % 10 === 0) {
+      this.runSlowLogic();
+    }
+  }
+
+  /**
+   * Native draw hook - runs every frame
+   */
+  private hookDraw(): void {
+    // Dashboard handles its own throttling
+    this.dashboard.render();
+  }
+
+  /**
+   * Native reincarnate hook - runs after ascension
+   */
+  private hookReincarnate(): void {
+    this.info('CookieBot detected reincarnation. Resetting state.');
+    this.state = this.getDefaultState();
+    this.state.isInitialized = true;
+    // Re-apply config that might have been lost in state reset
+    this.Config = this.dashboard.getConfig() as typeof this.Config;
+  }
+
+  /**
+   * Shared logic for slow/periodic tasks
+   * Called by periodic() (legacy) and hookLogic() (native)
+   */
+  private runSlowLogic(): void {
+    const Game = (globalThis as any).Game;
+    const startTime = performance.now();
+
+    // Handle "Just Right" achievement (special case)
+    if (this.state.nextAchievement === 397) {
+      this.measureModule('JustRight', () => this.runJustRight());
+      this.updateTickStats(startTime);
+      return;
+    }
+
+    // Update finished state
+    this.state.finished = LUMP_RELATED_ACHIEVEMENTS.every((id) => Game.AchievementsById[id].won);
+
+    // Night mode check
+    if (this.nightMode.checkNightMode() && !Game.ascensionMode) {
+      this.updateTickStats(startTime);
+      return;
+    }
+
+    // High-activity phase (Buying, Grimoire)
+    if (this.state.hyperActive || (this.state.now >= this.state.deadline)) {
+      this.state.hyperActive = false;
+      this.measureModule('PurchaseManager', () => this.bestBuy());
+      
+      if (this.cpsMult > 100) {
+        this.state.hyperActive = true;
+      }
+      
+      this.measureModule('GrimoireManager', () => this.handleSpeedMinigames());
+    }
+
+    // Frequent ascension checks
+    if (Game.ascensionMode === 1 || this.onAscend) {
+      this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
+    }
+    if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
+      this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
+    }
+
+    // Deadline check
+    if (this.state.now < this.state.deadline) {
+      this.updateTickStats(startTime);
+      return;
+    }
+
+    // Periodic actions (every ~15 seconds in legacy, or every ~50 calls here)
+    // We can just run them every time this function runs (every 300ms)
+    // The modules themselves usually have internal checks or are cheap enough
+
+    // Set robot name
+    const bakeryName = (Game as any).bakeryNameL.textContent;
+    const robotName = 'Automated ';
+    if (bakeryName.slice(0, robotName.length) !== robotName) {
+      (Game as any).bakeryNameL.textContent = robotName + bakeryName;
+    }
+
+    this.state.activities = this.state.mainActivity;
+
+    if (!Game.onMenu) {
+      this.status(false);
+    }
+
+    if (this.state.plantPending) {
+      Logger.addActivity('Make sure to harvest the new plant before ascend!');
+    }
+
+    // Calculate dynamic deadline
+    let dynamicDeadline = 5000 * this.fpsScale;
+    if (this.state.nextPurchasePrice && Game.cookiesPs > 0) {
+      const availableCookies = Game.cookies - (this.config.savingsGoal || 0);
+      const needsForPurchase = this.state.nextPurchasePrice - availableCookies;
+
+      if (needsForPurchase > 0) {
+        let timeToAfford = (needsForPurchase / Game.cookiesPs) * 1000;
+        const bufferTime = 500 * this.fpsScale;
+        timeToAfford = Math.max(timeToAfford - bufferTime, 100 * this.fpsScale);
+        
+        const maxWait = 5000 * this.fpsScale;
+        if (timeToAfford <= maxWait) {
+          dynamicDeadline = timeToAfford;
+        } else {
+          const remainder = timeToAfford % maxWait;
+          if (remainder > 1000 * this.fpsScale) {
+            dynamicDeadline = remainder;
+          } else {
+            dynamicDeadline = maxWait;
+          }
+        }
+        dynamicDeadline = Math.max(dynamicDeadline, 100 * this.fpsScale);
+      } else {
+        dynamicDeadline = 100 * this.fpsScale;
+      }
+    }
+
+    this.state.deadline = this.state.now + dynamicDeadline;
+    this.setDeadline(this.state.now + (this.state.now - Game.startDate) / 10);
+
+    // Run periodic modules
+    if (this.config.cheatLumps !== 4 && this.config.autoSugarLumps) {
+      this.measureModule('SugarLumpManager', () => this.sugarLumpManager.handleSugarLumps());
+    }
+
+    if (this.config.savingsEnabled) {
+      this.savingsManager.setCurrentTime(this.state.now);
+      this.measureModule('SavingsManager', () => this.savingsManager.handleSavings());
+    }
+
+    if (this.config.autoSeason) {
+      this.measureModule('SeasonHandler', () => this.seasonHandler.handleSeasons());
+    }
+
+    this.measureModule('DragonManager', () => this.dragonManager.handleDragon());
+    this.measureModule('AchievementHandler', () => this.achievementHandler.handleSmallAchievements());
+
+    if (this.config.autoWrinklers) {
+      this.measureModule('WrinklerManager', () => this.wrinklerManager.handleWrinklers());
+    }
+
+    this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
+    this.handleMinigames();
+    this.handleNotes();
+
+    if (!this.state.workingOnSpecialAchievement) {
+      if (!Game.HasAchiev('Elder')) {
+        Logger.addActivity('Getting 7 grandma types');
+      }
+      if (Game.HasAchiev('Elder') &&
+          Game.Upgrades['Bingo center/Research facility'].unlocked &&
+          Game.ascensionMode !== 1 &&
+          !Game.Upgrades['Bingo center/Research facility'].bought) {
+        Logger.addActivity('Funding the grandma research facility');
+      }
+    }
+
+    this.updateTickStats(startTime);
   }
 
   /**
@@ -522,26 +783,6 @@ export default class AutoPlay {
     // ===== Phase 2: Setup =====
     this.state.now = Date.now();
 
-    // Handle "Just Right" achievement (special case)
-    if (this.state.nextAchievement === 397) {
-      this.measureModule('JustRight', () => this.runJustRight());
-      this.updateTickStats(startTime);
-      return;
-    }
-
-    // Update finished state - check if all lump-related achievements are complete
-    this.state.finished = LUMP_RELATED_ACHIEVEMENTS.every((id) => Game.AchievementsById[id].won);
-
-    // ===== Phase 3: Night mode =====
-    if (this.nightMode.checkNightMode() && !Game.ascensionMode) {
-      // If sleeping, only cheat sugar lumps at level 4 and return
-      if (this.Config.CheatLumps === 4) {
-        this.measureModule('SugarLumpManager', () => this.sugarLumpManager.handleSugarLumps());
-      }
-      this.updateTickStats(startTime);
-      return;
-    }
-
     // ===== Phase 4: Fast actions (always run every 300ms) =====
     this.measureModule('ClickManager', () => this.clickManager.handleClicking());
     this.measureModule('GoldenCookieHandler', () => this.goldenCookieHandler.handleGoldenCookies());
@@ -551,156 +792,8 @@ export default class AutoPlay {
       this.measureModule('SugarLumpManager', () => this.sugarLumpManager.handleSugarLumps());
     }
 
-    // ===== Phase 5: High-activity phase =====
-    if (this.state.hyperActive || (this.state.now >= this.state.deadline)) {
-      this.state.hyperActive = false; // Reset flag, can be overwritten
-
-      // Unified bestBuy logic (compares buildings and upgrades by PP)
-      this.measureModule('PurchaseManager', () => this.bestBuy());
-
-      // Set hyperActive if CPS multiplier is very high
-      if (this.cpsMult > 100) {
-        this.state.hyperActive = true;
-      }
-
-      // Handle speed minigames (grimoire spells)
-      this.measureModule('GrimoireManager', () => this.handleSpeedMinigames());
-    }
-
-    // ===== Phase 6: Frequent ascension checks =====
-    // Check ascend often in reborn and during ascend
-    if (Game.ascensionMode === 1 || this.onAscend) {
-      this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
-    }
-
-    // Check ascend often for lucky payout
-    if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
-      this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
-    }
-
-    // ===== Phase 7: Deadline check (end of high-activity) =====
-    if (this.state.now < this.state.deadline) {
-      this.updateTickStats(startTime);
-      return;
-    }
-
-    // ===== Phase 8: Periodic actions (every 15 seconds) =====
-
-    // Set robot name in bakery
-    const bakeryName = (Game as any).bakeryNameL.textContent;
-    const robotName = 'Automated ';
-    if (bakeryName.slice(0, robotName.length) !== robotName) {
-      (Game as any).bakeryNameL.textContent = robotName + bakeryName;
-    }
-
-    // Reset activities to mainActivity at start of periodic phase
-    // Activities will be added to throughout Phase 8 by various modules
-    this.state.activities = this.state.mainActivity;
-
-    // Skip status() when menu is open - it closes the menu
-    if (!Game.onMenu) {
-      this.status(false);
-    }
-
-    // Plant pending warning
-    if (this.state.plantPending) {
-      Logger.addActivity('Make sure to harvest the new plant before ascend!');
-    }
-
-    // Calculate dynamic deadline based on when next purchase is affordable
-    let dynamicDeadline = 5000 * this.fpsScale; // Default 5 seconds (scaled)
-    if (this.state.nextPurchasePrice && Game.cookiesPs > 0) {
-      const availableCookies = Game.cookies - (this.config.savingsGoal || 0);
-      const needsForPurchase = this.state.nextPurchasePrice - availableCookies;
-
-      if (needsForPurchase > 0) {
-        // Calculate seconds until affordable (with buffer to catch it early)
-        let timeToAfford = (needsForPurchase / Game.cookiesPs) * 1000; // Convert to ms
-        const bufferTime = 500 * this.fpsScale; // Check 0.5s before affordable (scaled)
-        timeToAfford = Math.max(timeToAfford - bufferTime, 100 * this.fpsScale);
-
-        // Smart deadline calculation to avoid overshooting
-        const maxWait = 5000 * this.fpsScale;
-        if (timeToAfford <= maxWait) {
-          // Can check exactly when it's affordable
-          dynamicDeadline = timeToAfford;
-        } else {
-          // For longer waits, check at intervals that lead up to affordable time
-          const remainder = timeToAfford % maxWait;
-          if (remainder > 1000 * this.fpsScale) {
-            // Check at the remainder time to align with affordable moment
-            dynamicDeadline = remainder;
-          } else {
-            // Remainder is small, just use standard interval
-            dynamicDeadline = maxWait;
-          }
-        }
-
-        dynamicDeadline = Math.max(dynamicDeadline, 100 * this.fpsScale); // Minimum 100ms (scaled)
-      } else {
-        // Already affordable - check immediately
-        dynamicDeadline = 100 * this.fpsScale;
-      }
-    }
-
-    this.state.deadline = this.state.now + dynamicDeadline;
-    this.setDeadline(this.state.now + (this.state.now - Game.startDate) / 10); // Quick start
-
-    // Skip dashboard update if user has a menu open
-    if (!Game.onMenu || Game.onMenu === '') {
-      this.dashboard.render();
-    }
-
-    // Run all periodic modules (every 15 seconds)
-
-    // Sugar lumps (if not level 4, which runs in fast phase)
-    if (this.config.cheatLumps !== 4 && this.config.autoSugarLumps) {
-      this.measureModule('SugarLumpManager', () => this.sugarLumpManager.handleSugarLumps());
-    }
-
-    // Savings calculation
-    if (this.config.savingsEnabled) {
-      this.savingsManager.setCurrentTime(this.state.now);
-      this.measureModule('SavingsManager', () => this.savingsManager.handleSavings());
-    }
-
-    // Seasons
-    if (this.config.autoSeason) {
-      this.measureModule('SeasonHandler', () => this.seasonHandler.handleSeasons());
-    }
-
-    // Dragon
-    this.measureModule('DragonManager', () => this.dragonManager.handleDragon());
-
-    // Small achievements
-    this.measureModule('AchievementHandler', () => this.achievementHandler.handleSmallAchievements());
-
-    // Wrinklers
-    if (this.config.autoWrinklers) {
-      this.measureModule('WrinklerManager', () => this.wrinklerManager.handleWrinklers());
-    }
-
-    // Ascension
-    this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
-
-    // Minigames (garden, pantheon, stock market)
-    this.handleMinigames();
-
-    // Handle notes
-    this.handleNotes();
-
-    // Add some more hints what the bot is doing (but only if not working on special achievements)
-    if (!this.state.workingOnSpecialAchievement) {
-      if (!Game.HasAchiev('Elder')) {
-        Logger.addActivity('Getting 7 grandma types');
-      }
-      if (Game.HasAchiev('Elder') &&
-          Game.Upgrades['Bingo center/Research facility'].unlocked &&
-          Game.ascensionMode !== 1 &&
-          !Game.Upgrades['Bingo center/Research facility'].bought) {
-        Logger.addActivity('Funding the grandma research facility');
-      }
-    }
+    // Run shared slow logic
+    this.runSlowLogic();
 
     // Note: scheduleNextRun() is called at the START of periodic(), not here
     this.updateTickStats(startTime);
