@@ -9052,7 +9052,7 @@ class AutoPlay_AutoPlay {
         this.dashboard.updateDashboard();
         // Update dashboard every second for real-time stats
         setInterval(() => {
-            this.dashboard.render();
+            this.dashboard.updateDashboard();
         }, 1000);
         // Hook into Game.UpdateMenu to add config options to preferences
         this.setupMenuHook();
@@ -9839,7 +9839,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-102';
+AutoPlay_AutoPlay.version = '2.052-101';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

@@ -23,6 +23,7 @@ export class Dashboard {
   private positionTimeout: number | null = null;
   private lastRenderTime = 0;
   private renderInterval = 100; // Min ms between renders (approx 10fps)
+  private lastLayoutCheck = 0;
 
   // Activity tracking
   private actionHistory: ActionHistoryEntry[] = [];
@@ -875,6 +876,36 @@ export class Dashboard {
 
 
   /**
+   * Check if layout needs fixing (e.g. if game overlaps dashboard)
+   */
+  private checkLayout(): void {
+    const dashboard = document.getElementById('cookieBotDashboard');
+    const game = document.getElementById('game');
+
+    if (!dashboard || !game) return;
+
+    // Only check if dashboard is visible
+    if (dashboard.style.display === 'none') return;
+
+    const dashboardHeight = dashboard.offsetHeight;
+    if (dashboardHeight === 0) return;
+
+    // Parse current game bottom
+    const gameBottom = parseInt(game.style.bottom || '0', 10);
+
+    // Get dashboard bottom position (from style)
+    const dashboardBottom = parseInt(dashboard.style.bottom || '0', 10);
+
+    // Expected game bottom should be at least dashboard bottom + dashboard height
+    const expectedMinBottom = dashboardBottom + dashboardHeight;
+
+    // Allow small margin of error (e.g. 1px)
+    if (gameBottom < expectedMinBottom - 1) {
+      this.positionDashboard();
+    }
+  }
+
+  /**
    * Render/update the dashboard
    */
   render(): void {
@@ -890,6 +921,12 @@ export class Dashboard {
       this.createDashboard();
     }
     this.updateDashboard();
+
+    // Periodic layout check (every 2 seconds)
+    if (now - this.lastLayoutCheck > 2000) {
+      this.checkLayout();
+      this.lastLayoutCheck = now;
+    }
   }
 
   /**

@@ -211,6 +211,68 @@ const { initializeFullEnvironment } = require('./utils/setup');
         console.log('⚠️ SKIPPING: Could not find global AutoPlay object to test UseGameHooks.');
     }
 
+    // Disable UseGameHooks to ensure standard interval loop runs for the layout check
+    if (hasAutoPlay) {
+      await page.evaluate(() => {
+        window.AutoPlay.configManager.updateConfig({ UseGameHooks: 0 });
+      });
+    }
+
+    // Test Periodic Layout Fix
+    console.log('Testing Periodic Layout Fix...');
+
+    // 1. Manually break the layout
+    console.log('Simulating layout breakage (game.style.bottom = 0px)...');
+    await page.evaluate(() => {
+      const game = document.getElementById('game');
+      if (game) game.style.bottom = '0px';
+    });
+
+    // 2. Verify it is broken
+    const brokenBottom = await page.evaluate(() => {
+      const game = document.getElementById('game');
+      return game ? game.style.bottom : null;
+    });
+    console.log(`Game bottom is now: ${brokenBottom}`);
+    if (brokenBottom !== '0px') {
+      console.warn('⚠️ Could not break layout manually, test might be invalid.');
+    }
+
+    // 3. Wait for the periodic check (runs every 2000ms, so wait 4000ms to be safe)
+    console.log('Waiting for periodic fix (4s)...');
+
+    // Debug: check if render loop is active
+    await page.evaluate(() => {
+      window.renderCount = 0;
+      // Hook into render to count calls
+      const dashboard = window.AutoPlay.dashboard;
+      const originalRender = dashboard.render;
+      dashboard.render = function () {
+        window.renderCount = (window.renderCount || 0) + 1;
+        return originalRender.apply(this, arguments);
+      };
+    });
+
+    await new Promise(r => setTimeout(r, 4000));
+
+    const renderCount = await page.evaluate(() => window.renderCount);
+    console.log(`Render called ${renderCount} times during wait.`);
+
+    // 4. Verify it is fixed
+    const fixedBottom = await page.evaluate(() => {
+      const game = document.getElementById('game');
+      return game ? parseInt(game.style.bottom || '0', 10) : 0;
+    });
+
+    console.log(`Game bottom after wait: ${fixedBottom}px`);
+
+    if (fixedBottom > 0) {
+      console.log('✓ PASS: Periodic layout check fixed the game window overlap.');
+    } else {
+      console.error('❌ FAIL: Game window is still overlapping dashboard after wait!');
+      process.exit(1);
+    }
+
   } catch (error) {
     console.error('❌ Test Failed:', error);
     process.exit(1);

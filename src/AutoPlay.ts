@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-100';
+  static readonly version = '2.052-102';
 
   // State
   private config: AutoPlayConfig;
@@ -447,7 +447,7 @@ export default class AutoPlay {
 
     // Update dashboard every second for real-time stats
     setInterval(() => {
-      this.dashboard.updateDashboard();
+      this.dashboard.render();
     }, 1000);
 
     // Hook into Game.UpdateMenu to add config options to preferences

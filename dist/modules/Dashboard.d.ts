@@ -9,6 +9,7 @@ export declare class Dashboard {
     private positionTimeout;
     private lastRenderTime;
     private renderInterval;
+    private lastLayoutCheck;
     private actionHistory;
     private statusHistory;
     private lastStatus;
@@ -66,6 +67,10 @@ export declare class Dashboard {
      * Log a status update to the status history
      */
     logStatus(statusType: string, message: string, details?: string): void;
+    /**
+     * Check if layout needs fixing (e.g. if game overlaps dashboard)
+     */
+    private checkLayout;
     /**
      * Render/update the dashboard
      */
