@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-103';
+  static readonly version = '2.052-104';
 
   // State
   private config: AutoPlayConfig;
@@ -304,6 +304,17 @@ export default class AutoPlay {
       label: ['IDLE', 'AUTO', 'MANUAL'], // Legacy support
       desc: 'Cookiebot global mode (work in progress)'
     }, 1);
+
+    this.configManager.registerOption('GameSpeed', {
+      options: [
+        { value: 30, label: 'Normal (30 fps)' },
+        { value: 60, label: 'Fast (60 fps)' },
+        { value: 144, label: 'Faster (144 fps)' },
+        { value: 300, label: 'Hyper (300 fps)' }
+      ],
+      label: ['Normal (30 fps)', 'Fast (60 fps)', 'Faster (144 fps)', 'Hyper (300 fps)'],
+      desc: 'Adjust game speed (FPS). Warning: High speeds may crash the game. Not saved.'
+    }, 0);
 
     this.configManager.registerOption('FPS', {
       options: [

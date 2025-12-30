@@ -63,7 +63,7 @@ export class SugarLumpManager {
         { value: 4, label: 'Level 4 (15625x speed + Type manipulation)' }
       ],
       default: 0,
-      desc: 'Cheats to make sugar lumps ripen faster. Disables achievements.'
+      desc: 'Cheats to make sugar lumps ripen faster. Warning: May trigger "Cheated cookies" shadow achievement.'
     }, 0, 'Cheats');
   }
 

@@ -52,6 +52,10 @@ export declare class ConfigManager {
      */
     private setBotMode;
     /**
+     * Set game speed handler
+     */
+    private setGameSpeed;
+    /**
      * Toggle dashboard visibility via config
      */
     private toggleDashboardConfig;

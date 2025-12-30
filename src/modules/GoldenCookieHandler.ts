@@ -46,7 +46,7 @@ export class GoldenCookieHandler {
         { value: 5, label: 'Level 100 (Max)' }
       ],
       default: 0,
-      desc: 'Cheats to make golden cookies spawn faster. Disables achievements.'
+      desc: 'Cheats to make golden cookies spawn faster. Warning: May trigger "Cheated cookies" shadow achievement.'
     }, 0, 'Cheats');
   }
 

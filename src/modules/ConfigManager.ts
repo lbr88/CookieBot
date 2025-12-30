@@ -92,7 +92,11 @@ export class ConfigManager {
    */
   private saveConfig(config: Config): void {
     try {
-      window.localStorage.setItem(this.configPrefix, JSON.stringify(config));
+      // Create a copy and remove non-persistent settings
+      const configToSave = { ...config };
+      delete configToSave['GameSpeed'];
+      
+      window.localStorage.setItem(this.configPrefix, JSON.stringify(configToSave));
     } catch (e) {
       console.error('Failed to save config:', e);
     }
@@ -226,6 +230,7 @@ export class ConfigManager {
 
           if (key === 'BotMode') handler = () => this.setBotMode();
           else if (key === 'ShowDashboard') handler = () => this.toggleDashboardConfig();
+          else if (key === 'GameSpeed') handler = () => this.setGameSpeed();
           else if (key === 'CleanLog') handler = () => this.cleanLog();
           else if (key === 'ShowLog') handler = () => this.showLog();
 
@@ -251,6 +256,25 @@ export class ConfigManager {
     if (this.context && this.context.info) {
       this.context.info(`The bot has changed mode to ${modeName}`);
       this.context.logStatus('mode', `Mode: ${modeName}`);
+    }
+  }
+
+  /**
+   * Set game speed handler
+   */
+  private setGameSpeed(): void {
+    this.toggleConfig('GameSpeed');
+    const index = this.config.GameSpeed;
+    // Map index to FPS values: 0->30, 1->60, 2->144, 3->300
+    const fpsMap = [30, 60, 144, 300];
+    const newFps = fpsMap[index] || 30;
+    
+    if (typeof Game !== 'undefined') {
+      Game.fps = newFps;
+    }
+    
+    if (this.context && this.context.info) {
+      this.context.info(`Game speed set to ${newFps} FPS`);
     }
   }
 
