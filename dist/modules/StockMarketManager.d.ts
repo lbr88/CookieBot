@@ -38,7 +38,7 @@ export declare class StockMarketManager {
      */
     private upgradeOffices;
     /**
-     * Buy 500 of each stock for "Dude, sweet" achievement (459)
+     * Buy 500 of each stock for "No nobility in poverty" achievement
      */
     private buyForAchievement;
     /**

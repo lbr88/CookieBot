@@ -12,6 +12,7 @@
 import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
 import { Logger } from '../utils/Logger';
+import { UPGRADE_IDS, ACHIEVEMENT_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 declare const Beautify: (num: number) => string;
@@ -31,7 +32,7 @@ export class WrinklerManager {
     this.context.poppingWrinklers = false;
 
     // Don't handle wrinklers until One mind is bought (unlocks wrinklers)
-    if (!Game.Upgrades["One mind"].bought) {
+    if (!Game.UpgradesById[UPGRADE_IDS.ONE_MIND].bought) {
       return;
     }
 
@@ -60,11 +61,11 @@ export class WrinklerManager {
     // Pop if we have Unholy bait and haven't won Moistburster achievement
     // Game.Upgrades[...].bought returns number (0 or 1), so convert to boolean
     doPop = doPop ||
-      (!!Game.Upgrades["Unholy bait"].bought && !Game.Achievements["Moistburster"].won);
+      (!!Game.UpgradesById[UPGRADE_IDS.UNHOLY_BAIT].bought && !Game.AchievementsById[ACHIEVEMENT_IDS.MOISTBURSTER].won);
 
     // Pop in end phase if we haven't won Last Chance to See achievement
     doPop = doPop ||
-      (this.isEndPhase() && !Game.Achievements["Last Chance to See"].won);
+      (this.isEndPhase() && !Game.AchievementsById[ACHIEVEMENT_IDS.LAST_CHANCE_TO_SEE].won);
 
     return doPop;
   }
@@ -93,7 +94,7 @@ export class WrinklerManager {
    */
   private handleSingleWrinklerPopping(): void {
     // Handle Wrinkler poker achievement (pop wrinkler #3)
-    if (!Game.Achievements['Wrinkler poker'].won && Game.wrinklers[3].close === 1) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.WRINKLER_POKER].won && Game.wrinklers[3].close === 1) {
       Game.wrinklers[3].selected = 1;
       l('backgroundLeftCanvas').click();
     }
@@ -222,7 +223,7 @@ export class WrinklerManager {
    */
   getStatus(): ModuleStatus {
     // Check if wrinklers are unlocked
-    if (!Game.Upgrades["One mind"].bought) {
+    if (!Game.UpgradesById[UPGRADE_IDS.ONE_MIND].bought) {
       return {
         module: 'Wrinklers',
         status: 'disabled',
@@ -248,7 +249,7 @@ export class WrinklerManager {
         currentAction: 'Popping all wrinklers',
         reason: Game.season === 'easter' || Game.season === 'halloween'
           ? 'Season drops'
-          : Game.Upgrades["Unholy bait"].bought && !Game.Achievements["Moistburster"].won
+          : Game.UpgradesById[UPGRADE_IDS.UNHOLY_BAIT].bought && !Game.AchievementsById[ACHIEVEMENT_IDS.MOISTBURSTER].won
             ? 'Moistburster achievement'
             : 'Last Chance to See achievement',
         icon: '🐛',
@@ -261,7 +262,7 @@ export class WrinklerManager {
     }
 
     // Check for Wrinkler poker achievement
-    if (!Game.Achievements['Wrinkler poker'].won && Game.wrinklers[3].close === 1) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.WRINKLER_POKER].won && Game.wrinklers[3].close === 1) {
       return {
         module: 'Wrinklers',
         status: 'active',

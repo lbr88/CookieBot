@@ -4,6 +4,7 @@
 
 import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
+import { BUILDING_IDS, ACHIEVEMENT_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 declare const l: (id: string) => HTMLElement | null;
@@ -20,25 +21,25 @@ export class AchievementHandler {
    */
   handleSmallAchievements(): void {
     // Tabloid addiction - click news ticker 50 times
-    if (!Game.Achievements['Tabloid addiction'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.TABLOID_ADDICTION].won) {
       for (let i = 0; i < 50; i++) {
         Game.tickerL.click();
       }
     }
 
     // Here you go - click the achievement itself
-    if (!Game.Achievements['Here you go'].won) {
-      Game.Achievements['Here you go'].click();
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.HERE_YOU_GO].won) {
+      Game.AchievementsById[ACHIEVEMENT_IDS.HERE_YOU_GO].click();
     }
 
     // Tiny cookie - click the tiny cookie
-    if (!Game.Achievements['Tiny cookie'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.TINY_COOKIE].won) {
       Game.ClickTinyCookie();
     }
 
     // God complex - name bakery "Orteil"
     const bakeryName = Game.bakeryName;
-    if (!Game.Achievements['God complex'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.GOD_COMPLEX].won) {
       Game.bakeryName = 'Orteil';
       Game.bakeryNamePrompt();
       Game.ConfirmPrompt();
@@ -48,7 +49,7 @@ export class AchievementHandler {
     }
 
     // What's in a name - add robot name to bakery name
-    if (!Game.Achievements["What's in a name"].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.WHATS_IN_A_NAME].won) {
       Game.bakeryName = this.context.robotName + bakeryName;
       Game.bakeryNamePrompt();
       Game.ConfirmPrompt();
@@ -62,17 +63,17 @@ export class AchievementHandler {
     }
 
     // Cheated cookies taste awful - get this after all other achievements
-    if (this.context.endPhase() && !Game.Achievements['Cheated cookies taste awful'].won) {
+    if (this.context.endPhase() && !Game.AchievementsById[ACHIEVEMENT_IDS.CHEATED_COOKIES_TASTE_AWFUL].won) {
       Game.Win('Cheated cookies taste awful');
     }
 
     // Third-party - using a third-party tool
-    if (!Game.Achievements['Third-party'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.THIRDPARTY].won) {
       Game.Win('Third-party');
     }
 
     // Olden days - find the forgotten madeleine
-    if (!Game.Achievements['Olden days'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.OLDEN_DAYS].won) {
       const currentMenu = Game.onMenu;
       Game.ShowMenu('log');
       const menuDivs = l('menu')?.getElementsByTagName('div');
@@ -87,7 +88,7 @@ export class AchievementHandler {
     }
 
     // Cookie-dunker - dunk the cookie in milk
-    if (!Game.Achievements['Cookie-dunker'].won && Game.milkProgress > 1 && Game.milkHd > 0.34) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.COOKIEDUNKER].won && Game.milkProgress > 1 && Game.milkHd > 0.34) {
       if (this.context.backupHeight) {
         Game.LeftBackground.canvas.height = this.context.backupHeight;
         this.context.backupHeight = 0;
@@ -99,7 +100,7 @@ export class AchievementHandler {
     }
 
     // Stifling the press - mute the news ticker
-    if (!Game.Achievements['Stifling the press'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.STIFLING_THE_PRESS].won) {
       const savedNarrowSize = Game.tickerTooNarrow;
       Game.tickerTooNarrow = Game.windowW + 10;
       Game.tickerL.click();
@@ -107,7 +108,7 @@ export class AchievementHandler {
     }
 
     // No time like the present - send and redeem a gift
-    if (!Game.Achievements['No time like the present'].won &&
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.NO_TIME_LIKE_THE_PRESENT].won &&
         Game.Has('Wrapping paper') && !Game.hasBuff('Gifted out')) {
       if (!this.context.giftCode) {
         Game.promptGiftSend();
@@ -140,7 +141,7 @@ export class AchievementHandler {
 
     // In her likeness - customize the You building
     // Only after player has at least one You building (fixes issue #97)
-    if (!Game.Achievements['In her likeness'].won && Game.Objects.You.amount > 0) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.IN_HER_LIKENESS].won && Game.ObjectsById[BUILDING_IDS.YOU].amount > 0) {
       Game.YouCustomizer.load('9,6,-,3,-,0,3', true);
       // This is already correct, but we need to trigger the change
       Game.YouCustomizer.offsetGene('head', -1);
@@ -151,7 +152,7 @@ export class AchievementHandler {
    * Undunk the cookie after getting the achievement
    */
   private undunkCookie(): void {
-    if (!Game.Achievements['Cookie-dunker'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.COOKIEDUNKER].won) {
       setTimeout(() => this.undunkCookie(), 20 * 1000);
       return;
     }
@@ -575,7 +576,7 @@ export class AchievementHandler {
       module: 'Achievements',
       status: 'active',
       currentAction: `Working on: ${achievement.name}`,
-      reason: achievement.ddesc.replace(/<q>.*?<\/q>/ig, '').substring(0, 50),
+      reason: achievement.ddesc.replace(/<q>.*?<\/q>/ig, '').replace(/<[^>]+>/g, '').substring(0, 50),
       nextAction: this.context.grinding() ? 'Grinding mode (no sleep)' : undefined,
       icon: '🏆',
       progress,

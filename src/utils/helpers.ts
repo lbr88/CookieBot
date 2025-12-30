@@ -2,6 +2,8 @@
  * Utility helper functions used across modules
  */
 
+import { UPGRADE_IDS } from '../constants/gameIds';
+
 /**
  * Format large numbers with suffixes (Million, Billion, etc.)
  * Used as fallback when Beautify function is not available
@@ -260,7 +262,13 @@ export function status(
   let lum = 0;
 
   // Upgrades to skip checking (grandmapocalypse, chocolate egg)
-  const nonUp = [71, 72, 73, 87, 227];
+  const nonUp = [
+    UPGRADE_IDS.ONE_MIND,
+    UPGRADE_IDS.EXOTIC_NUTS,
+    UPGRADE_IDS.COMMUNAL_BRAINSWEEP,
+    UPGRADE_IDS.ARCANE_SUGAR,
+    UPGRADE_IDS.CHOCOLATE_EGG
+  ];
 
   // Check achievements
   for (const a in Game.Achievements) {

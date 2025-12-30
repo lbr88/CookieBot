@@ -1,4 +1,5 @@
 import type { AutoPlayContext } from '../types/autoplay';
+import { UPGRADE_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 declare const Beautify: (num: number) => string;
@@ -108,7 +109,7 @@ export class SavingsManager {
 
     // Wait for golden cookie upgrades before saving
     // Upgrade IDs: 52 (Lucky day), 53 (Serendipity)
-    if (Game.UpgradesById[52].bought && Game.UpgradesById[53].bought) {
+    if (Game.UpgradesById[UPGRADE_IDS.LUCKY_DAY].bought && Game.UpgradesById[UPGRADE_IDS.SERENDIPITY].bought) {
       this.savingsGoal = Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER;
     } else {
       this.savingsGoal = 0;
@@ -118,7 +119,7 @@ export class SavingsManager {
 
     // Upgrade to Lucky Frenzy if "Get lucky" upgrade is bought
     // Upgrade ID: 86 (Get lucky)
-    if (Game.UpgradesById[86].bought) {
+    if (Game.UpgradesById[UPGRADE_IDS.GET_LUCKY].bought) {
       this.savingsGoal *= this.FRENZY_MULTIPLIER;
     }
 
@@ -198,7 +199,7 @@ export class SavingsManager {
     // Calculate thresholds
     const baseLucky = Game.unbuffedCps * 60 * this.LUCKY_MULTIPLIER;
     const baseLuckyFrenzy = baseLucky * this.FRENZY_MULTIPLIER;
-    const hasGetLucky = Game.UpgradesById[86] && Game.UpgradesById[86].bought;
+    const hasGetLucky = Game.UpgradesById[UPGRADE_IDS.GET_LUCKY] && Game.UpgradesById[UPGRADE_IDS.GET_LUCKY].bought;
 
     // Check why reserve might be disabled
     let disabledReason = '';
@@ -209,10 +210,10 @@ export class SavingsManager {
     } else if (elapsedTime < 0) {
       const minutesRemaining = Math.ceil(Math.abs(elapsedTime) / 60 / 1000);
       disabledReason = `Startup Period (${minutesRemaining}m remaining)`;
-    } else if (!Game.UpgradesById[52]?.bought || !Game.UpgradesById[53]?.bought) {
+    } else if (!Game.UpgradesById[UPGRADE_IDS.LUCKY_DAY]?.bought || !Game.UpgradesById[UPGRADE_IDS.SERENDIPITY]?.bought) {
       const missing = [];
-      if (!Game.UpgradesById[52]?.bought) missing.push('Lucky day');
-      if (!Game.UpgradesById[53]?.bought) missing.push('Serendipity');
+      if (!Game.UpgradesById[UPGRADE_IDS.LUCKY_DAY]?.bought) missing.push('Lucky day');
+      if (!Game.UpgradesById[UPGRADE_IDS.SERENDIPITY]?.bought) missing.push('Serendipity');
       disabledReason = `Missing upgrades: ${missing.join(', ')}`;
     }
 

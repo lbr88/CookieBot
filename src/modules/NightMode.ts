@@ -12,6 +12,7 @@
  */
 
 import type { AutoPlayContext } from '../types/autoplay';
+import { UPGRADE_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 
@@ -130,7 +131,7 @@ export class NightMode {
     this.context.handleNightTrading();
 
     // Handle Golden Switch
-    const goldenSwitchOff = Game.Upgrades["Golden switch [off]"];
+    const goldenSwitchOff = Game.UpgradesById[UPGRADE_IDS.GOLDEN_SWITCH_OFF];
     if (goldenSwitchOff && goldenSwitchOff.unlocked) {
       // Click any golden cookies before buying Golden Switch
       this.context.handleGoldenCookies();
@@ -142,11 +143,11 @@ export class NightMode {
       const cpsMult = this.getCurrentCpsMultiplier();
       if (cpsMult < 0.8 || hour < 7) {
         // Buy Shimmering veil if available
-        const shimmeringVeilOff = Game.Upgrades["Shimmering veil [off]"];
+        const shimmeringVeilOff = Game.UpgradesById[UPGRADE_IDS.SHIMMERING_VEIL_OFF];
         if (shimmeringVeilOff &&
             shimmeringVeilOff.unlocked &&
             shimmeringVeilOff.canBuy() &&
-            Game.Upgrades["Reinforced membrane"].bought) {
+          Game.UpgradesById[UPGRADE_IDS.REINFORCED_MEMBRANE].bought) {
           shimmeringVeilOff.buy();
         }
         goldenSwitchOff.buy();
@@ -176,7 +177,7 @@ export class NightMode {
     this.context.deactivateNightSpirits();
 
     // Turn Golden Switch back on
-    const goldenSwitchOn = Game.Upgrades["Golden switch [on]"];
+    const goldenSwitchOn = Game.UpgradesById[UPGRADE_IDS.GOLDEN_SWITCH_ON];
     if (goldenSwitchOn && goldenSwitchOn.unlocked) {
       goldenSwitchOn.buy();
     }

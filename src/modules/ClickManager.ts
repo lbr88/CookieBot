@@ -6,6 +6,7 @@
 
 import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
+import { ACHIEVEMENT_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 declare const Beautify: (num: number) => string;
@@ -48,18 +49,18 @@ export class ClickManager {
     if (clickMode === 0) return;
 
     // Respect Neverclick achievement (max 15 clicks)
-    if (!Game.Achievements['Neverclick'].won && Game.cookieClicks <= 15) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.NEVERCLICK].won && Game.cookieClicks <= 15) {
       return;
     }
 
     // Respect True Neverclick in Born Again endgame
     if (Game.ascensionMode === 1 && this.context.endPhase() &&
-        !Game.Achievements['True Neverclick'].won && !Game.cookieClicks) {
+      !Game.AchievementsById[ACHIEVEMENT_IDS.TRUE_NEVERCLICK].won && !Game.cookieClicks) {
       return;
     }
 
     // Uncanny clicker achievement (5 clicks in a row within 1 second)
-    if (!Game.Achievements['Uncanny clicker'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.UNCANNY_CLICKER].won) {
       for (let i = 1; i < 6; i++) {
         setTimeout(() => Game.ClickCookie(), 50 * i);
       }
@@ -115,7 +116,7 @@ export class ClickManager {
     }
 
     // Check if blocked by Neverclick
-    if (!Game.Achievements['Neverclick'].won && Game.cookieClicks <= 15) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.NEVERCLICK].won && Game.cookieClicks <= 15) {
       return {
         module: 'Clicking',
         status: 'waiting',
@@ -133,7 +134,7 @@ export class ClickManager {
 
     // Check if blocked by True Neverclick in Born Again endgame
     if (Game.ascensionMode === 1 && this.context.endPhase() &&
-        !Game.Achievements['True Neverclick'].won && !Game.cookieClicks) {
+      !Game.AchievementsById[ACHIEVEMENT_IDS.TRUE_NEVERCLICK].won && !Game.cookieClicks) {
       return {
         module: 'Clicking',
         status: 'waiting',
@@ -158,14 +159,14 @@ export class ClickManager {
       status: 'active',
       currentAction: hasFrenzy ? 'Clicking (Frenzy active!)' : 'Auto-clicking big cookie',
       reason: this.getClickModeName(),
-      nextAction: !Game.Achievements['Uncanny clicker'].won ? 'Working on Uncanny clicker achievement' : undefined,
+      nextAction: !Game.AchievementsById[ACHIEVEMENT_IDS.UNCANNY_CLICKER].won ? 'Working on Uncanny clicker achievement' : undefined,
       icon: '👆',
       details: {
         'Mode': this.getClickModeName(),
         'Clicks/sec': hasFrenzy ? '~15-20' : clicksPerSecond,
         'Total Clicks': typeof Beautify !== 'undefined' ? Beautify(Game.cookieClicks) : Game.cookieClicks,
         'Frenzy Active': hasFrenzy,
-        'Uncanny Clicker': Game.Achievements['Uncanny clicker'].won
+        'Uncanny Clicker': Game.AchievementsById[ACHIEVEMENT_IDS.UNCANNY_CLICKER].won
       }
     };
   }

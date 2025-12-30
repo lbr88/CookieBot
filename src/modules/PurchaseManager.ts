@@ -8,6 +8,7 @@
 
 import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
+import { BUILDING_IDS, UPGRADE_IDS, ACHIEVEMENT_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 declare const Beautify: (num: number) => string;
@@ -92,7 +93,7 @@ export class PurchaseManager {
     }
 
     // Initialize with cursor, when cps = 0 all pp = inf
-    let best = Game.ObjectsById[0]?.name || 'Cursor';
+    let best = Game.ObjectsById[BUILDING_IDS.CURSOR]?.name || 'Cursor';
     let minpp = Infinity;
     let type: 'building' | 'upgrade' = 'building';
 
@@ -146,8 +147,8 @@ export class PurchaseManager {
     let buy_amt = 1;
 
     if ((Game.resets && Game.ascensionMode !== 1 &&
-         Game.isMinigameReady(Game.Objects?.["Temple"]) &&
-         Game.Objects?.["Temple"]?.minigame?.slot?.[0] === 10 && // Rigidel is in slot 0
+      Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.TEMPLE]) &&
+      Game.ObjectsById[BUILDING_IDS.TEMPLE]?.minigame?.slot?.[0] === 10 && // Rigidel is in slot 0
       Game.BuildingsOwned % 10 === 0 && (this.context.now - Game.startDate) > 2 * 60 * 1000)
         || this.state.buy10) {
       // if owned % 10 != 0, will just buy one
@@ -179,7 +180,7 @@ export class PurchaseManager {
     this.state.buy10 = minpp < 1;
 
     // Upgrades (original lines 571-584)
-    if (Game.Achievements["Hardcore"].won || Game.UpgradesOwned !== 0) {
+    if (Game.AchievementsById[ACHIEVEMENT_IDS.HARDCORE].won || Game.UpgradesOwned !== 0) {
       for (const u of Game.UpgradesInStore) {
         if (!this.shouldAvoidBuy(u) && !u.bought) {
           // Safety check: ensure upgrade exists in CookieMonster data
@@ -218,16 +219,16 @@ export class PurchaseManager {
     }
 
     // Sugar frenzy check (original lines 602-605)
-    if (this.context.canUseLumps && Game.Upgrades["Sugar frenzy"].unlocked &&
-        !Game.Upgrades["Sugar frenzy"].bought &&
+    if (this.context.canUseLumps && Game.UpgradesById[UPGRADE_IDS.SUGAR_FRENZY].unlocked &&
+      !Game.UpgradesById[UPGRADE_IDS.SUGAR_FRENZY].bought &&
       (this.context.now - Game.startDate) > 3 * 24 * 60 * 60 * 1000) {
-      Game.Upgrades["Sugar frenzy"].buy();
+      Game.UpgradesById[UPGRADE_IDS.SUGAR_FRENZY].buy();
     }
 
     // Nothing bought, within first 10 minutes, have neverclick
     if (!haveBought) {
       if ((this.context.now - Game.startDate) < 10 * 60 * 1000 &&
-          Game.Achievements['Neverclick'].won) {
+        Game.AchievementsById[ACHIEVEMENT_IDS.NEVERCLICK].won) {
         // Wait five seconds before next step (scaled by FPS)
         const delay = 5000 * (this.context.fpsScale || 1);
         this.context.setDeadline(this.context.now + delay);

@@ -17,7 +17,7 @@
 
 declare const Game: any;
 
-import { HARVESTABLE_PLANTS, GARDEN_UPGRADE_IDS, PLANT_DEPENDENCIES } from '../constants/gameIds';
+import { HARVESTABLE_PLANTS, GARDEN_UPGRADE_IDS, PLANT_DEPENDENCIES, BUILDING_IDS, UPGRADE_IDS } from '../constants/gameIds';
 import type { ModuleStatus } from '../types/moduleStatus';
 import type { AutoPlayContext } from '../types/autoplay';
 
@@ -49,9 +49,9 @@ export class GardenManager {
    * @param freeze true to freeze, false to unfreeze
    */
   freezeGarden(freeze: boolean): void {
-    if (!Game.isMinigameReady(Game.Objects['Farm'])) return;
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.FARM])) return;
 
-    const garden = Game.Objects['Farm'].minigame;
+    const garden = Game.ObjectsById[BUILDING_IDS.FARM].minigame;
 
     // Toggle freeze if needed
     if (freeze !== garden.freeze) {
@@ -66,9 +66,9 @@ export class GardenManager {
    * Main handler - called periodically (every 15 seconds)
    */
   handleGarden(): void {
-    if (!Game.isMinigameReady(Game.Objects['Farm'])) return;
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.FARM])) return;
 
-    const garden = Game.Objects['Farm'].minigame;
+    const garden = Game.ObjectsById[BUILDING_IDS.FARM].minigame;
 
     // Harvest mature plants and clean up
     this.harvesting(garden);
@@ -161,22 +161,22 @@ export class GardenManager {
 
     if (sector === 0) this.plantsMissing = false;
 
-    const doPrint = (sector === 0) || (sector !== 3 && Game.Objects['Farm'].level === sector + 6);
+    const doPrint = (sector === 0) || (sector !== 3 && Game.ObjectsById[BUILDING_IDS.FARM].level === sector + 6);
 
     // Priority order: Try to unlock cookie-dropping upgrades
-    if (!Game.Upgrades['Ichor syrup'].unlocked && garden.plants['ichorpuff']?.unlocked) {
+    if (!Game.UpgradesById[UPGRADE_IDS.ICHOR_SYRUP].unlocked && garden.plants['ichorpuff']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Ichor syrup.');
       this.plantCookies = true;
       return 'ichorpuff';
     }
-    if (!Game.Upgrades['Green yeast digestives'].unlocked && garden.plants['greenRot']?.unlocked) {
+    if (!Game.UpgradesById[UPGRADE_IDS.GREEN_YEAST_DIGESTIVES].unlocked && garden.plants['greenRot']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Green yeast digestives.');
       this.plantCookies = true;
       return 'greenRot';
     }
-    if (!Game.Upgrades['Duketater cookies'].unlocked && garden.plants['duketater']?.unlocked) {
+    if (!Game.UpgradesById[UPGRADE_IDS.DUKETATER_COOKIES].unlocked && garden.plants['duketater']?.unlocked) {
       this.switchSoil(garden, sector, 'fertilizer');
       if (doPrint) this.logActivity('Trying to get Duketater cookies.');
       this.plantCookies = true;

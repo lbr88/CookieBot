@@ -4,6 +4,7 @@
 
 import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
+import { BUILDING_IDS, UPGRADE_IDS, ACHIEVEMENT_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 
@@ -57,8 +58,8 @@ export class SeasonHandler {
    */
   private handleSanta(): void {
     if (
-      !!Game.Upgrades["A festive hat"].bought &&
-      !Game.Upgrades["Santa's dominion"].unlocked
+      !!Game.UpgradesById[UPGRADE_IDS.A_FESTIVE_HAT].bought &&
+      !Game.UpgradesById[UPGRADE_IDS.SANTAS_DOMINION].unlocked
     ) {
       // Upgrade Santa
       Game.specialTab = "santa";
@@ -76,20 +77,20 @@ export class SeasonHandler {
     if (Game.season !== "christmas") return;
 
     // Skip if achievement already won
-    if (!!Game.Achievements["Baby it's old outside"].won) return;
+    if (!!Game.AchievementsById[ACHIEVEMENT_IDS.BABY_ITS_OLD_OUTSIDE].won) return;
 
     // Skip if no grandmas purchased yet (elf can't appear without grandmas)
     // This is the fix for the menu closing issue
-    if (Game.Objects["Grandma"].amount === 0) return;
+    if (Game.ObjectsById[BUILDING_IDS.GRANDMA].amount === 0) return;
 
     // Close any open menu
     if (Game.onMenu) Game.ShowMenu("");
 
     // Scroll grandma canvas into view
-    Game.Objects["Grandma"].canvas.parentElement?.scrollIntoView();
+    Game.ObjectsById[BUILDING_IDS.GRANDMA].canvas.parentElement?.scrollIntoView();
 
     // Find elf grandma
-    const elfGrandmas = Game.Objects["Grandma"].pics.filter(
+    const elfGrandmas = Game.ObjectsById[BUILDING_IDS.GRANDMA].pics.filter(
       (p: any) => p.pic === "elfGrandma.png"
     );
 
@@ -99,8 +100,8 @@ export class SeasonHandler {
       const yPos = elfGranny.y + 32;
 
       // Set mouse position and trigger click
-      Game.Objects["Grandma"].mousePos = [xPos, yPos];
-      Game.Objects["Grandma"].mouseOn = true;
+      Game.ObjectsById[BUILDING_IDS.GRANDMA].mousePos = [xPos, yPos];
+      Game.ObjectsById[BUILDING_IDS.GRANDMA].mouseOn = true;
       Game.mouseDown = 1;
 
       // Release click after 1 second
@@ -121,7 +122,7 @@ export class SeasonHandler {
    */
   private cycleSeason(): void {
     // Don't cycle if season switcher not bought
-    if (!Game.Upgrades["Season switcher"].bought) return; // bought is number, falsy check works
+    if (!Game.UpgradesById[UPGRADE_IDS.SEASON_SWITCHER].bought) return; // bought is number, falsy check works
 
     // Don't cycle in Born Again mode
     if (Game.ascensionMode === 1) return;
@@ -134,16 +135,16 @@ export class SeasonHandler {
       // Cycle to next season
       switch (Game.season) {
         case "christmas":
-          Game.Upgrades["Lovesick biscuit"].buy(); // to valentine
+          Game.UpgradesById[UPGRADE_IDS.LOVESICK_BISCUIT].buy(); // to valentine
           break;
         case "valentines":
-          Game.Upgrades["Bunny biscuit"].buy(); // to easter
+          Game.UpgradesById[UPGRADE_IDS.BUNNY_BISCUIT].buy(); // to easter
           break;
         case "easter":
-          Game.Upgrades["Ghostly biscuit"].buy(); // to halloween
+          Game.UpgradesById[UPGRADE_IDS.GHOSTLY_BISCUIT].buy(); // to halloween
           break;
         default:
-          Game.Upgrades["Festive biscuit"].buy(); // to christmas
+          Game.UpgradesById[UPGRADE_IDS.FESTIVE_BISCUIT].buy(); // to christmas
           break;
       }
     } else if (!this.allUnlocked(this.allSeasonUpgrades)) {
@@ -206,7 +207,7 @@ export class SeasonHandler {
     const currentSeason = Game.season || 'none';
 
     // Check if season switcher is unlocked
-    if (!Game.Upgrades["Season switcher"].bought) {
+    if (!Game.UpgradesById[UPGRADE_IDS.SEASON_SWITCHER].bought) {
       return {
         module: 'Season',
         status: 'disabled',
@@ -252,8 +253,8 @@ export class SeasonHandler {
     }
 
     // Check for Santa development
-    if (Game.Upgrades["A festive hat"].bought &&
-        !Game.Upgrades["Santa's dominion"].unlocked) {
+    if (Game.UpgradesById[UPGRADE_IDS.A_FESTIVE_HAT].bought &&
+      !Game.UpgradesById[UPGRADE_IDS.SANTAS_DOMINION].unlocked) {
       return {
         module: 'Season',
         status: 'active',
@@ -270,9 +271,9 @@ export class SeasonHandler {
 
     // Check for Christmas elf achievement
     if (currentSeason === 'christmas' &&
-        !Game.Achievements["Baby it's old outside"].won &&
-        Game.Objects["Grandma"].amount > 0) {
-      const elfGrandmas = Game.Objects["Grandma"].pics.filter(
+      !Game.AchievementsById[ACHIEVEMENT_IDS.BABY_ITS_OLD_OUTSIDE].won &&
+      Game.ObjectsById[BUILDING_IDS.GRANDMA].amount > 0) {
+      const elfGrandmas = Game.ObjectsById[BUILDING_IDS.GRANDMA].pics.filter(
         (p: any) => p.pic === "elfGrandma.png"
       );
 

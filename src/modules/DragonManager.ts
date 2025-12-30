@@ -8,6 +8,7 @@
 
 import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
+import { BUILDING_IDS, UPGRADE_IDS, ACHIEVEMENT_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 
@@ -81,7 +82,7 @@ export class DragonManager {
    */
   handleDragon(): void {
     // Only proceed if dragon egg is unlocked
-    if (!Game.Upgrades['A crumbly egg'].unlocked) {
+    if (!Game.UpgradesById[UPGRADE_IDS.A_CRUMBLY_EGG].unlocked) {
       return;
     }
 
@@ -135,8 +136,8 @@ export class DragonManager {
     if (shouldBuy150) {
       // After sacrificing 50 or 200 of all buildings, buy back to 150
       // Ensure Farm exists for garden minigame
-      if (Game.Objects['Farm'].amount === 0) {
-        Game.Objects['Farm'].buy(1);
+      if (Game.ObjectsById[BUILDING_IDS.FARM].amount === 0) {
+        Game.ObjectsById[BUILDING_IDS.FARM].buy(1);
       }
 
       // Note: handleMinigames would need to be called here
@@ -265,7 +266,7 @@ export class DragonManager {
    */
   checkDragonLimits(buildingName: string): boolean {
     // Don't limit purchases until "Here be dragon" achievement is won
-    if (!Game.Achievements['Here be dragon'].won) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.HERE_BE_DRAGON].won) {
       return true;
     }
 
@@ -313,7 +314,7 @@ export class DragonManager {
    */
   getStatus(): ModuleStatus {
     // Check if dragon egg is unlocked
-    if (!Game.Upgrades['A crumbly egg'].unlocked) {
+    if (!Game.UpgradesById[UPGRADE_IDS.A_CRUMBLY_EGG].unlocked) {
       return {
         module: 'Dragon',
         status: 'disabled',

@@ -20,6 +20,7 @@ declare const Beautify: (num: number) => string;
 
 import type { ModuleStatus } from '../types/moduleStatus';
 import type { AutoPlayContext } from '../types/autoplay';
+import { BUILDING_IDS, ACHIEVEMENT_IDS } from '../constants/gameIds';
 
 interface GoodData {
   min: number;        // Minimum price seen
@@ -47,10 +48,10 @@ export class StockMarketManager {
     // Wait 1 hour after reset/reincarnation before trading
     if (Date.now() < this.context.resetTime + 3600000) return;
 
-    if (!Game.isMinigameReady(Game.Objects['Bank'])) return;
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.BANK])) return;
     if (this.context.wantAscend) return; // Don't trade before ascending
 
-    const market = Game.Objects['Bank'].minigame;
+    const market = Game.ObjectsById[BUILDING_IDS.BANK].minigame;
 
     // Buy brokers to increase stock limits
     this.buyBrokers(market);
@@ -78,9 +79,9 @@ export class StockMarketManager {
    * Called from NightMode.activateNightAtStocks()
    */
   handleNightTrading(): void {
-    if (!Game.isMinigameReady(Game.Objects['Bank'])) return;
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.BANK])) return;
 
-    const market = Game.Objects['Bank'].minigame;
+    const market = Game.ObjectsById[BUILDING_IDS.BANK].minigame;
 
     // First do normal trading
     this.handleStockMarket();
@@ -127,8 +128,8 @@ export class StockMarketManager {
     if (market.officeLevel < market.offices.length - 1) {
       const office = market.offices[market.officeLevel];
       if (office.cost &&
-          Game.Objects['Cursor'].amount >= office.cost[0] &&
-          Game.Objects['Cursor'].level >= office.cost[1]) {
+        Game.ObjectsById[BUILDING_IDS.CURSOR].amount >= office.cost[0] &&
+        Game.ObjectsById[BUILDING_IDS.CURSOR].level >= office.cost[1]) {
         const upgradeButton = document.getElementById('bankOfficeUpgrade');
         if (upgradeButton) {
           upgradeButton.click();
@@ -138,12 +139,12 @@ export class StockMarketManager {
   }
 
   /**
-   * Buy 500 of each stock for "Dude, sweet" achievement (459)
+   * Buy 500 of each stock for "No nobility in poverty" achievement
    */
   private buyForAchievement(market: any): void {
-    // Achievement 459 = "Dude, sweet" (own 500 of each stock)
+    // Achievement 459 = "No nobility in poverty" (own 500 of each stock)
     const lastGood = market.goodsById[market.goodsById.length - 1];
-    if (!Game.AchievementsById[459].won &&
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.NO_NOBILITY_IN_POVERTY].won &&
         market.getGoodMaxStock(lastGood) > 1000) {
       for (const goodKey in market.goods) {
         const good = market.goods[goodKey];
@@ -159,7 +160,7 @@ export class StockMarketManager {
    * Try to get "Debt evasion" achievement by ascending with loan
    */
   private tryDebtEvasion(): void {
-    if (!Game.Achievements['Debt evasion'].won && !this.context.plantPending) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.DEBT_EVASION].won && !this.context.plantPending) {
       const loanButton = document.getElementById('bankLoan2');
       if (loanButton) {
         loanButton.click();
@@ -274,7 +275,7 @@ export class StockMarketManager {
     }
 
     // Check if stock market is unlocked
-    if (!Game.isMinigameReady(Game.Objects['Bank'])) {
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.BANK])) {
       return {
         module: 'Stock Market',
         status: 'disabled',
@@ -282,7 +283,7 @@ export class StockMarketManager {
         reason: 'Need Bank minigame unlocked (Cursor level 12)',
         icon: '📈',
         details: {
-          'Cursor Level': Game.Objects['Cursor']?.level || 0,
+          'Cursor Level': Game.ObjectsById[BUILDING_IDS.CURSOR]?.level || 0,
           'Minigame': 'Not ready'
         }
       };
@@ -302,7 +303,7 @@ export class StockMarketManager {
       };
     }
 
-    const market = Game.Objects['Bank'].minigame;
+    const market = Game.ObjectsById[BUILDING_IDS.BANK].minigame;
     const brokers = market.brokers;
     const maxBrokers = market.getMaxBrokers();
     const officeLevel = market.officeLevel;
@@ -320,7 +321,7 @@ export class StockMarketManager {
 
     // Check for achievement pursuit
     const lastGood = market.goodsById[market.goodsById.length - 1];
-    const pursuingAchievement = !Game.AchievementsById[459].won &&
+    const pursuingAchievement = !Game.AchievementsById[ACHIEVEMENT_IDS.NO_NOBILITY_IN_POVERTY].won &&
                                 market.getGoodMaxStock(lastGood) > 1000;
 
     if (pursuingAchievement) {

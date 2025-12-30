@@ -14,6 +14,7 @@
 
 declare const Game: any;
 
+import { BUILDING_IDS } from '../constants/gameIds';
 import type { ModuleStatus } from '../types/moduleStatus';
 import type { AutoPlayContext } from '../types/autoplay';
 
@@ -30,7 +31,7 @@ export class PantheonManager {
    * Assigns optimal spirits based on current game state
    */
   handlePantheon(): void {
-    if (!Game.isMinigameReady(Game.Objects['Temple'])) return;
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.TEMPLE])) return;
 
     const age = this.context.now - Game.lumpT;
 
@@ -64,7 +65,7 @@ export class PantheonManager {
    * Called from NightMode.prepareForNight()
    */
   activateNightSpirits(): void {
-    if (!Game.isMinigameReady(Game.Objects['Temple'])) return;
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.TEMPLE])) return;
 
     // Remove day spirits
     this.removeSpirit(1, 'decadence');
@@ -80,7 +81,7 @@ export class PantheonManager {
    * Called from NightMode.deactivateNightFeatures()
    */
   deactivateNightSpirits(): void {
-    if (!Game.isMinigameReady(Game.Objects['Temple'])) return;
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.TEMPLE])) return;
 
     // Just remove asceticism, let main logic handle others
     this.removeSpirit(1, 'asceticism');
@@ -93,7 +94,7 @@ export class PantheonManager {
    * @param force If 1, forces use of 1 swap. If 0, requires 3 swaps available.
    */
   public assignSpirit(slot: number, godName: string, force: number): void {
-    const pantheon = Game.Objects['Temple'].minigame;
+    const pantheon = Game.ObjectsById[BUILDING_IDS.TEMPLE].minigame;
 
     // Check if we have enough swaps (worship swaps recharge over time)
     if (pantheon.swaps + force < 3) return;
@@ -113,7 +114,7 @@ export class PantheonManager {
    * @param godName Name of the spirit to remove
    */
   private removeSpirit(slot: number, godName: string): void {
-    const pantheon = Game.Objects['Temple'].minigame;
+    const pantheon = Game.ObjectsById[BUILDING_IDS.TEMPLE].minigame;
 
     // Check if this spirit is in the slot
     if (pantheon.slot[slot] !== pantheon.gods[godName].id) return;
@@ -130,21 +131,21 @@ export class PantheonManager {
    */
   getStatus(): ModuleStatus {
     // Check if pantheon is unlocked
-    if (!Game.isMinigameReady(Game.Objects['Temple'])) {
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.TEMPLE])) {
       return {
         module: 'Pantheon',
         status: 'disabled',
         currentAction: 'Not unlocked',
-        reason: 'Need Temple minigame unlocked (Temple level 1)',
-        icon: '⛪',
+        reason: 'Need Temple minigame unlocked (Level 1)',
+        icon: '🏛️',
         details: {
-          'Temple Level': Game.Objects['Temple']?.level || 0,
+          'Temple Level': Game.ObjectsById[BUILDING_IDS.TEMPLE]?.level || 0,
           'Minigame': 'Not ready'
         }
       };
     }
 
-    const pantheon = Game.Objects['Temple'].minigame;
+    const pantheon = Game.ObjectsById[BUILDING_IDS.TEMPLE].minigame;
     const slot0 = pantheon.slot[0];
     const slot1 = pantheon.slot[1];
     const slot2 = pantheon.slot[2];

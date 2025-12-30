@@ -20,12 +20,12 @@ import { GrimoireManager } from './modules/GrimoireManager';
 import { GardenManager } from './modules/GardenManager';
 import { StockMarketManager } from './modules/StockMarketManager';
 import type { AutoPlayConfig, AutoPlayState } from './types/autoplay';
-import { WANTED_ACHIEVEMENTS, LUMP_RELATED_ACHIEVEMENTS } from './constants/gameIds';
+import { WANTED_ACHIEVEMENTS, LUMP_RELATED_ACHIEVEMENTS, BUILDING_IDS, UPGRADE_IDS, ACHIEVEMENT_IDS } from './constants/gameIds';
 import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-78';
+  static readonly version = '2.052-80';
 
   // State
   private config: AutoPlayConfig;
@@ -595,7 +595,7 @@ export default class AutoPlay {
     if (Game.ascensionMode === 1 || this.onAscend) {
       this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
     }
-    if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
+    if (!Game.UpgradesById[UPGRADE_IDS.LUCKY_PAYOUT].bought && Game.heavenlyChips > 77777777) {
       this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
     }
 
@@ -683,13 +683,13 @@ export default class AutoPlay {
     this.handleNotes();
 
     if (!this.state.workingOnSpecialAchievement) {
-      if (!Game.HasAchiev('Elder')) {
+      if (!Game.AchievementsById[ACHIEVEMENT_IDS.ELDER].won) {
         Logger.addActivity('Getting 7 grandma types');
       }
-      if (Game.HasAchiev('Elder') &&
-          Game.Upgrades['Bingo center/Research facility'].unlocked &&
+      if (Game.AchievementsById[ACHIEVEMENT_IDS.ELDER].won &&
+        Game.UpgradesById[UPGRADE_IDS.BINGO_CENTERRESEARCH_FACILITY].unlocked &&
           Game.ascensionMode !== 1 &&
-          !Game.Upgrades['Bingo center/Research facility'].bought) {
+        !Game.UpgradesById[UPGRADE_IDS.BINGO_CENTERRESEARCH_FACILITY].bought) {
         Logger.addActivity('Funding the grandma research facility');
       }
     }
@@ -1114,28 +1114,28 @@ export default class AutoPlay {
           this.ascensionManager.triggerAscend('ascend just right did not work, retry.', false);
         } else if (cookieDiff < -2000000000) {
           // Way over - buy many cursors to burn cookies
-          Game.ObjectsById[0].buy(130 + (this.state.runRightCount || 0));
+          Game.ObjectsById[BUILDING_IDS.CURSOR].buy(130 + (this.state.runRightCount || 0));
         } else if (cookieDiff < -6000000) {
           // Over by 6M - buy cursors
-          Game.ObjectsById[0].buy(90 + (this.state.runRightCount || 0));
+          Game.ObjectsById[BUILDING_IDS.CURSOR].buy(90 + (this.state.runRightCount || 0));
         } else if (cookieDiff < -30000) {
           // Over by 30k - buy cursors
-          Game.ObjectsById[0].buy(50 + (this.state.runRightCount || 0));
+          Game.ObjectsById[BUILDING_IDS.CURSOR].buy(50 + (this.state.runRightCount || 0));
         } else if (cookieDiff < 0) {
           // Slightly over - buy few cursors
-          Game.ObjectsById[0].buy(22 + (this.state.runRightCount || 0));
+          Game.ObjectsById[BUILDING_IDS.CURSOR].buy(22 + (this.state.runRightCount || 0));
         } else if (cookieDiff > 10000000) {
           // Need >10M - buy bank
-          Game.ObjectsById[5].buy(1);
+          Game.ObjectsById[BUILDING_IDS.BANK].buy(1);
         } else if (cookieDiff > 500000) {
           // Need >500k - buy factory
-          Game.ObjectsById[4].buy(1);
+          Game.ObjectsById[BUILDING_IDS.FACTORY].buy(1);
         } else if (cookieDiff > 5000) {
           // Need >5k - buy farm
-          Game.ObjectsById[2].buy(1);
+          Game.ObjectsById[BUILDING_IDS.FARM].buy(1);
         } else if (cookieDiff > 50) {
           // Need >50 - buy cursor
-          Game.ObjectsById[0].buy(1);
+          Game.ObjectsById[BUILDING_IDS.CURSOR].buy(1);
         } else {
           // Very close - just click
           Game.ClickCookie();
@@ -1144,7 +1144,7 @@ export default class AutoPlay {
         // Phase 2b: Still have buildings - sell them off
         if (cookieDiff / Game.cookiesPs > 1000) {
           // Need more cookies first - buy a bank
-          Game.ObjectsById[5].buy(1);
+          Game.ObjectsById[BUILDING_IDS.BANK].buy(1);
         }
 
         // Sell excess buildings (keep 10 more than next type)

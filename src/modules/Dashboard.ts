@@ -465,6 +465,10 @@ export class Dashboard {
 
       // Helper function to render a module card
       const renderModuleCard = (key: string, status: any): string => {
+        const escapeHtml = (str: string) => {
+          if (typeof str !== 'string') return String(str);
+          return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        };
         const color = statusColors[status.status as keyof typeof statusColors] || '#ccc';
         const icon = status.icon || '📦';
 
@@ -493,14 +497,14 @@ export class Dashboard {
 
         let cardHtml = '<div style="padding: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ' + color + '; border-radius: 4px;">';
         cardHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-        cardHtml += '<div><span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + status.module + '</span>' + timingDisplay + '</div>';
-        cardHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + status.status + '</span>';
+        cardHtml += '<div><span style="color: ' + color + '; font-weight: bold; font-size: 11px;">' + icon + ' ' + escapeHtml(status.module) + '</span>' + timingDisplay + '</div>';
+        cardHtml += '<span style="color: ' + color + '; font-size: 9px; text-transform: uppercase; opacity: 0.8;">' + escapeHtml(status.status) + '</span>';
         cardHtml += '</div>';
-        cardHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + status.currentAction + '</div>';
-        cardHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + status.reason + '</div>';
+        cardHtml += '<div style="color: #ccc; font-size: 10px; margin-bottom: 2px;">' + escapeHtml(status.currentAction) + '</div>';
+        cardHtml += '<div style="color: #888; font-size: 9px; margin-bottom: 4px;">' + escapeHtml(status.reason) + '</div>';
 
         if (status.nextAction) {
-          cardHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + status.nextAction + '</div>';
+          cardHtml += '<div style="color: #9cf; font-size: 9px; margin-top: 4px;">→ ' + escapeHtml(status.nextAction) + '</div>';
         }
 
         // Add standardized progress bar and time remaining
@@ -533,7 +537,7 @@ export class Dashboard {
           cardHtml += '<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 9px;">';
           for (const [key, value] of Object.entries(status.details)) {
             if (key !== 'Price' && key !== 'Available') {
-              cardHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + key + ':</span> <span style="color: #ccc;">' + value + '</span></div>';
+              cardHtml += '<div style="color: #888; margin-top: 1px;"><span style="color: #aaa;">' + escapeHtml(key) + ':</span> <span style="color: #ccc;">' + escapeHtml(String(value)) + '</span></div>';
             }
           }
           cardHtml += '</div>';

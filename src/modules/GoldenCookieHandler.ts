@@ -5,6 +5,7 @@
 
 import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
+import { UPGRADE_IDS, ACHIEVEMENT_IDS, BUILDING_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 declare const Beautify: ((value: number, floats?: number) => string) | undefined;
@@ -99,7 +100,7 @@ export class GoldenCookieHandler {
     // Wait for Four-leaf cookie achievement if close
     if (
       Game.shimmerTypes['golden'].n >= 4 &&
-      !Game.Achievements['Four-leaf cookie'].won
+      !Game.AchievementsById[ACHIEVEMENT_IDS.FOURLEAF_COOKIE].won
     ) {
       return; // wait for achievement
     }
@@ -119,7 +120,7 @@ export class GoldenCookieHandler {
       if (
         s.type !== 'golden' ||
         s.life < Game.fps ||
-        !Game.Achievements['Early bird'].won
+        !Game.AchievementsById[ACHIEVEMENT_IDS.EARLY_BIRD].won
       ) {
         this.clickShimmerWithTracking(s);
         return;
@@ -128,7 +129,7 @@ export class GoldenCookieHandler {
       // Click golden cookies that have been around for a while (if we have Fading luck)
       if (
         s.life / Game.fps < s.dur - 2 &&
-        Game.Achievements['Fading luck'].won
+        Game.AchievementsById[ACHIEVEMENT_IDS.FADING_LUCK].won
       ) {
         this.clickShimmerWithTracking(s);
         return;
@@ -177,7 +178,7 @@ export class GoldenCookieHandler {
     if (!cheatGolden || cheatGolden === 0) return;
 
     // Don't cheat if Lucky payout isn't bought and we have enough heavenly chips
-    if (!Game.Upgrades['Lucky payout'].bought && Game.heavenlyChips > 77777777) {
+    if (!Game.UpgradesById[UPGRADE_IDS.LUCKY_PAYOUT].bought && Game.heavenlyChips > 77777777) {
       return;
     }
 
@@ -273,9 +274,9 @@ export class GoldenCookieHandler {
     const activeShimmers = Game.shimmers.length;
 
     // Check for Four-leaf cookie achievement attempt
-    if (!Game.Achievements['Four-leaf cookie'].won &&
-        Game.Objects['Wizard tower']?.amount > 500 &&
-        Game.Upgrades['Distilled essence of redoubled luck']?.bought) {
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.FOURLEAF_COOKIE].won &&
+      Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER]?.amount > 500 &&
+      Game.UpgradesById[UPGRADE_IDS.DISTILLED_ESSENCE_OF_REDOUBLED_LUCK]?.bought) {
       return {
         module: 'Golden Cookies',
         status: 'waiting',
@@ -286,7 +287,7 @@ export class GoldenCookieHandler {
         details: {
           'Golden Cookies': goldenCount,
           'Target': 4,
-          'Wizard Towers': Game.Objects['Wizard tower']?.amount || 0
+          'Wizard Towers': Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER]?.amount || 0
         }
       };
     }

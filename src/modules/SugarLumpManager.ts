@@ -9,6 +9,7 @@
 
 import type { AutoPlayContext } from '../types/autoplay';
 import type { ModuleStatus } from '../types/moduleStatus';
+import { ACHIEVEMENT_IDS, BUILDING_IDS } from '../constants/gameIds';
 
 declare const Game: any;
 declare const Beautify: (num: number) => string;
@@ -100,7 +101,7 @@ export class SugarLumpManager {
       age >= game.lumpMatureAge &&
       game.lumpCurrentType === LumpType.Normal &&
       this.minLumpsOK &&
-      !Game.Achievements["Hand-picked"].won
+      !Game.AchievementsById[ACHIEVEMENT_IDS.HANDPICKED].won
     ) {
       this.harvestLump();
     }
@@ -174,16 +175,16 @@ export class SugarLumpManager {
 
     // Max level: manipulate lump types for achievements (RNG manipulation)
     if (this.cheatLumpsLevel === 4) {
-      if (!Game.Achievements["Sugar sugar"].won) {
+      if (!Game.AchievementsById[ACHIEVEMENT_IDS.SUGAR_SUGAR].won) {
         // Bifurcated sugar lumps
         game.lumpCurrentType = LumpType.Bifurcated;
       } else if (
-        !Game.Achievements["Sweetmeats"].won &&
+        !Game.AchievementsById[ACHIEVEMENT_IDS.SWEETMEATS].won &&
         game.elderWrath > 0
       ) {
         // Meaty sugar lumps (grandmapocalypse only)
         game.lumpCurrentType = LumpType.Meaty;
-      } else if (!Game.Achievements["Maillard reaction"].won) {
+      } else if (!Game.AchievementsById[ACHIEVEMENT_IDS.MAILLARD_REACTION].won) {
         // Caramelized sugar lumps
         game.lumpCurrentType = LumpType.Caramelized;
       } else {
@@ -218,7 +219,7 @@ export class SugarLumpManager {
     }
 
     // Step 2: Bring Farm (Garden) to level 9
-    const farm = Game.Objects["Farm"];
+    const farm = Game.ObjectsById[BUILDING_IDS.FARM];
     if (farm.level < 9) {
       if (farm.level < Game.lumps) {
         farm.levelUp();
@@ -235,7 +236,7 @@ export class SugarLumpManager {
     const lumpLimit = endPhase ? 0 : 100;
 
     // Step 3: Bring Cursor (Stock Market) to level 12
-    const cursor = Game.Objects["Cursor"];
+    const cursor = Game.ObjectsById[BUILDING_IDS.CURSOR];
     if (cursor.level < 12) {
       if (cursor.level + lumpLimit < Game.lumps) {
         cursor.levelUp();
@@ -360,7 +361,7 @@ export class SugarLumpManager {
 
     // Check if waiting for mature (Hand-picked achievement)
     if (age >= matureAge && game.lumpCurrentType === 0 &&
-        this.minLumpsOK && !Game.Achievements["Hand-picked"].won) {
+      this.minLumpsOK && !Game.AchievementsById[ACHIEVEMENT_IDS.HANDPICKED].won) {
       return {
         module: 'Sugar Lumps',
         status: 'active',
@@ -394,8 +395,8 @@ export class SugarLumpManager {
     }
 
     // Check auto-spending status
-    const farm = Game.Objects["Farm"];
-    const cursor = Game.Objects["Cursor"];
+    const farm = Game.ObjectsById[BUILDING_IDS.FARM];
+    const cursor = Game.ObjectsById[BUILDING_IDS.CURSOR];
     let spendingStatus = '';
 
     if (!farm || farm.level < 9) {

@@ -15,6 +15,7 @@
 
 declare const Game: any;
 
+import { BUILDING_IDS, ACHIEVEMENT_IDS, UPGRADE_IDS } from '../constants/gameIds';
 import type { ModuleStatus } from '../types/moduleStatus';
 import type { AutoPlayContext } from '../types/autoplay';
 
@@ -31,16 +32,16 @@ export class GrimoireManager {
    * Casts grimoire spells when beneficial
    */
   handleGrimoires(): void {
-    if (!Game.isMinigameReady(Game.Objects['Wizard tower'])) return;
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER])) return;
 
-    const grimoire = Game.Objects['Wizard tower'].minigame;
-    const wizardTower = Game.Objects['Wizard tower'];
+    const grimoire = Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER].minigame;
+    const wizardTower = Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER];
 
     // Special case: Four-leaf cookie achievement
     // Try to get 4 golden cookies on screen at once
-    if (!Game.Achievements['Four-leaf cookie'].won &&
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.FOURLEAF_COOKIE].won &&
         wizardTower.amount > 500 &&
-        Game.Upgrades['Distilled essence of redoubled luck'].bought) {
+      Game.UpgradesById[UPGRADE_IDS.DISTILLED_ESSENCE_OF_REDOUBLED_LUCK].bought) {
       const handOfFate = grimoire.spells['hand of fate'];
 
       // Wait until we have 2 golden cookies, then cast to get a 3rd
@@ -96,22 +97,22 @@ export class GrimoireManager {
    */
   getStatus(): ModuleStatus {
     // Check if grimoire is unlocked
-    if (!Game.isMinigameReady(Game.Objects['Wizard tower'])) {
+    if (!Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER])) {
       return {
         module: 'Grimoire',
         status: 'disabled',
         currentAction: 'Not unlocked',
-        reason: 'Need Wizard tower minigame unlocked (Wizard tower level 1)',
-        icon: '🔮',
+        reason: 'Need Wizard Tower minigame unlocked (Level 1)',
+        icon: '🧙',
         details: {
-          'Wizard Tower Level': Game.Objects['Wizard tower']?.level || 0,
+          'Wizard Tower Level': Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER]?.level || 0,
           'Minigame': 'Not ready'
         }
       };
     }
 
-    const grimoire = Game.Objects['Wizard tower'].minigame;
-    const wizardTower = Game.Objects['Wizard tower'];
+    const grimoire = Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER].minigame;
+    const wizardTower = Game.ObjectsById[BUILDING_IDS.WIZARD_TOWER];
     const magicPercent = Math.floor((grimoire.magic / grimoire.magicM) * 100);
 
     // Check for Four-leaf cookie achievement attempt

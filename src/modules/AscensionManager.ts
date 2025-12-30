@@ -6,6 +6,7 @@ declare const Game: any;
 declare const Beautify: (num: number) => string;
 import type { ModuleStatus } from '../types/moduleStatus';
 import type { AutoPlayContext } from '../types/autoplay';
+import { BUILDING_IDS, UPGRADE_IDS, ACHIEVEMENT_IDS } from '../constants/gameIds';
 
 interface AscensionState {
   ascendLimit: number;
@@ -121,7 +122,7 @@ export class AscensionManager {
     }
 
     // Check for season switcher
-    if (!Game.Upgrades["Season switcher"].bought &&
+    if (!Game.UpgradesById[UPGRADE_IDS.SEASON_SWITCHER].bought &&
         this.context.nextAchievement === 108 && Game.ascendMeterLevel > 1111) {
       this.doAscend("getting season switcher.", true);
       return;
@@ -160,9 +161,9 @@ export class AscensionManager {
     const isFirstRun = (Game.prestige === 0);
     const currentPrestige = Game.ascendMeterLevel;
     const isHardcoreAchievement = (
-      achiev.id === Game.Achievements["Hardcore"].id ||
-      achiev.id === Game.Achievements["Neverclick"].id ||
-      achiev.id === Game.Achievements["True Neverclick"].id
+      achiev.id === Game.AchievementsById[ACHIEVEMENT_IDS.HARDCORE].id ||
+      achiev.id === Game.AchievementsById[ACHIEVEMENT_IDS.NEVERCLICK].id ||
+      achiev.id === Game.AchievementsById[ACHIEVEMENT_IDS.TRUE_NEVERCLICK].id
     );
 
     if (isFirstRun && currentPrestige < 365 && !isHardcoreAchievement) {
@@ -188,9 +189,9 @@ export class AscensionManager {
    * Check for endless cycle achievement (1000 ascends)
    */
   private checkEndlessCycle(): boolean {
-    if (this.context.endPhase() && !Game.Achievements["Endless cycle"].won &&
-        !Game.ascensionMode && Game.Upgrades["Sucralosia Inutilis"].bought &&
-        Game.Upgrades['Lucky payout'].bought) {
+    if (this.context.endPhase() && !Game.AchievementsById[ACHIEVEMENT_IDS.ENDLESS_CYCLE].won &&
+      !Game.ascensionMode && Game.UpgradesById[UPGRADE_IDS.SUCRALOSIA_INUTILIS].bought &&
+      Game.UpgradesById[UPGRADE_IDS.LUCKY_PAYOUT].bought) {
       // this costs approx. 1 minute per ascend
       this.context.activities = "Going for 1000 ascends.";
       this.context.hyperActive = true; // full activity
@@ -208,8 +209,8 @@ export class AscensionManager {
    * Check for reincarnation achievement (100 ascends)
    */
   private checkReincarnation(): boolean {
-    if (Game.Upgrades["Permanent upgrade slot V"].bought &&
-        !Game.Achievements["Reincarnation"].won && !Game.ascensionMode) {
+    if (Game.UpgradesById[UPGRADE_IDS.PERMANENT_UPGRADE_SLOT_V].bought &&
+      !Game.AchievementsById[ACHIEVEMENT_IDS.REINCARNATION].won && !Game.ascensionMode) {
       // this costs 3+2 minute per 2 ascend
       this.context.activities = "Going for 100 ascends.";
       this.context.hyperActive = true; // full activity
@@ -232,7 +233,7 @@ export class AscensionManager {
 
     // Stock market profit check
     if (this.context.nextAchievement === 463 && daysInRun > 10 &&
-        Game.Objects["Bank"].minigame && Game.Objects["Bank"].minigame.profit > daysInRun * 300000) {
+      Game.ObjectsById[BUILDING_IDS.BANK].minigame && Game.ObjectsById[BUILDING_IDS.BANK].minigame.profit > daysInRun * 300000) {
       this.context.addActivity("Making money in stock market for achievements.");
       return false;
     }
@@ -268,7 +269,7 @@ export class AscensionManager {
    */
   private checkLuckyUpgrades(): boolean {
     // Lucky digit (prestige % 10 == 7)
-    if (!Game.Upgrades["Lucky digit"].bought && Game.heavenlyChips > 777 &&
+    if (!Game.UpgradesById[UPGRADE_IDS.LUCKY_DIGIT].bought && Game.heavenlyChips > 777 &&
         Game.ascendMeterLevel > 0 && Game.ascendMeterLevel < 20 &&
         ((Game.prestige + Game.ascendMeterLevel) % 10 === 7)) {
       this.doAscend("ascend for heavenly upgrade lucky digit.", false);
@@ -276,7 +277,7 @@ export class AscensionManager {
     }
 
     // Lucky number (prestige % 1000 == 777)
-    if (!Game.Upgrades["Lucky number"].bought && Game.heavenlyChips > 77777 &&
+    if (!Game.UpgradesById[UPGRADE_IDS.LUCKY_NUMBER].bought && Game.heavenlyChips > 77777 &&
         Game.ascendMeterLevel > 0 && Game.ascendMeterLevel < 200 &&
         ((Game.prestige + Game.ascendMeterLevel) % 1000 === 777)) {
       this.doAscend("ascend for heavenly upgrade lucky number.", false);
@@ -284,7 +285,7 @@ export class AscensionManager {
     }
 
     // Lucky payout (need six 7s in prestige)
-    if (!Game.Upgrades["Lucky payout"].bought && Game.heavenlyChips > 77777777) {
+    if (!Game.UpgradesById[UPGRADE_IDS.LUCKY_PAYOUT].bought && Game.heavenlyChips > 77777777) {
       const newPrestige = Game.prestige + Game.ascendMeterLevel;
       this.context.wantAscend = true; // avoid buying plants
       this.context.hyperActive = true; // full activity
@@ -313,9 +314,9 @@ export class AscensionManager {
     const shouldAttemptHardcore = this.context.Config.HardcoreMode === 1;
 
     // True Neverclick (0 clicks)
-    if (shouldAttemptHardcore && !Game.Achievements["True Neverclick"].won && Game.cookieClicks === 0) {
-      const achiev = Game.Achievements["True Neverclick"];
-      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    if (shouldAttemptHardcore && !Game.AchievementsById[ACHIEVEMENT_IDS.TRUE_NEVERCLICK].won && Game.cookieClicks === 0) {
+      const achiev = Game.AchievementsById[ACHIEVEMENT_IDS.TRUE_NEVERCLICK];
+      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '').replace(/<[^>]+>/g, '');
 
       if (this.state.neverclickWarn) {
         Game.Prompt('<h3>Attention</h3><div class="block">' +
@@ -327,15 +328,15 @@ export class AscensionManager {
       needAchievement = true;
     }
     // Neverclick (<=15 clicks)
-    else if (shouldAttemptHardcore && !Game.Achievements["Neverclick"].won && Game.cookieClicks <= 15) {
-      const achiev = Game.Achievements["Neverclick"];
-      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    else if (shouldAttemptHardcore && !Game.AchievementsById[ACHIEVEMENT_IDS.NEVERCLICK].won && Game.cookieClicks <= 15) {
+      const achiev = Game.AchievementsById[ACHIEVEMENT_IDS.NEVERCLICK];
+      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '').replace(/<[^>]+>/g, '');
       needAchievement = true;
     }
     // Hardcore (0 upgrades)
-    else if (shouldAttemptHardcore && !Game.Achievements["Hardcore"].won && Game.UpgradesOwned === 0) {
-      const achiev = Game.Achievements["Hardcore"];
-      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+    else if (shouldAttemptHardcore && !Game.AchievementsById[ACHIEVEMENT_IDS.HARDCORE].won && Game.UpgradesOwned === 0) {
+      const achiev = Game.AchievementsById[ACHIEVEMENT_IDS.HARDCORE];
+      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '').replace(/<[^>]+>/g, '');
       needAchievement = true;
     }
 
@@ -350,23 +351,23 @@ export class AscensionManager {
     }
 
     // Speed baking achievements
-    if (!Game.Achievements["Speed baking I"].won &&
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.SPEED_BAKING_I].won &&
         (this.context.now - Game.startDate <= 1000 * 60 * 35)) {
-      const achiev = Game.Achievements["Speed baking I"];
-      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
-    } else if (!Game.Achievements["Speed baking II"].won &&
+      const achiev = Game.AchievementsById[ACHIEVEMENT_IDS.SPEED_BAKING_I];
+      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '').replace(/<[^>]+>/g, '');
+    } else if (!Game.AchievementsById[ACHIEVEMENT_IDS.SPEED_BAKING_II].won &&
         (this.context.now - Game.startDate <= 1000 * 60 * 25)) {
-      const achiev = Game.Achievements["Speed baking II"];
-      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+      const achiev = Game.AchievementsById[ACHIEVEMENT_IDS.SPEED_BAKING_II];
+      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '').replace(/<[^>]+>/g, '');
 
       // threefold clicking speed
       for (let i = 1; i < 3; i++) {
         setTimeout(() => { Game.ClickCookie(0, Game.computedMouseCps); }, 60 * i);
       }
-    } else if (!Game.Achievements["Speed baking III"].won &&
+    } else if (!Game.AchievementsById[ACHIEVEMENT_IDS.SPEED_BAKING_III].won &&
         (this.context.now - Game.startDate <= 1000 * 60 * 15)) {
-      const achiev = Game.Achievements["Speed baking III"];
-      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '');
+      const achiev = Game.AchievementsById[ACHIEVEMENT_IDS.SPEED_BAKING_III];
+      targetActivity = "Trying to get achievement: " + achiev.name + " - " + achiev.ddesc.replace(/<q>.*?<\/q>/ig, '').replace(/<[^>]+>/g, '');
 
       // fivefold clicking speed
       for (let i = 1; i < 5; i++) {
@@ -422,21 +423,21 @@ export class AscensionManager {
     Game.wrinklers.forEach((w: any) => { if (w.close === 1) w.hp = 0; });
 
     // Harvest garden
-    if (Game.isMinigameReady && Game.isMinigameReady(Game.Objects["Farm"])) {
-      Game.Objects["Farm"].minigame.harvestAll();
+    if (Game.isMinigameReady && Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.FARM])) {
+      Game.ObjectsById[BUILDING_IDS.FARM].minigame.harvestAll();
     }
 
     // Sell all stock market goods
-    if (Game.isMinigameReady && Game.isMinigameReady(Game.Objects["Bank"])) {
-      const market = Game.Objects["Bank"].minigame;
+    if (Game.isMinigameReady && Game.isMinigameReady(Game.ObjectsById[BUILDING_IDS.BANK])) {
+      const market = Game.ObjectsById[BUILDING_IDS.BANK].minigame;
       for (const g in market.goods) {
         market.sellGood(market.goods[g].id, 10000);
       }
     }
 
     // Buy chocolate egg if available
-    if (Game.Upgrades["Chocolate egg"].unlocked &&
-        !Game.Upgrades["Chocolate egg"].bought) {
+    if (Game.UpgradesById[UPGRADE_IDS.CHOCOLATE_EGG].unlocked &&
+      !Game.UpgradesById[UPGRADE_IDS.CHOCOLATE_EGG].bought) {
       // Set first aura to earth shatterer
       if (Game.dragonLevel >= 9) {
         Game.specialTab = "dragon";
@@ -445,7 +446,7 @@ export class AscensionManager {
         Game.ToggleSpecialMenu(0);
       }
       Game.ObjectsById.forEach((e: any) => { e.sell(e.amount); });
-      Game.Upgrades["Chocolate egg"].buy();
+      Game.UpgradesById[UPGRADE_IDS.CHOCOLATE_EGG].buy();
       this.context.delay = 10;
     } else {
       this.context.info(reason);
@@ -633,11 +634,11 @@ export class AscensionManager {
     // Check for special achievement attempts
     if (this.context.workingOnSpecialAchievement) {
       let achievementName = '';
-      if (Game.cookieClicks === 0 && !Game.Achievements["True Neverclick"].won) {
+      if (Game.cookieClicks === 0 && !Game.AchievementsById[ACHIEVEMENT_IDS.TRUE_NEVERCLICK].won) {
         achievementName = 'True Neverclick (0 clicks)';
-      } else if (Game.cookieClicks <= 15 && !Game.Achievements["Neverclick"].won) {
+      } else if (Game.cookieClicks <= 15 && !Game.AchievementsById[ACHIEVEMENT_IDS.NEVERCLICK].won) {
         achievementName = 'Neverclick (≤15 clicks)';
-      } else if (Game.UpgradesOwned === 0 && !Game.Achievements["Hardcore"].won) {
+      } else if (Game.UpgradesOwned === 0 && !Game.AchievementsById[ACHIEVEMENT_IDS.HARDCORE].won) {
         achievementName = 'Hardcore (0 upgrades)';
       } else {
         achievementName = 'Speed baking';
@@ -660,8 +661,8 @@ export class AscensionManager {
     }
 
     // Check for endless cycle (1000 ascends)
-    if (this.context.endPhase() && !Game.Achievements["Endless cycle"].won &&
-        !Game.ascensionMode && Game.Upgrades["Sucralosia Inutilis"].bought) {
+    if (this.context.endPhase() && !Game.AchievementsById[ACHIEVEMENT_IDS.ENDLESS_CYCLE].won &&
+      !Game.ascensionMode && Game.UpgradesById[UPGRADE_IDS.SUCRALOSIA_INUTILIS].bought) {
       return {
         module: 'Ascension',
         status: 'active',
@@ -678,8 +679,8 @@ export class AscensionManager {
     }
 
     // Check for reincarnation (100 ascends)
-    if (Game.Upgrades["Permanent upgrade slot V"].bought &&
-        !Game.Achievements["Reincarnation"].won && !Game.ascensionMode) {
+    if (Game.UpgradesById[UPGRADE_IDS.PERMANENT_UPGRADE_SLOT_V].bought &&
+      !Game.AchievementsById[ACHIEVEMENT_IDS.REINCARNATION].won && !Game.ascensionMode) {
       return {
         module: 'Ascension',
         status: 'active',
@@ -696,7 +697,7 @@ export class AscensionManager {
     }
 
     // Check for lucky upgrades
-    if (!Game.Upgrades["Lucky payout"].bought && Game.heavenlyChips > 77777777) {
+    if (!Game.UpgradesById[UPGRADE_IDS.LUCKY_PAYOUT].bought && Game.heavenlyChips > 77777777) {
       const sevenCount = ((Game.prestige + prestigeGain) + '').split('7').length - 1;
       return {
         module: 'Ascension',
@@ -719,7 +720,7 @@ export class AscensionManager {
         module: 'Ascension',
         status: 'waiting',
         currentAction: `Working on ${targetAchievement.name}`,
-        reason: targetAchievement.ddesc.replace(/<q>.*?<\/q>/ig, ''),
+        reason: targetAchievement.ddesc.replace(/<q>.*?<\/q>/ig, '').replace(/<[^>]+>/g, ''),
         nextAction: `Will ascend when achieved`,
         icon: '🌟',
         details: {
