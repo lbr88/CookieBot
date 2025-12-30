@@ -760,7 +760,8 @@ export class Dashboard {
           icon,
           tooltip,
           message: entry.message,
-          details: entry.details
+          details: entry.details,
+          count: entry.count
         });
       });
     }
@@ -790,7 +791,8 @@ export class Dashboard {
           icon,
           tooltip: 'Action performed by the bot',
           message: entry.action,
-          details: entry.details
+          details: entry.details,
+          count: entry.count
         });
       });
     }
@@ -802,7 +804,8 @@ export class Dashboard {
     if (combinedActivity.length > 0) {
       combinedActivity.forEach((entry) => {
         const timeStr = entry.time.toLocaleTimeString();
-        activityHtml += `<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ${entry.color};" title="${entry.tooltip}"><span style="color: #888; font-size: 9px;">${timeStr}</span> <span style="color: ${entry.color};">${entry.icon} ${entry.message}</span>${entry.details ? ` <span style="color: #aaa; font-size: 10px;"> - ${entry.details}</span>` : ''}</div>`;
+        const countStr = entry.count && entry.count > 1 ? ` <span style="color: #fff; font-weight: bold; font-size: 10px; background: rgba(255,255,255,0.2); padding: 0 3px; border-radius: 3px;">x${entry.count}</span>` : '';
+        activityHtml += `<div style="margin-bottom: 4px; padding: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid ${entry.color};" title="${entry.tooltip}"><span style="color: #888; font-size: 9px;">${timeStr}</span> <span style="color: ${entry.color};">${entry.icon} ${entry.message}</span>${countStr}${entry.details ? ` <span style="color: #aaa; font-size: 10px;"> - ${entry.details}</span>` : ''}</div>`;
       });
     } else {
       activityHtml = '<div style="color: #888;">No activity yet...</div>';
@@ -820,10 +823,28 @@ export class Dashboard {
   logAction(action: string, details?: string): void {
     try {
       const timestamp = new Date();
+      const lastEntry = this.actionHistory[0];
+
+      // Check if identical to last entry (ignoring details for price updates)
+      if (lastEntry && lastEntry.action === action) {
+        lastEntry.count = (lastEntry.count || 1) + 1;
+        lastEntry.time = timestamp; // Update time to latest occurrence
+        lastEntry.details = details || ''; // Update details to latest (e.g. new price)
+        
+        // Log to console if enabled (with count)
+        if (this.configManager.getConfig().ConsoleLog) {
+          console.log(`[Action] ${action} ${details ? `(${details})` : ''} (x${lastEntry.count})`);
+        }
+        
+        this.updateDashboard(); // Refresh display
+        return;
+      }
+
       const entry: ActionHistoryEntry = {
         time: timestamp,
         action,
-        details: details || ''
+        details: details || '',
+        count: 1
       };
 
       this.actionHistory.unshift(entry); // Add to beginning
@@ -849,6 +870,22 @@ export class Dashboard {
     try {
       // Only log if status changed
       const statusKey = `${statusType}:${message}`;
+      
+      // Check if identical to last entry in history (for deduplication display)
+      const lastEntry = this.statusHistory[0];
+      if (lastEntry && lastEntry.type === statusType && lastEntry.message === message && lastEntry.details === (details || '')) {
+        lastEntry.count = (lastEntry.count || 1) + 1;
+        lastEntry.time = new Date(); // Update time
+        
+        // Log to console if enabled
+        if (this.configManager.getConfig().ConsoleLog) {
+          console.log(`[Status] [${statusType}] ${message} ${details ? `(${details})` : ''} (x${lastEntry.count})`);
+        }
+        
+        this.updateDashboard();
+        return;
+      }
+
       if (this.lastStatus[statusType] === statusKey) return;
       this.lastStatus[statusType] = statusKey;
 
@@ -857,7 +894,8 @@ export class Dashboard {
         time: timestamp,
         type: statusType,
         message,
-        details: details || ''
+        details: details || '',
+        count: 1
       };
 
       this.statusHistory.unshift(entry); // Add to beginning

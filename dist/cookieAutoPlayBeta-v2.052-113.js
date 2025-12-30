@@ -6625,11 +6625,10 @@ class Dashboard {
         try {
             const timestamp = new Date();
             const lastEntry = this.actionHistory[0];
-            // Check if identical to last entry (ignoring details for price updates)
-            if (lastEntry && lastEntry.action === action) {
+            // Check if identical to last entry
+            if (lastEntry && lastEntry.action === action && lastEntry.details === (details || '')) {
                 lastEntry.count = (lastEntry.count || 1) + 1;
                 lastEntry.time = timestamp; // Update time to latest occurrence
-                lastEntry.details = details || ''; // Update details to latest (e.g. new price)
                 // Log to console if enabled (with count)
                 if (this.configManager.getConfig().ConsoleLog) {
                     console.log(`[Action] ${action} ${details ? `(${details})` : ''} (x${lastEntry.count})`);
@@ -9967,7 +9966,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-114';
+AutoPlay_AutoPlay.version = '2.052-113';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

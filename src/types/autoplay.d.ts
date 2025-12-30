@@ -255,6 +255,7 @@ export interface ActionHistoryEntry {
   time: Date;
   action: string;
   details?: string;
+  count?: number;
 }
 
 export interface StatusHistoryEntry {
@@ -262,6 +263,7 @@ export interface StatusHistoryEntry {
   type: string; // 'goal', 'reserve', 'mode', 'achievement', 'ascend', 'dragon', 'wrinkler', etc.
   message: string;
   details?: string;
+  count?: number;
 }
 
 export interface ActivityEntry {
@@ -272,6 +274,7 @@ export interface ActivityEntry {
   tooltip: string;
   message: string;
   details?: string;
+  count?: number;
 }
 
 export interface StatusInfo {
