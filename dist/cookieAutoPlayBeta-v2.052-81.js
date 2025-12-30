@@ -5878,25 +5878,13 @@ class Dashboard {
         // Create header with toggle button and next update timer
         const header = document.createElement('div');
         header.style.cssText = 'padding: 8px 16px; background: rgba(0, 100, 0, 0.3); cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
-        // Create left section (Title + Timer)
-        const leftSection = document.createElement('div');
-        leftSection.style.cssText = 'display: flex; flex-direction: column; gap: 2px;';
-        leftSection.innerHTML = `
+        header.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 2px;">
         <span style="color: #6f6; font-size: 14px; font-weight: bold;">CookieBot Dashboard</span>
         <span id="dashboardNextUpdate" style="color: #9cf; font-size: 10px; opacity: 0.8;">Next update: checking...</span>
+      </div>
+      <span id="dashboardToggle" style="color: #6f6; font-size: 12px;">▼ Collapse</span>
     `;
-        // Create mini modules container (hidden by default)
-        const miniModules = document.createElement('div');
-        miniModules.id = 'dashMiniModules';
-        miniModules.style.cssText = 'display: none; flex: 1; justify-content: center; gap: 16px; align-items: center; overflow: hidden; white-space: nowrap; margin: 0 16px;';
-        // Create right section (Toggle)
-        const toggleBtn = document.createElement('span');
-        toggleBtn.id = 'dashboardToggle';
-        toggleBtn.style.cssText = 'color: #6f6; font-size: 12px;';
-        toggleBtn.textContent = '▼ Collapse';
-        header.appendChild(leftSection);
-        header.appendChild(miniModules);
-        header.appendChild(toggleBtn);
         // Create content area - flexible grid for modules + activity column
         const content = document.createElement('div');
         content.id = 'dashboardContent';
@@ -6028,22 +6016,17 @@ class Dashboard {
      */
     toggleDashboard() {
         const content = document.getElementById('dashboardContent');
-        const miniModules = document.getElementById('dashMiniModules');
         const toggle = document.getElementById('dashboardToggle');
         this.dashboardCollapsed = !this.dashboardCollapsed;
         if (this.dashboardCollapsed) {
             if (content)
                 content.style.display = 'none';
-            if (miniModules)
-                miniModules.style.display = 'flex';
             if (toggle)
                 toggle.textContent = '▲ Expand';
         }
         else {
             if (content)
                 content.style.display = 'flex';
-            if (miniModules)
-                miniModules.style.display = 'none';
             if (toggle)
                 toggle.textContent = '▼ Collapse';
         }
@@ -6079,12 +6062,6 @@ class Dashboard {
         const timerElement = document.getElementById('dashboardNextUpdate');
         if (!timerElement)
             return;
-        // Hide next update in mini view to save space
-        if (this.dashboardCollapsed) {
-            timerElement.style.display = 'none';
-            return;
-        }
-        timerElement.style.display = 'block';
         try {
             let text = '';
             let color = '#9cf';
@@ -6331,104 +6308,6 @@ class Dashboard {
             const modulesContent = document.getElementById('dashModulesContent');
             if (modulesContent) {
                 modulesContent.innerHTML = modulesHtml;
-            }
-            // Update mini modules (collapsed view)
-            const miniModulesContainer = document.getElementById('dashMiniModules');
-            if (miniModulesContainer) {
-                // STRICT FILTER: Only show modules that are actively doing something
-                // Status must be 'active' or 'waiting' (waiting usually means saving up for something)
-                let interestingModules = allModules.filter(m => {
-                    const s = m.status.status;
-                    if (s !== 'active' && s !== 'waiting')
-                        return false;
-                    // Double check for "No ..." messages which might have slipped through with a wrong status
-                    const info = m.status.nextAction || m.status.currentAction || '';
-                    if (info.match(/^No (upgrades|buildings)/i))
-                        return false;
-                    return true;
-                });
-                // If we have both buildings and upgrades, try to determine which is the "real" target
-                const hasBuilding = interestingModules.find(m => m.key === 'buildings');
-                const hasUpgrade = interestingModules.find(m => m.key === 'upgrades');
-                if (hasBuilding && hasUpgrade) {
-                    const bIndex = interestingModules.findIndex(m => m.key === 'buildings');
-                    const uIndex = interestingModules.findIndex(m => m.key === 'upgrades');
-                    if (bIndex !== -1 && uIndex !== -1) {
-                        const b = interestingModules[bIndex];
-                        const u = interestingModules[uIndex];
-                        // If one is active and the other is waiting, prioritize active
-                        if (b.status.status === 'active' && u.status.status !== 'active') {
-                            interestingModules.splice(uIndex, 1);
-                        }
-                        else if (u.status.status === 'active' && b.status.status !== 'active') {
-                            interestingModules.splice(bIndex, 1);
-                        }
-                        else {
-                            // If both are same status (e.g. both waiting), remove upgrades to save space
-                            // (Assuming buildings is the primary goal or they are redundant)
-                            interestingModules.splice(uIndex, 1);
-                        }
-                    }
-                }
-                // Take first 4 modules
-                interestingModules = interestingModules.slice(0, 4);
-                if (interestingModules.length === 0) {
-                    miniModulesContainer.innerHTML = '<span style="color: #888; font-size: 10px;">Idle</span>';
-                }
-                else {
-                    let miniHtml = '';
-                    for (const { key, status } of interestingModules) {
-                        const color = statusColors[status.status] || '#ccc';
-                        const icon = status.icon || '';
-                        // Determine target info (what it's working towards)
-                        let infoText = status.nextAction || status.currentAction || '';
-                        // Clean up common prefixes to save space
-                        infoText = infoText.replace(/^(Working on:?|Buying|Upgrading|Waiting for|Saving for)\s+/i, '');
-                        // Time remaining
-                        let timeStr = '';
-                        if (status.timeRemaining && status.timeRemaining > 0) {
-                            timeStr = this.formatTimeRemaining(status.timeRemaining);
-                        }
-                        // Progress percent
-                        let percent = 0;
-                        if (status.progress) {
-                            percent = Math.max(0, Math.min(100, status.progress.percent));
-                        }
-                        // Create module card with progress bar background
-                        // Dynamic width: removed min-width, added white-space: nowrap
-                        miniHtml += `<div style="position: relative; display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">`;
-                        // Progress bar overlay
-                        if (percent > 0) {
-                            miniHtml += `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: ${color}; opacity: 0.2; pointer-events: none;"></div>`;
-                        }
-                        // Content based on type
-                        if (key === 'buildings' || key === 'upgrades') {
-                            // Show Target Name + Time
-                            // Removed truncation to allow dynamic sizing
-                            miniHtml += `<span style="position: relative; color: ${color}; font-weight: bold;">${infoText}</span>`;
-                            if (timeStr) {
-                                miniHtml += `<span style="position: relative; color: #fc6; margin-left: auto; font-family: monospace; padding-left: 6px;">${timeStr}</span>`;
-                            }
-                            else if (percent > 0) {
-                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace; padding-left: 6px;">${Math.round(percent)}%</span>`;
-                            }
-                        }
-                        else {
-                            // Achievements/Ascension: Icon + Name
-                            miniHtml += `<span style="position: relative; color: ${color}; font-size: 12px;">${icon}</span>`;
-                            if (infoText && infoText !== 'Idle' && infoText !== 'Active') {
-                                // Removed truncation
-                                miniHtml += `<span style="position: relative; color: #ccc;">${infoText}</span>`;
-                            }
-                            // Show percent for these if available
-                            if (percent > 0) {
-                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace; padding-left: 6px;">${Math.round(percent)}%</span>`;
-                            }
-                        }
-                        miniHtml += `</div>`;
-                    }
-                    miniModulesContainer.innerHTML = miniHtml;
-                }
             }
         }
         catch (e) {
@@ -9809,7 +9688,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-92';
+AutoPlay_AutoPlay.version = '2.052-81';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

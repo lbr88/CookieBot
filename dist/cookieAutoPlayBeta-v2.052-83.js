@@ -6079,12 +6079,6 @@ class Dashboard {
         const timerElement = document.getElementById('dashboardNextUpdate');
         if (!timerElement)
             return;
-        // Hide next update in mini view to save space
-        if (this.dashboardCollapsed) {
-            timerElement.style.display = 'none';
-            return;
-        }
-        timerElement.style.display = 'block';
         try {
             let text = '';
             let color = '#9cf';
@@ -6335,97 +6329,27 @@ class Dashboard {
             // Update mini modules (collapsed view)
             const miniModulesContainer = document.getElementById('dashMiniModules');
             if (miniModulesContainer) {
-                // STRICT FILTER: Only show modules that are actively doing something
-                // Status must be 'active' or 'waiting' (waiting usually means saving up for something)
-                let interestingModules = allModules.filter(m => {
-                    const s = m.status.status;
-                    if (s !== 'active' && s !== 'waiting')
-                        return false;
-                    // Double check for "No ..." messages which might have slipped through with a wrong status
-                    const info = m.status.nextAction || m.status.currentAction || '';
-                    if (info.match(/^No (upgrades|buildings)/i))
-                        return false;
-                    return true;
-                });
-                // If we have both buildings and upgrades, try to determine which is the "real" target
-                const hasBuilding = interestingModules.find(m => m.key === 'buildings');
-                const hasUpgrade = interestingModules.find(m => m.key === 'upgrades');
-                if (hasBuilding && hasUpgrade) {
-                    const bIndex = interestingModules.findIndex(m => m.key === 'buildings');
-                    const uIndex = interestingModules.findIndex(m => m.key === 'upgrades');
-                    if (bIndex !== -1 && uIndex !== -1) {
-                        const b = interestingModules[bIndex];
-                        const u = interestingModules[uIndex];
-                        // If one is active and the other is waiting, prioritize active
-                        if (b.status.status === 'active' && u.status.status !== 'active') {
-                            interestingModules.splice(uIndex, 1);
-                        }
-                        else if (u.status.status === 'active' && b.status.status !== 'active') {
-                            interestingModules.splice(bIndex, 1);
-                        }
-                        else {
-                            // If both are same status (e.g. both waiting), remove upgrades to save space
-                            // (Assuming buildings is the primary goal or they are redundant)
-                            interestingModules.splice(uIndex, 1);
-                        }
-                    }
-                }
-                // Take first 4 modules
-                interestingModules = interestingModules.slice(0, 4);
+                // Filter for active/waiting/blocked modules
+                const interestingModules = allModules.filter(m => ['active', 'waiting', 'blocked'].includes(m.status.status)).slice(0, 4);
                 if (interestingModules.length === 0) {
                     miniModulesContainer.innerHTML = '<span style="color: #888; font-size: 10px;">Idle</span>';
                 }
                 else {
                     let miniHtml = '';
-                    for (const { key, status } of interestingModules) {
+                    for (const { status } of interestingModules) {
                         const color = statusColors[status.status] || '#ccc';
                         const icon = status.icon || '';
-                        // Determine target info (what it's working towards)
-                        let infoText = status.nextAction || status.currentAction || '';
-                        // Clean up common prefixes to save space
-                        infoText = infoText.replace(/^(Working on:?|Buying|Upgrading|Waiting for|Saving for)\s+/i, '');
-                        // Time remaining
-                        let timeStr = '';
-                        if (status.timeRemaining && status.timeRemaining > 0) {
-                            timeStr = this.formatTimeRemaining(status.timeRemaining);
-                        }
-                        // Progress percent
-                        let percent = 0;
+                        let info = '';
                         if (status.progress) {
-                            percent = Math.max(0, Math.min(100, status.progress.percent));
+                            info = Math.round(status.progress.percent) + '%';
                         }
-                        // Create module card with progress bar background
-                        // Dynamic width: removed min-width, added white-space: nowrap
-                        miniHtml += `<div style="position: relative; display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">`;
-                        // Progress bar overlay
-                        if (percent > 0) {
-                            miniHtml += `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: ${color}; opacity: 0.2; pointer-events: none;"></div>`;
+                        else if (status.timeRemaining) {
+                            info = this.formatTimeRemaining(status.timeRemaining);
                         }
-                        // Content based on type
-                        if (key === 'buildings' || key === 'upgrades') {
-                            // Show Target Name + Time
-                            // Removed truncation to allow dynamic sizing
-                            miniHtml += `<span style="position: relative; color: ${color}; font-weight: bold;">${infoText}</span>`;
-                            if (timeStr) {
-                                miniHtml += `<span style="position: relative; color: #fc6; margin-left: auto; font-family: monospace; padding-left: 6px;">${timeStr}</span>`;
-                            }
-                            else if (percent > 0) {
-                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace; padding-left: 6px;">${Math.round(percent)}%</span>`;
-                            }
-                        }
-                        else {
-                            // Achievements/Ascension: Icon + Name
-                            miniHtml += `<span style="position: relative; color: ${color}; font-size: 12px;">${icon}</span>`;
-                            if (infoText && infoText !== 'Idle' && infoText !== 'Active') {
-                                // Removed truncation
-                                miniHtml += `<span style="position: relative; color: #ccc;">${infoText}</span>`;
-                            }
-                            // Show percent for these if available
-                            if (percent > 0) {
-                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace; padding-left: 6px;">${Math.round(percent)}%</span>`;
-                            }
-                        }
-                        miniHtml += `</div>`;
+                        miniHtml += `<div style="display: flex; align-items: center; gap: 4px; font-size: 10px; border-left: 2px solid ${color}; padding-left: 4px;">
+               <span style="color: ${color};">${icon} ${status.module}</span>
+               ${info ? `<span style="color: #aaa;">${info}</span>` : ''}
+             </div>`;
                     }
                     miniModulesContainer.innerHTML = miniHtml;
                 }
@@ -9809,7 +9733,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-92';
+AutoPlay_AutoPlay.version = '2.052-83';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

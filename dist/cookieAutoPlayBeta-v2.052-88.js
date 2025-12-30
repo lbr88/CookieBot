@@ -6079,12 +6079,6 @@ class Dashboard {
         const timerElement = document.getElementById('dashboardNextUpdate');
         if (!timerElement)
             return;
-        // Hide next update in mini view to save space
-        if (this.dashboardCollapsed) {
-            timerElement.style.display = 'none';
-            return;
-        }
-        timerElement.style.display = 'block';
         try {
             let text = '';
             let color = '#9cf';
@@ -6335,13 +6329,11 @@ class Dashboard {
             // Update mini modules (collapsed view)
             const miniModulesContainer = document.getElementById('dashMiniModules');
             if (miniModulesContainer) {
-                // STRICT FILTER: Only show modules that are actively doing something
-                // Status must be 'active' or 'waiting' (waiting usually means saving up for something)
+                // Filter out "No upgrades" or similar non-actionable states even if status is not idle
                 let interestingModules = allModules.filter(m => {
-                    const s = m.status.status;
-                    if (s !== 'active' && s !== 'waiting')
+                    if (m.status.status === 'idle')
                         return false;
-                    // Double check for "No ..." messages which might have slipped through with a wrong status
+                    // Specific check for Upgrades/Buildings with "No ..." messages
                     const info = m.status.nextAction || m.status.currentAction || '';
                     if (info.match(/^No (upgrades|buildings)/i))
                         return false;
@@ -6356,7 +6348,7 @@ class Dashboard {
                     if (bIndex !== -1 && uIndex !== -1) {
                         const b = interestingModules[bIndex];
                         const u = interestingModules[uIndex];
-                        // If one is active and the other is waiting, prioritize active
+                        // Prioritize active status
                         if (b.status.status === 'active' && u.status.status !== 'active') {
                             interestingModules.splice(uIndex, 1);
                         }
@@ -6364,8 +6356,8 @@ class Dashboard {
                             interestingModules.splice(bIndex, 1);
                         }
                         else {
-                            // If both are same status (e.g. both waiting), remove upgrades to save space
-                            // (Assuming buildings is the primary goal or they are redundant)
+                            // If both are waiting/active, remove upgrades to save space (assuming buildings is primary or redundant)
+                            // Since buildings is usually first in list, uIndex > bIndex
                             interestingModules.splice(uIndex, 1);
                         }
                     }
@@ -6395,8 +6387,7 @@ class Dashboard {
                             percent = Math.max(0, Math.min(100, status.progress.percent));
                         }
                         // Create module card with progress bar background
-                        // Dynamic width: removed min-width, added white-space: nowrap
-                        miniHtml += `<div style="position: relative; display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">`;
+                        miniHtml += `<div style="position: relative; display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); overflow: hidden; min-width: 120px; border: 1px solid rgba(255,255,255,0.1);">`;
                         // Progress bar overlay
                         if (percent > 0) {
                             miniHtml += `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: ${color}; opacity: 0.2; pointer-events: none;"></div>`;
@@ -6404,25 +6395,27 @@ class Dashboard {
                         // Content based on type
                         if (key === 'buildings' || key === 'upgrades') {
                             // Show Target Name + Time
-                            // Removed truncation to allow dynamic sizing
+                            if (infoText.length > 15)
+                                infoText = infoText.substring(0, 14) + '…';
                             miniHtml += `<span style="position: relative; color: ${color}; font-weight: bold;">${infoText}</span>`;
                             if (timeStr) {
-                                miniHtml += `<span style="position: relative; color: #fc6; margin-left: auto; font-family: monospace; padding-left: 6px;">${timeStr}</span>`;
+                                miniHtml += `<span style="position: relative; color: #fc6; margin-left: auto; font-family: monospace;">${timeStr}</span>`;
                             }
                             else if (percent > 0) {
-                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace; padding-left: 6px;">${Math.round(percent)}%</span>`;
+                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace;">${Math.round(percent)}%</span>`;
                             }
                         }
                         else {
-                            // Achievements/Ascension: Icon + Name
+                            // Achievements/Ascension: Icon + Name (short)
                             miniHtml += `<span style="position: relative; color: ${color}; font-size: 12px;">${icon}</span>`;
                             if (infoText && infoText !== 'Idle' && infoText !== 'Active') {
-                                // Removed truncation
+                                if (infoText.length > 12)
+                                    infoText = infoText.substring(0, 11) + '…';
                                 miniHtml += `<span style="position: relative; color: #ccc;">${infoText}</span>`;
                             }
                             // Show percent for these if available
                             if (percent > 0) {
-                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace; padding-left: 6px;">${Math.round(percent)}%</span>`;
+                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace;">${Math.round(percent)}%</span>`;
                             }
                         }
                         miniHtml += `</div>`;
@@ -9809,7 +9802,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-92';
+AutoPlay_AutoPlay.version = '2.052-88';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

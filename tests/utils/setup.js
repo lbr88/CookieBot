@@ -38,36 +38,57 @@ async function launchBrowser(options = {}) {
  */
 async function setupPage(browser, options = {}) {
   const page = await browser.newPage();
-  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-  // Request Interception & Caching
-  await page.setRequestInterception(true);
-  const cache = new Map();
+  // Set appropriate User Agent based on browser type
+  if (options.browser === 'firefox') {
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0');
+  } else {
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  }
 
-  page.on('request', request => {
-    const url = request.url();
-    if (cache.has(url)) {
-      const cached = cache.get(url);
-      const headers = {};
-      const allowedHeaders = ['content-type', 'access-control-allow-origin', 'last-modified', 'etag', 'cache-control'];
-      for (const [key, value] of Object.entries(cached.headers)) {
-        if (allowedHeaders.includes(key.toLowerCase())) headers[key] = value;
-      }
-      request.respond({ status: cached.status, headers, body: cached.body });
-      return;
-    }
-    request.continue();
+  // Basic Stealth: Hide WebDriver property and other automation flags
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+
+    // Mock plugins to look more like a real browser
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => [1, 2, 3, 4, 5],
+    });
+
+    // Mock languages
+    Object.defineProperty(navigator, 'languages', {
+      get: () => ['en-US', 'en'],
+    });
   });
 
-  page.on('response', async response => {
-    const url = response.url();
-    if ((url.includes('dashnet.org') || url.includes('CookieMonster')) && response.ok()) {
-      try {
-        const buffer = await response.buffer();
-        cache.set(url, { status: response.status(), headers: response.headers(), body: buffer });
-      } catch (e) { }
-    }
-  });
+  // Request Interception & Caching - DISABLED to avoid Cloudflare detection
+  // await page.setRequestInterception(true);
+  // const cache = new Map();
+
+  // page.on('request', request => {
+  //   const url = request.url();
+  //   if (cache.has(url)) {
+  //     const cached = cache.get(url);
+  //     const headers = {};
+  //     const allowedHeaders = ['content-type', 'access-control-allow-origin', 'last-modified', 'etag', 'cache-control'];
+  //     for (const [key, value] of Object.entries(cached.headers)) {
+  //       if (allowedHeaders.includes(key.toLowerCase())) headers[key] = value;
+  //     }
+  //     request.respond({ status: cached.status, headers, body: cached.body });
+  //     return;
+  //   }
+  //   request.continue();
+  // });
+
+  // page.on('response', async response => {
+  //   const url = response.url();
+  //   if ((url.includes('dashnet.org') || url.includes('CookieMonster')) && response.ok()) {
+  //     try {
+  //       const buffer = await response.buffer();
+  //       cache.set(url, { status: response.status(), headers: response.headers(), body: buffer });
+  //     } catch (e) { }
+  //   }
+  // });
 
   // Filter logs
   page.on('console', msg => {
@@ -86,8 +107,24 @@ async function setupPage(browser, options = {}) {
  */
 async function loadGame(page) {
   console.log('Loading Cookie Clicker...');
-  await page.goto('https://orteil.dashnet.org/cookieclicker/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForFunction(() => typeof Game !== 'undefined' && Game.ready, { timeout: 60000 });
+  try {
+    await page.goto('https://orteil.dashnet.org/cookieclicker/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  } catch (e) {
+    // Ignore NS_BINDING_ABORTED which happens during Cloudflare redirects/reloads
+    if (e.message.includes('NS_BINDING_ABORTED') || e.message.includes('Navigation failed')) {
+      console.log('Navigation interrupted (likely Cloudflare), waiting for game load...');
+    } else {
+      throw e;
+    }
+  }
+
+  // Wait for the game object to be available
+  try {
+    await page.waitForFunction(() => typeof Game !== 'undefined' && Game.ready, { timeout: 120000 }); // Increased timeout for manual verification
+  } catch (e) {
+    console.log('Timed out waiting for Game.ready. If you are stuck on Cloudflare, please verify manually.');
+    throw e;
+  }
 }
 
 /**

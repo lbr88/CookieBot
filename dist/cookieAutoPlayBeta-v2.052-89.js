@@ -6079,12 +6079,6 @@ class Dashboard {
         const timerElement = document.getElementById('dashboardNextUpdate');
         if (!timerElement)
             return;
-        // Hide next update in mini view to save space
-        if (this.dashboardCollapsed) {
-            timerElement.style.display = 'none';
-            return;
-        }
-        timerElement.style.display = 'block';
         try {
             let text = '';
             let color = '#9cf';
@@ -6395,8 +6389,7 @@ class Dashboard {
                             percent = Math.max(0, Math.min(100, status.progress.percent));
                         }
                         // Create module card with progress bar background
-                        // Dynamic width: removed min-width, added white-space: nowrap
-                        miniHtml += `<div style="position: relative; display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">`;
+                        miniHtml += `<div style="position: relative; display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); overflow: hidden; min-width: 120px; border: 1px solid rgba(255,255,255,0.1);">`;
                         // Progress bar overlay
                         if (percent > 0) {
                             miniHtml += `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: ${color}; opacity: 0.2; pointer-events: none;"></div>`;
@@ -6404,25 +6397,27 @@ class Dashboard {
                         // Content based on type
                         if (key === 'buildings' || key === 'upgrades') {
                             // Show Target Name + Time
-                            // Removed truncation to allow dynamic sizing
+                            if (infoText.length > 15)
+                                infoText = infoText.substring(0, 14) + '…';
                             miniHtml += `<span style="position: relative; color: ${color}; font-weight: bold;">${infoText}</span>`;
                             if (timeStr) {
-                                miniHtml += `<span style="position: relative; color: #fc6; margin-left: auto; font-family: monospace; padding-left: 6px;">${timeStr}</span>`;
+                                miniHtml += `<span style="position: relative; color: #fc6; margin-left: auto; font-family: monospace;">${timeStr}</span>`;
                             }
                             else if (percent > 0) {
-                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace; padding-left: 6px;">${Math.round(percent)}%</span>`;
+                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace;">${Math.round(percent)}%</span>`;
                             }
                         }
                         else {
-                            // Achievements/Ascension: Icon + Name
+                            // Achievements/Ascension: Icon + Name (short)
                             miniHtml += `<span style="position: relative; color: ${color}; font-size: 12px;">${icon}</span>`;
                             if (infoText && infoText !== 'Idle' && infoText !== 'Active') {
-                                // Removed truncation
+                                if (infoText.length > 12)
+                                    infoText = infoText.substring(0, 11) + '…';
                                 miniHtml += `<span style="position: relative; color: #ccc;">${infoText}</span>`;
                             }
                             // Show percent for these if available
                             if (percent > 0) {
-                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace; padding-left: 6px;">${Math.round(percent)}%</span>`;
+                                miniHtml += `<span style="position: relative; color: #aaa; margin-left: auto; font-family: monospace;">${Math.round(percent)}%</span>`;
                             }
                         }
                         miniHtml += `</div>`;
@@ -9809,7 +9804,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-92';
+AutoPlay_AutoPlay.version = '2.052-89';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

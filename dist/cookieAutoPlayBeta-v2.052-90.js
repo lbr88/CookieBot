@@ -6079,12 +6079,6 @@ class Dashboard {
         const timerElement = document.getElementById('dashboardNextUpdate');
         if (!timerElement)
             return;
-        // Hide next update in mini view to save space
-        if (this.dashboardCollapsed) {
-            timerElement.style.display = 'none';
-            return;
-        }
-        timerElement.style.display = 'block';
         try {
             let text = '';
             let color = '#9cf';
@@ -9809,7 +9803,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-92';
+AutoPlay_AutoPlay.version = '2.052-90';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

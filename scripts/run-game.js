@@ -60,10 +60,13 @@ const formatNumber = (num) => {
       userDataDir: userDataDir
     });
     // Disable default console logging in setupPage so we can handle it manually
-    const page = await setupPage(browser, { logConsole: false });
+    const page = await setupPage(browser, {
+      logConsole: false,
+      browser: useFirefox ? 'firefox' : 'chrome'
+    });
     
     // Custom console listener
-    page.on('console', msg => {
+    page.on('console', async msg => {
       const text = msg.text();
       if (text.includes('Failed to load resource') && text.includes('403')) return;
       
@@ -78,8 +81,18 @@ const formatNumber = (num) => {
           console.error('Failed to parse status update:', e);
         }
       } else {
-        // Replicate default behavior for other logs
-        console.log('BROWSER:', text);
+        // Enhanced logging for objects/errors
+        const args = await Promise.all(msg.args().map(arg => arg.jsonValue().catch(() => 'JSHandle')));
+        if (args.length > 0) {
+          // If the text is just JSHandle@error, try to show the args
+          if (text === 'JSHandle@error' || text.includes('JSHandle@')) {
+            console.log('BROWSER ERROR:', ...args);
+          } else {
+            console.log('BROWSER:', text);
+          }
+        } else {
+          console.log('BROWSER:', text);
+        }
       }
     });
 
