@@ -56,8 +56,29 @@ const formatNumber = (num) => {
       browser: useFirefox ? 'firefox' : 'chrome',
       userDataDir: userDataDir
     });
-    const page = await setupPage(browser, { logConsole: true });
+    // Disable default console logging in setupPage so we can handle it manually
+    const page = await setupPage(browser, { logConsole: false });
     
+    // Custom console listener
+    page.on('console', msg => {
+      const text = msg.text();
+      if (text.includes('Failed to load resource') && text.includes('403')) return;
+      
+      if (text.startsWith('STATUS_UPDATE|')) {
+        try {
+          const stats = JSON.parse(text.substring(14));
+          const time = new Date().toLocaleTimeString();
+          console.log(`[${time}] 🍪 ${stats.cookiesStr} | CPS: ${stats.cpsStr} | Bld: ${stats.buildings} | Upg: ${stats.upgrades} | Lumps: ${Math.floor(stats.lumps)}`);
+          console.log(`           Target: ${stats.buyStatus} | Ach: ${stats.achStatus} | Asc: ${stats.ascStatus}`);
+        } catch (e) {
+          console.error('Failed to parse status update:', e);
+        }
+      } else {
+        // Replicate default behavior for other logs
+        console.log('BROWSER:', text);
+      }
+    });
+
     await loadGame(page);
 
     // Load save if context exists
@@ -85,103 +106,104 @@ const formatNumber = (num) => {
     await injectCookieMonster(page);
     await injectBot(page);
 
-    // Enable console logging automatically
+    // Enable console logging and native hooks automatically
     await page.evaluate(() => {
       if (typeof AutoPlay !== 'undefined') {
         AutoPlay.Config.ConsoleLog = 1;
+        AutoPlay.Config.UseGameHooks = 1; // Enable native mode by default
         if (AutoPlay.configManager && AutoPlay.configManager.config) {
           AutoPlay.configManager.config['ConsoleLog'] = 1;
+          AutoPlay.configManager.config['UseGameHooks'] = 1;
         }
-        console.log('Console logging enabled.');
+        console.log('Console logging and Native Mode enabled.');
+
+        // Register a logic hook for status updates (every 10 seconds = 300 ticks)
+        if (typeof Game !== 'undefined' && Game.registerHook) {
+          Game.registerHook('logic', () => {
+            if (Game.T % 300 === 0) {
+              let ascStatus = '-';
+              let achStatus = '-';
+              let buyStatus = 'Idle';
+
+              // Helper to format time
+              const formatTime = (ms) => {
+                if (!ms || !isFinite(ms)) return '--';
+                const s = Math.ceil(ms / 1000);
+                if (s < 60) return s + 's';
+                if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+                return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+              };
+
+              if (typeof AutoPlay !== 'undefined') {
+                // Ascension
+                if (AutoPlay.ascensionManager && AutoPlay.ascensionManager.getStatus) {
+                  const s = AutoPlay.ascensionManager.getStatus();
+                  if (s) ascStatus = s.currentAction;
+                }
+
+                // Achievement
+                if (AutoPlay.achievementHandler && AutoPlay.achievementHandler.getStatus) {
+                  const s = AutoPlay.achievementHandler.getStatus();
+                  if (s) achStatus = s.currentAction;
+                }
+                if (Game.AchievementsOwned !== undefined) {
+                  achStatus += ` (${Game.AchievementsOwned}/${Game.AchievementsN})`;
+                }
+
+                // Purchase
+                if (AutoPlay.purchaseManager) {
+                  const pm = AutoPlay.purchaseManager;
+                  const b = pm.getBuildingStatus ? pm.getBuildingStatus() : null;
+                  const u = pm.getUpgradeStatus ? pm.getUpgradeStatus() : null;
+
+                  let active = null;
+                  if (b && b.status === 'active') active = b;
+                  else if (u && u.status === 'active') active = u;
+
+                  if (active && active.details) {
+                    const name = active.details['Next Building'] || active.details['Next Upgrade'] || 'Unknown';
+
+                    let progressStr = '';
+                    if (active.progress) {
+                      const current = Beautify(Math.floor(active.progress.current), 0);
+                      const target = Beautify(Math.floor(active.progress.target), 0);
+                      progressStr = ` (${current}/${target})`;
+                    }
+
+                    let timeStr = '';
+                    if (active.timeRemaining) {
+                      timeStr = ` [${formatTime(active.timeRemaining)}]`;
+                    }
+
+                    buyStatus = `${name}${progressStr}${timeStr}`;
+                  }
+                }
+              }
+
+              const stats = {
+                cookiesStr: Beautify(Math.floor(Game.cookies), 0),
+                cpsStr: Beautify(Game.cookiesPs),
+                buildings: Game.BuildingsOwned,
+                upgrades: Game.UpgradesOwned,
+                lumps: Game.lumps,
+                ascStatus,
+                achStatus,
+                buyStatus
+              };
+              
+              console.log('STATUS_UPDATE|' + JSON.stringify(stats));
+            }
+          });
+          console.log('Status update hook registered.');
+        }
       }
     });
 
     console.log('Game is running.');
 
-    // Periodic status update (every 10 seconds)
+    // Auto-save context every minute (still using setInterval for this as it's not game-logic dependent)
     setInterval(async () => {
       try {
-        const stats = await page.evaluate(() => {
-          if (typeof Game === 'undefined' || !Game.ready) return null;
-
-          let ascStatus = '-';
-          let achStatus = '-';
-          let buyStatus = 'Idle';
-
-          // Helper to format time
-          const formatTime = (ms) => {
-            if (!ms || !isFinite(ms)) return '--';
-            const s = Math.ceil(ms / 1000);
-            if (s < 60) return s + 's';
-            if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
-            return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
-          };
-
-          if (typeof AutoPlay !== 'undefined') {
-            // Ascension
-            if (AutoPlay.ascensionManager && AutoPlay.ascensionManager.getStatus) {
-              const s = AutoPlay.ascensionManager.getStatus();
-              if (s) ascStatus = s.currentAction;
-            }
-
-            // Achievement
-            if (AutoPlay.achievementHandler && AutoPlay.achievementHandler.getStatus) {
-              const s = AutoPlay.achievementHandler.getStatus();
-              if (s) achStatus = s.currentAction;
-            }
-            if (Game.AchievementsOwned !== undefined) {
-              achStatus += ` (${Game.AchievementsOwned}/${Game.AchievementsN})`;
-            }
-
-            // Purchase
-            if (AutoPlay.purchaseManager) {
-              const pm = AutoPlay.purchaseManager;
-              const b = pm.getBuildingStatus ? pm.getBuildingStatus() : null;
-              const u = pm.getUpgradeStatus ? pm.getUpgradeStatus() : null;
-
-              let active = null;
-              if (b && b.status === 'active') active = b;
-              else if (u && u.status === 'active') active = u;
-
-              if (active && active.details) {
-                const name = active.details['Next Building'] || active.details['Next Upgrade'] || 'Unknown';
-
-                let progressStr = '';
-                if (active.progress) {
-                  const current = Beautify(Math.floor(active.progress.current), 0);
-                  const target = Beautify(Math.floor(active.progress.target), 0);
-                  progressStr = ` (${current}/${target})`;
-                }
-
-                let timeStr = '';
-                if (active.timeRemaining) {
-                  timeStr = ` [${formatTime(active.timeRemaining)}]`;
-                }
-
-                buyStatus = `${name}${progressStr}${timeStr}`;
-              }
-            }
-          }
-
-          return {
-            cookiesStr: Beautify(Math.floor(Game.cookies), 0),
-            cpsStr: Beautify(Game.cookiesPs),
-            buildings: Game.BuildingsOwned,
-            upgrades: Game.UpgradesOwned,
-            lumps: Game.lumps,
-            ascStatus,
-            achStatus,
-            buyStatus
-          };
-        });
-
-        if (stats) {
-          const time = new Date().toLocaleTimeString();
-          console.log(`[${time}] 🍪 ${stats.cookiesStr} | CPS: ${stats.cpsStr} | Bld: ${stats.buildings} | Upg: ${stats.upgrades} | Lumps: ${Math.floor(stats.lumps)}`);
-          console.log(`           Target: ${stats.buyStatus} | Ach: ${stats.achStatus} | Asc: ${stats.ascStatus}`);
-        }
-
-        // Auto-save context every minute
         if (contextName) {
           const saveString = await page.evaluate(() => {
             if (typeof Game !== 'undefined' && Game.WriteSave) {
@@ -197,11 +219,10 @@ const formatNumber = (num) => {
             // console.log('Context saved.');
           }
         }
-
       } catch (e) {
-        // Ignore errors (e.g. if page closed)
+        // Ignore errors
       }
-    }, 10000);
+    }, 60000);
 
     // Setup keyboard input
     readline.emitKeypressEvents(process.stdin);
