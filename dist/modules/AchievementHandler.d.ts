@@ -37,6 +37,10 @@ export declare class AchievementHandler {
      */
     handleAchievements(): void;
     /**
+     * Check if we are in a rapid ascension mode (Endless Cycle or Reincarnation)
+     */
+    private isRapidAscending;
+    /**
      * Get achievement handler status
      */
     getStatus(): ModuleStatus;

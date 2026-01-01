@@ -316,6 +316,21 @@ export class AchievementHandler {
   }
 
   /**
+   * Check if we are in a rapid ascension mode (Endless Cycle or Reincarnation)
+   */
+  private isRapidAscending(): boolean {
+    // Check if we are going for Endless Cycle (1000 ascensions)
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.ENDLESS_CYCLE].won) {
+      return true;
+    }
+    // Check if we are going for Reincarnation (100 ascensions)
+    if (!Game.AchievementsById[ACHIEVEMENT_IDS.REINCARNATION].won) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Get achievement handler status
    */
   getStatus(): ModuleStatus {
