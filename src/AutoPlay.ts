@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-125';
+  static readonly version = '2.052-126';
 
   // State
   private config: AutoPlayConfig;
@@ -1094,6 +1094,12 @@ export default class AutoPlay {
 
     // Don't let savings interfere with this achievement
     this.config.savingsGoal = 0;
+
+    // Disable cheats to prevent interference with exact cookie counts
+    if (this.Config.CheatGolden > 0) this.Config.CheatGolden = 0;
+    if (this.Config.CheatLumps > 0) this.Config.CheatLumps = 0;
+    if (this.config.autoGoldenCookie) this.config.autoGoldenCookie = false;
+
     Logger.addActivity('Running just right.');
 
     // Handle ascension checks
