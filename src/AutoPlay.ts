@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-119';
+  static readonly version = '2.052-120';
 
   // State
   private config: AutoPlayConfig;
@@ -530,6 +530,12 @@ export default class AutoPlay {
     if (Game.OnAscend) {
       // Don't run if reincarnating (timer active)
       if (Game.ReincarnateTimer > 0) return;
+
+      // Respect delay even on ascension screen
+      if (this.state.delay > 0) {
+        this.state.delay--;
+        return;
+      }
       
       this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
       return;
@@ -635,8 +641,11 @@ export default class AutoPlay {
 
     // Deadline check
     if (this.state.now < this.state.deadline) {
-      this.updateTickStats(startTime);
-      return;
+      // If we are on the ascension screen, we MUST proceed to handleAscend
+      if (!Game.OnAscend) {
+        this.updateTickStats(startTime);
+        return;
+      }
     }
 
     // Periodic actions (every ~15 seconds in legacy, or every ~50 calls here)
