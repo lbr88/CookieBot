@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-114';
+  static readonly version = '2.052-115';
 
   // State
   private config: AutoPlayConfig;
@@ -524,6 +524,13 @@ export default class AutoPlay {
    * Native logic hook - runs every game tick (30 times/sec)
    */
   private hookLogic(): void {
+    const Game = (globalThis as any).Game;
+
+    // Pause during ascension/reincarnation
+    if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0 || Game.OnAscend) {
+      return;
+    }
+
     this.tickCounter++;
     // const Game = (globalThis as any).Game; // Removed unused variable
 
@@ -551,6 +558,13 @@ export default class AutoPlay {
    * Native draw hook - runs every frame
    */
   private hookDraw(): void {
+    const Game = (globalThis as any).Game;
+
+    // Pause during ascension/reincarnation
+    if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0 || Game.OnAscend) {
+      return;
+    }
+
     // Dashboard handles its own throttling
     this.dashboard.render();
   }

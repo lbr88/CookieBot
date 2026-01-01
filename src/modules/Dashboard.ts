@@ -956,6 +956,12 @@ export class Dashboard {
     if (now - this.lastRenderTime < this.renderInterval) {
       return;
     }
+
+    // Safety check for ascension/reincarnation
+    if (typeof Game !== 'undefined' && (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0 || Game.OnAscend)) {
+      return;
+    }
+
     this.lastRenderTime = now;
 
     // Check if dashboard exists, create if not
