@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-126';
+  static readonly version = '2.052-127';
 
   // State
   private config: AutoPlayConfig;
@@ -1099,6 +1099,8 @@ export default class AutoPlay {
     if (this.Config.CheatGolden > 0) this.Config.CheatGolden = 0;
     if (this.Config.CheatLumps > 0) this.Config.CheatLumps = 0;
     if (this.config.autoGoldenCookie) this.config.autoGoldenCookie = false;
+    if (this.config.autoReindeer) this.config.autoReindeer = false;
+    if (this.Config.ClickMode !== 0) this.Config.ClickMode = 0;
 
     Logger.addActivity('Running just right.');
 
