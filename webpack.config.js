@@ -32,5 +32,5 @@ module.exports = {
   optimization: {
     minimize: false, // Keep readable for debugging
   },
-  devtool: 'inline-source-map',
+  devtool: 'source-map',
 };

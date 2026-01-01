@@ -24,6 +24,28 @@ if (!fs.existsSync(distDir)) {
 if (fs.existsSync(versionedFile)) {
   fs.copyFileSync(versionedFile, latestFile);
   console.log(`✓ Created ${path.basename(latestFile)} from v${version}`);
+
+  // Handle Source Map
+  const versionedMap = versionedFile + '.map';
+  const latestMap = latestFile + '.map';
+
+  if (fs.existsSync(versionedMap)) {
+    // 1. Copy the map file
+    fs.copyFileSync(versionedMap, latestMap);
+    console.log(`✓ Created ${path.basename(latestMap)} from v${version}`);
+
+    // 2. Update the sourceMappingURL comment in the latest JS file
+    let jsContent = fs.readFileSync(latestFile, 'utf8');
+    const oldMappingUrl = path.basename(versionedMap);
+    const newMappingUrl = path.basename(latestMap);
+    
+    // Replace the source mapping URL at the end of the file
+    if (jsContent.includes(oldMappingUrl)) {
+      jsContent = jsContent.replace(oldMappingUrl, newMappingUrl);
+      fs.writeFileSync(latestFile, jsContent);
+      console.log(`✓ Updated source mapping URL in ${path.basename(latestFile)}`);
+    }
+  }
 } else {
   console.error(`✗ Error: ${versionedFile} not found`);
   process.exit(1);
