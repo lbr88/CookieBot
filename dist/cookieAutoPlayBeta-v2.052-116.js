@@ -9246,9 +9246,6 @@ class AutoPlay_AutoPlay {
         const Game = globalThis.Game;
         // Special handling for ascension screen - allow AscensionManager to run
         if (Game.OnAscend) {
-            // Don't run if reincarnating (timer active)
-            if (Game.ReincarnateTimer > 0)
-                return;
             this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
             return;
         }
@@ -9989,7 +9986,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-119';
+AutoPlay_AutoPlay.version = '2.052-116';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

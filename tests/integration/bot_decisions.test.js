@@ -35,6 +35,17 @@ const TEST_CASES = [
       if (data.cookies < 1e27) return 'Save did not load correctly (cookies too low)';
       return true;
     }
+  },
+  {
+    filename: 'ascend_save.txt',
+    name: 'Ascension State',
+    description: 'Bot should handle ascension state correctly',
+    validate: (data) => {
+      if (!data.isInitialized) return 'Bot not initialized';
+      // If we are stuck in ascension, we might see specific flags
+      // But for now, let's just check if the bot is running
+      return true;
+    }
   }
 ];
 

@@ -5264,7 +5264,7 @@ class AscensionManager {
         // Buy priority upgrades first
         PRIO_UPGRADES.forEach((id) => {
             const upgrade = Game.UpgradesById[id];
-            if (upgrade && upgrade.canBePurchased && !upgrade.bought && upgrade.buy(true)) {
+            if (upgrade && upgrade.pool === 'prestige' && upgrade.canBePurchased && !upgrade.bought && upgrade.buy(true)) {
                 this.context.info("buying " + upgrade.name);
                 upgradesPurchased.push(upgrade.name);
             }
@@ -5272,7 +5272,7 @@ class AscensionManager {
         // Buy all other available upgrades
         for (const key in Game.UpgradesById) {
             const upgrade = Game.UpgradesById[key];
-            if (upgrade && upgrade.canBePurchased && !upgrade.bought && upgrade.buy(true)) {
+            if (upgrade && upgrade.pool === 'prestige' && upgrade.canBePurchased && !upgrade.bought && upgrade.buy(true)) {
                 this.context.info("buying " + upgrade.name);
                 upgradesPurchased.push(upgrade.name);
             }
@@ -9246,9 +9246,6 @@ class AutoPlay_AutoPlay {
         const Game = globalThis.Game;
         // Special handling for ascension screen - allow AscensionManager to run
         if (Game.OnAscend) {
-            // Don't run if reincarnating (timer active)
-            if (Game.ReincarnateTimer > 0)
-                return;
             this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
             return;
         }
@@ -9989,7 +9986,7 @@ class AutoPlay_AutoPlay {
     }
 }
 // Version
-AutoPlay_AutoPlay.version = '2.052-119';
+AutoPlay_AutoPlay.version = '2.052-117';
 /* harmony default export */ const src_AutoPlay = (AutoPlay_AutoPlay);
 
 ;// ./src/index.ts

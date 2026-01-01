@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-115';
+  static readonly version = '2.052-119';
 
   // State
   private config: AutoPlayConfig;
@@ -526,8 +526,17 @@ export default class AutoPlay {
   private hookLogic(): void {
     const Game = (globalThis as any).Game;
 
-    // Pause during ascension/reincarnation
-    if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0 || Game.OnAscend) {
+    // Special handling for ascension screen - allow AscensionManager to run
+    if (Game.OnAscend) {
+      // Don't run if reincarnating (timer active)
+      if (Game.ReincarnateTimer > 0) return;
+      
+      this.measureModule('AscensionManager', () => this.ascensionManager.handleAscend());
+      return;
+    }
+
+    // Pause during ascension/reincarnation animations
+    if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0) {
       return;
     }
 
