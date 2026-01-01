@@ -107,13 +107,19 @@ const formatNumber = (num) => {
       
       const savePath = path.join(savesDir, `${contextName}.txt`);
       if (fs.existsSync(savePath)) {
-        const saveString = fs.readFileSync(savePath, 'utf8');
-        console.log('Loading save from context...');
+        const saveString = fs.readFileSync(savePath, 'utf8').trim();
+        console.log(`Loading save from ${savePath} (${saveString.length} chars)...`);
         await page.evaluate((save) => {
           if (typeof Game !== 'undefined' && Game.ImportSaveCode) {
             Game.ImportSaveCode(save);
+            console.log('Save imported via Game.ImportSaveCode');
+          } else {
+            console.error('Game.ImportSaveCode not available');
           }
         }, saveString);
+        
+        // Wait a bit for save to apply
+        await new Promise(r => setTimeout(r, 1000));
       } else {
         console.log('No save found for this context. Starting fresh.');
       }

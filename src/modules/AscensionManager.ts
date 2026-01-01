@@ -417,6 +417,11 @@ export class AscensionManager {
     if (Game.AscendTimer > 0 || Game.ReincarnateTimer > 0) return;
     if (this.context.onAscend || Game.OnAscend) return;
 
+    // Close any open prompts (like gift popup) before ascending
+    if (Game.promptOn) {
+      Game.ClosePrompt();
+    }
+
     this.context.logStatus('ascend', reason);
     this.context.wantAscend = this.context.plantPending;
     this.context.addActivity("Preparing to ascend.");
@@ -498,6 +503,11 @@ export class AscensionManager {
    * Handle reincarnation (after ascending)
    */
   private doReincarnate(): void {
+    // Close any open prompts before reincarnating
+    if (Game.promptOn) {
+      Game.ClosePrompt();
+    }
+
     this.context.onAscend = false;
     this.context.delay = 10;
     this.buyHeavenlyUpgrades();
