@@ -146,7 +146,7 @@ export class AchievementHandler {
     // No time like the present - send and redeem a gift
     if (!Game.AchievementsById[ACHIEVEMENT_IDS.NO_TIME_LIKE_THE_PRESENT].won &&
         Game.Has('Wrapping paper') && !Game.hasBuff('Gifted out') &&
-        !this.context.wantAscend && !Game.OnAscend) {
+      !this.context.wantAscend && !Game.OnAscend && !this.isRapidAscending()) {
       if (!this.context.giftCode) {
         Game.promptGiftSend();
         const giftAmountEl = l('giftAmount') as HTMLInputElement;

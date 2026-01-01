@@ -25,7 +25,7 @@ import { Logger } from './utils/Logger';
 
 export default class AutoPlay {
   // Version
-  static readonly version = '2.052-123';
+  static readonly version = '2.052-124';
 
   // State
   private config: AutoPlayConfig;
@@ -715,7 +715,6 @@ export default class AutoPlay {
     }
 
     this.measureModule('DragonManager', () => this.dragonManager.handleDragon());
-    this.measureModule('AchievementHandler', () => this.achievementHandler.handleSmallAchievements());
 
     if (this.config.autoWrinklers) {
       this.measureModule('WrinklerManager', () => this.wrinklerManager.handleWrinklers());
